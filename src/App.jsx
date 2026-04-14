@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import {
   ArrowRight,
   ChevronDown,
+  ChevronLeft,
   ChevronRight,
   FileCheck2,
   Heart,
@@ -16,7 +17,6 @@ import {
   ShoppingBag,
   Store,
   Truck,
-  User,
   X,
 } from 'lucide-react'
 import gsap from 'gsap'
@@ -24,6 +24,17 @@ import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import './App.css'
 import { trackEvent } from './lib/analytics'
 import { getApiUrl } from './lib/api'
+import industrialSewingWorkshop from './assets/product-cards/industrial-sewing-workshop.jpg'
+import footballJerseysBerlin from './assets/product-cards/football-jerseys-berlin.webp'
+import usSoccerJersey from './assets/product-cards/us-soccer-jersey.jpg'
+import oregonJerseyExchange from './assets/product-cards/oregon-jersey-exchange.webp'
+
+const productVisuals = [
+  footballJerseysBerlin,
+  usSoccerJersey,
+  industrialSewingWorkshop,
+  oregonJerseyExchange,
+]
 
 const homepageContent = {
   brand: {
@@ -291,25 +302,49 @@ const homepageContent = {
       category: 'Teamwear',
       price: 'Rp 189.000',
       tone: 'navy',
+      audience: 'Tim & Komunitas',
+      detail: 'Untuk klub, sekolah, dan komunitas yang butuh set jersey seragam dengan size run rapi.',
+      image: footballJerseysBerlin,
+      imagePosition: 'center center',
     },
     {
       name: 'Training Capsule Top',
-      category: 'Retail',
+      category: 'Retail Ready',
       price: 'Rp 149.000',
       tone: 'sand',
+      audience: 'Personal',
+      detail: 'Pilihan ringan untuk order personal, custom nama, atau koleksi latihan yang lebih kasual.',
+      image: usSoccerJersey,
+      imagePosition: 'center 26%',
     },
     {
       name: 'Corporate Active Kit',
       category: 'B2B Capsule',
       price: 'Rp 229.000',
       tone: 'orange',
+      audience: 'Event & Brand',
+      detail: 'Cocok untuk brand activation, seragam event, dan kebutuhan apparel perusahaan dalam jumlah lebih besar.',
+      image: industrialSewingWorkshop,
+      imagePosition: 'center center',
     },
     {
-      name: 'Slides Summer Edit',
-      category: 'Lifestyle',
+      name: 'Personalized Fan Jersey',
+      category: 'Personal Order',
       price: 'Rp 129.000',
       tone: 'black',
+      audience: 'Custom Satuan',
+      detail: 'Jalur cepat untuk customer satuan yang ingin desain personal tetap terasa premium.',
+      image: oregonJerseyExchange,
+      imagePosition: 'center 30%',
     },
+  ],
+  clientBrands: [
+    'Komunitas Futsal Bandung',
+    'School League Series',
+    'Corporate Fun Run',
+    'Event Organizer Jawa Barat',
+    'Campus Sports Week',
+    'Brand Activation Team',
   ],
   pricingPackages: [
     {
@@ -480,6 +515,10 @@ function normalizeLandingPageContent(payload = {}) {
             price: item.price_hint,
             detail: `${item.material} • ${item.moq}`,
             tone: productTones[index % productTones.length],
+            audience: homepageContent.products[index % homepageContent.products.length]?.audience || 'Pilihan Custom',
+            image: productVisuals[index % productVisuals.length],
+            imagePosition:
+              homepageContent.products[index % homepageContent.products.length]?.imagePosition || 'center center',
           }))
         : homepageContent.products.map((item, index) => ({
             ...item,
@@ -552,6 +591,8 @@ function App() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
   const [activeCatalogFilter, setActiveCatalogFilter] = useState('all')
+  const [productSlideIndex, setProductSlideIndex] = useState(0)
+  const [cardsPerView, setCardsPerView] = useState(4)
   const [leadForm, setLeadForm] = useState(defaultLeadForm)
   const [leadStatus, setLeadStatus] = useState({ state: 'idle', message: '' })
   const contactProfile = landingPageContent.brand
@@ -624,6 +665,34 @@ function App() {
     return () => {
       window.removeEventListener('scroll', handleScroll)
       window.removeEventListener('beforeunload', handleUnload)
+    }
+  }, [])
+
+  useEffect(() => {
+    const updateCardsPerView = () => {
+      if (window.innerWidth <= 720) {
+        setCardsPerView(1)
+        return
+      }
+
+      if (window.innerWidth <= 1080) {
+        setCardsPerView(2)
+        return
+      }
+
+      if (window.innerWidth <= 1320) {
+        setCardsPerView(3)
+        return
+      }
+
+      setCardsPerView(4)
+    }
+
+    updateCardsPerView()
+    window.addEventListener('resize', updateCardsPerView)
+
+    return () => {
+      window.removeEventListener('resize', updateCardsPerView)
     }
   }, [])
 
@@ -884,6 +953,18 @@ function App() {
     activeCatalogFilter === 'all'
       ? landingPageContent.products
       : landingPageContent.products.filter((product) => product.categoryId === activeCatalogFilter)
+  const maxProductSlideIndex = Math.max(0, visibleProducts.length - cardsPerView)
+  const productTrackStyle = {
+    transform: `translateX(-${productSlideIndex * (100 / cardsPerView)}%)`,
+  }
+
+  useEffect(() => {
+    setProductSlideIndex(0)
+  }, [activeCatalogFilter])
+
+  useEffect(() => {
+    setProductSlideIndex((current) => Math.min(current, maxProductSlideIndex))
+  }, [cardsPerView, maxProductSlideIndex])
 
   const scrollToSection = (sectionId) => {
     const target = document.querySelector(sectionId)
@@ -1009,15 +1090,11 @@ function App() {
   return (
     <div className="app-shell" ref={rootRef}>
       <header className="site-header">
-        <div className="utility-bar">
-          <div className="utility-message">14 DAYS *EASY RETURN</div>
-          <button className="utility-toggle" type="button" aria-label="Expand utility">
-            <ChevronDown size={14} />
-          </button>
-        </div>
-
         <div className="utility-links-row">
-          <div />
+          <div className="utility-bar">
+            <span className="utility-message">Konsultasi desain cepat untuk order tim, komunitas, dan event.</span>
+            <a href="#contact">Lihat workshop</a>
+          </div>
           <div className="utility-links">
             {landingPageContent.utilityLinks.map((item) => (
               <a href={item.href} key={item.label}>
@@ -1034,84 +1111,68 @@ function App() {
           }}
         >
           <div className="main-header">
-          <a className="brand" href="#hero" aria-label="AHR Home">
-            <img className="brand-mark" src="/ahr-brand-logo.webp" alt="AHR logo" />
-          </a>
+            <a className="brand" href="#hero" aria-label="AHR Home">
+              <img className="brand-mark" src="/ahr-brand-logo.webp" alt="AHR logo" />
+            </a>
 
-          <button
-            className="mobile-menu-button"
-            type="button"
-            aria-label="Toggle menu"
-            onClick={() => setMobileMenuOpen((current) => !current)}
-          >
-            {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
-          </button>
+            <button
+              className="mobile-menu-button"
+              type="button"
+              aria-label="Toggle menu"
+              onClick={() => setMobileMenuOpen((current) => !current)}
+            >
+              {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
+            </button>
 
-          <nav className={mobileMenuOpen ? 'main-nav open' : 'main-nav'}>
-            {landingPageContent.navGroups.map((item) => (
+            <nav className={mobileMenuOpen ? 'main-nav open' : 'main-nav'}>
+              {landingPageContent.navGroups.map((item) => (
+                <button
+                  className={activeNav === item.id ? 'nav-tab active' : 'nav-tab'}
+                  key={item.id}
+                  type="button"
+                  onMouseEnter={() => {
+                    setActiveNav(item.id)
+                    setMenuOpen(true)
+                  }}
+                  onFocus={() => {
+                    setActiveNav(item.id)
+                    setMenuOpen(true)
+                  }}
+                  onClick={() => {
+                    setActiveNav(item.id)
+                    setMenuOpen((current) => !current)
+                    trackEvent('nav_click', { nav_item: item.id })
+                  }}
+                >
+                  {item.label}
+                </button>
+              ))}
+            </nav>
+
+            <div className="header-actions">
+              <label className="search-box">
+                <input
+                  aria-label="Cari section atau kebutuhan"
+                  placeholder="Cari produk atau info"
+                  onFocus={() => scrollToSection('#products')}
+                  readOnly
+                />
+                <Search size={18} />
+              </label>
               <button
-                className={activeNav === item.id ? 'nav-tab active' : 'nav-tab'}
-                key={item.id}
+                className="header-cta"
                 type="button"
-                onMouseEnter={() => {
-                  setActiveNav(item.id)
-                  setMenuOpen(true)
-                }}
-                onFocus={() => {
-                  setActiveNav(item.id)
-                  setMenuOpen(true)
-                }}
-                onClick={() => {
-                  setActiveNav(item.id)
-                  setMenuOpen((current) => !current)
-                  trackEvent('nav_click', { nav_item: item.id })
-                }}
+                aria-label="Konsultasi Produk"
+                onClick={() => scrollToSection('#final-cta')}
               >
-                {item.label}
+                <ShoppingBag size={18} />
+                <span>Konsultasi</span>
               </button>
-            ))}
-          </nav>
-
-          <div className="header-actions">
-            <label className="search-box">
-              <input
-                aria-label="Cari section atau kebutuhan"
-                placeholder="Cari produk atau info"
-                onFocus={() => scrollToSection('#products')}
-                readOnly
-              />
-              <Search size={18} />
-            </label>
-            <button
-              className="icon-button"
-              type="button"
-              aria-label="Tentang AHR"
-              onClick={() => scrollToSection('#about')}
-            >
-              <User size={20} />
-            </button>
-            <button
-              className="icon-button"
-              type="button"
-              aria-label="Keunggulan AHR"
-              onClick={() => scrollToSection('#about')}
-            >
-              <Heart size={20} />
-            </button>
-            <button
-              className="icon-button"
-              type="button"
-              aria-label="Konsultasi Produk"
-              onClick={() => scrollToSection('#final-cta')}
-            >
-              <ShoppingBag size={20} />
-            </button>
-          </div>
+            </div>
           </div>
 
           <div className="ticker-bar">
             <span>{landingPageContent.ticker}</span>
-            <ArrowRight size={16} />
           </div>
 
           <section
@@ -1242,17 +1303,29 @@ function App() {
               <p>{companyProfile.about}</p>
             </div>
 
-            <article className="about-highlight-card" data-reveal-item>
-              <strong>Katapang, Kabupaten Bandung</strong>
-              <p>
-                Workshop kami menjadi titik kerja untuk desain, printing, finishing, dan koordinasi
-                order agar hasil tetap rapi, tajam, dan tahan lama.
-              </p>
-              <div className="about-highlight-meta">
-                <span>Sejak 2020</span>
-                <span>Fokus pada jersey custom</span>
+            <div className="about-visual-stack" data-reveal-item>
+              <div
+                className="about-visual about-visual-primary"
+                style={{ backgroundImage: `url(${industrialSewingWorkshop})` }}
+              />
+              <div className="about-visual-column">
+                <div
+                  className="about-visual about-visual-secondary"
+                  style={{ backgroundImage: `url(${footballJerseysBerlin})` }}
+                />
+                <article className="about-highlight-card">
+                  <strong>Katapang, Kabupaten Bandung</strong>
+                  <p>
+                    Workshop kami menjadi titik kerja untuk desain, printing, finishing, dan koordinasi
+                    order agar hasil tetap rapi, tajam, dan tahan lama.
+                  </p>
+                  <div className="about-highlight-meta">
+                    <span>Sejak 2020</span>
+                    <span>Fokus pada jersey custom</span>
+                  </div>
+                </article>
               </div>
-            </article>
+            </div>
           </div>
 
           <div className="story-grid">
@@ -1279,13 +1352,41 @@ function App() {
         <section className="content-block section-plain" id="products" data-reveal>
           <div className="section-heading heading-inline" data-reveal-item>
             <div>
-              <span>WHAT'S HOT</span>
-              <h2>Pilihan produk ditampilkan lebih ringkas agar pengunjung bisa cepat menangkap arahnya.</h2>
+              <span>Discover Our Product</span>
+              <h2>Lihat dulu pilihan yang paling cocok, lalu lanjutkan ke jalur order yang terasa pas.</h2>
+              <p>
+                Kami buat bagian ini tetap ringan supaya orang bisa cepat menangkap pilihannya.
+                Mau pesan untuk tim, komunitas, sekolah, event, atau kebutuhan personal, semuanya
+                tetap terasa gampang dijelajahi sebelum masuk ke tahap konsultasi.
+              </p>
             </div>
             <a href="#final-cta">
-              View all
+              Mulai konsultasi
               <ArrowRight size={16} />
             </a>
+          </div>
+
+          <div className="discover-grid" data-reveal-item>
+            <article className="discover-intro-card">
+              <span>Pilih yang paling dekat</span>
+              <h3>Produk kami disusun supaya kamu bisa cepat menemukan yang paling nyambung dengan kebutuhanmu.</h3>
+              <p>
+                Ada yang cocok untuk pesanan rame-rame, ada juga yang pas untuk order personal atau
+                custom satuan. Tujuannya sederhana: biar kamu tidak perlu menebak-nebak harus mulai
+                dari mana.
+              </p>
+            </article>
+
+            <div className="discover-audience-grid">
+              <article className="audience-card audience-card-b2b">
+                <span>Untuk pesanan ramai</span>
+                <strong>Pas untuk tim, sekolah, komunitas, event, dan kebutuhan kerja bareng.</strong>
+              </article>
+              <article className="audience-card audience-card-b2c">
+                <span>Untuk order personal</span>
+                <strong>Cocok buat custom nama, jumlah satuan, atau pilihan yang lebih simpel dan cepat.</strong>
+              </article>
+            </div>
           </div>
 
           <div className="catalog-filter-row" data-reveal-item>
@@ -1301,24 +1402,81 @@ function App() {
             ))}
           </div>
 
-          <div className="product-grid">
-            {visibleProducts.map((product) => (
-              <article className={`product-card tone-${product.tone}`} key={product.name} data-reveal-item>
-                <div className="product-media">
-                  <button
-                    className="wishlist-button"
-                    type="button"
-                    aria-label={`Tanya produk ${product.name}`}
-                    onClick={() => handleProductInquiry(product)}
-                  >
-                    <Heart size={18} />
-                  </button>
-                </div>
-                <div className="product-body">
-                  <span>{product.price}</span>
-                  <h3>{product.name}</h3>
-                  <p>{product.detail || product.category}</p>
-                </div>
+          <div className="product-slider" data-reveal-item>
+            <div className="product-slider-toolbar">
+              <p className="product-slider-meta">
+                Menampilkan {Math.min(cardsPerView, visibleProducts.length)} dari {visibleProducts.length} produk
+              </p>
+              <div className="product-slider-controls">
+                <button
+                  className="slider-button"
+                  type="button"
+                  aria-label="Produk sebelumnya"
+                  onClick={() => setProductSlideIndex((current) => Math.max(0, current - 1))}
+                  disabled={productSlideIndex === 0}
+                >
+                  <ChevronLeft size={18} />
+                </button>
+                <button
+                  className="slider-button"
+                  type="button"
+                  aria-label="Produk berikutnya"
+                  onClick={() =>
+                    setProductSlideIndex((current) => Math.min(maxProductSlideIndex, current + 1))
+                  }
+                  disabled={productSlideIndex >= maxProductSlideIndex}
+                >
+                  <ChevronRight size={18} />
+                </button>
+              </div>
+            </div>
+
+            <div className="product-slider-viewport">
+              <div className="product-slider-track" style={productTrackStyle}>
+                {visibleProducts.map((product) => (
+                  <article className={`product-card tone-${product.tone}`} key={product.name}>
+                    <div className="product-media">
+                      <img
+                        className="product-image"
+                        src={product.image}
+                        alt={product.name}
+                        style={{ objectPosition: product.imagePosition || 'center center' }}
+                      />
+                      <span className="product-audience">{product.audience}</span>
+                      <button
+                        className="wishlist-button"
+                        type="button"
+                        aria-label={`Tanya produk ${product.name}`}
+                        onClick={() => handleProductInquiry(product)}
+                      >
+                        <Heart size={18} />
+                      </button>
+                    </div>
+                    <div className="product-body">
+                      <span>{product.price}</span>
+                      <h3>{product.name}</h3>
+                      <p>{product.detail || product.category}</p>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="content-block section-soft client-brand-section" data-reveal>
+          <div className="section-heading heading-inline" data-reveal-item>
+            <div>
+              <span>Our Client Brand</span>
+              <h2>Dipercaya brand, komunitas, sekolah, dan tim yang membutuhkan produksi lebih rapi dan mudah dikoordinasikan.</h2>
+            </div>
+            <p className="client-brand-caption">Beberapa tipe klien dan kolaborator yang paling sering bekerja sama dengan AHR Printing.</p>
+          </div>
+
+          <div className="client-brand-grid">
+            {landingPageContent.clientBrands.map((brand) => (
+              <article className="client-brand-card" key={brand} data-reveal-item>
+                <span>{brand}</span>
               </article>
             ))}
           </div>
@@ -1514,43 +1672,59 @@ function App() {
             </div>
           </div>
 
-          <div className="faq-list">
-            {landingPageContent.faqs.map((faq, index) => {
-              const isOpen = openFaqIndex === index
+          <div className="faq-layout-grid">
+            <article className="faq-visual-card" data-reveal-item>
+              <div
+                className="faq-visual-media"
+                style={{ backgroundImage: `url(${oregonJerseyExchange})` }}
+              />
+              <div className="faq-visual-copy">
+                <span>Masih ragu sebelum order?</span>
+                <p>
+                  FAQ ini kami susun untuk menjawab pertanyaan yang paling sering muncul dari buyer tim,
+                  sekolah, komunitas, maupun customer personal sebelum masuk ke tahap konsultasi.
+                </p>
+              </div>
+            </article>
 
-              return (
-                <article
-                  className={isOpen ? 'faq-item open' : 'faq-item'}
-                  key={faq.question}
-                  data-reveal-item
-                >
-                  <button
-                    className="faq-button"
-                    type="button"
-                    onClick={() => {
-                      setOpenFaqIndex(isOpen ? -1 : index)
-                      trackEvent('faq_open', {
-                        question_text: faq.question,
-                        question_index: index + 1,
-                      })
-                    }}
+            <div className="faq-list">
+              {landingPageContent.faqs.map((faq, index) => {
+                const isOpen = openFaqIndex === index
+
+                return (
+                  <article
+                    className={isOpen ? 'faq-item open' : 'faq-item'}
+                    key={faq.question}
+                    data-reveal-item
                   >
-                    <span>{faq.question}</span>
-                    <ChevronDown size={18} />
-                  </button>
-                  <div
-                    className="faq-answer"
-                    ref={(element) => {
-                      faqContentRefs.current[index] = element
-                    }}
-                  >
-                    <div className="faq-answer-inner">
-                      <p>{faq.answer}</p>
+                    <button
+                      className="faq-button"
+                      type="button"
+                      onClick={() => {
+                        setOpenFaqIndex(isOpen ? -1 : index)
+                        trackEvent('faq_open', {
+                          question_text: faq.question,
+                          question_index: index + 1,
+                        })
+                      }}
+                    >
+                      <span>{faq.question}</span>
+                      <ChevronDown size={18} />
+                    </button>
+                    <div
+                      className="faq-answer"
+                      ref={(element) => {
+                        faqContentRefs.current[index] = element
+                      }}
+                    >
+                      <div className="faq-answer-inner">
+                        <p>{faq.answer}</p>
+                      </div>
                     </div>
-                  </div>
-                </article>
-              )
-            })}
+                  </article>
+                )
+              })}
+            </div>
           </div>
         </section>
 

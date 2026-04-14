@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "skills": {
+    "react": {
+      "source": "vercel-labs/json-render",
+      "sourceType": "github",
+      "computedHash": "67d6daabd85c23cc58eeabea56f25b899723932dfb69c55ddae4990b43c918d2"
+    }
+  }
+}
