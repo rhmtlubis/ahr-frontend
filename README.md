@@ -1,16 +1,64 @@
-# React + Vite
+# AHR Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Frontend ini adalah landing page React + Vite untuk funnel B2B jersey AHR. Aplikasi ini berfungsi sebagai layer presentasi dan konversi yang mengonsumsi API Laravel di folder [backend](/opt/homebrew/var/www/ahr/backend).
 
-Currently, two official plugins are available:
+## Peran Frontend
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- merender landing page B2B
+- mengambil konten dinamis dari endpoint backend
+- menangkap UTM parameter dari URL
+- mengirim form lead ke backend
+- membuka WhatsApp dengan konteks CTA dan attribution
+- mengirim event analytics ke GA4 bila measurement ID diisi
 
-## React Compiler
+## Integrasi Backend
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+Secara default frontend akan memanggil route berikut:
 
-## Expanding the ESLint configuration
+- `GET /api/b2b/landing-page`
+- `POST /api/b2b/leads`
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+Saat development lokal, Vite sudah dipasang proxy `/api` ke backend Laravel sehingga frontend bisa dijalankan tanpa harus hardcode domain backend.
+
+## Setup Lokal
+
+1. Install dependency:
+
+```bash
+npm install
+```
+
+2. Buat file environment:
+
+```bash
+cp .env.example .env
+```
+
+3. Jalankan frontend:
+
+```bash
+npm run dev
+```
+
+Frontend lokal default tersedia di `http://localhost:5173`.
+
+## Environment Variables
+
+```env
+VITE_API_BASE_URL=
+VITE_API_PROXY_TARGET=http://127.0.0.1:8000
+VITE_GA_MEASUREMENT_ID=
+```
+
+Catatan:
+
+- kosongkan `VITE_API_BASE_URL` saat development lokal agar request lewat proxy Vite
+- isi `VITE_API_BASE_URL` pada deploy production jika backend berada di domain berbeda
+- `VITE_GA_MEASUREMENT_ID` opsional dan hanya dipakai untuk event tracking
+- untuk admin React berbasis session, Vite juga mem-proxy `/sanctum` agar CSRF cookie Laravel bisa diambil saat login lokal
+
+## Build
+
+```bash
+npm run build
+```
