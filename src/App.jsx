@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
   ArrowRight,
@@ -24,7 +24,7 @@ import {
 import gsap from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import './App.css'
-import { trackEvent } from './lib/analytics'
+import { initializeAnalytics, trackEvent, trackPageView } from './lib/analytics'
 import { getApiUrl } from './lib/api'
 import { companyProfileContent } from './content/companyProfile'
 import {
@@ -42,8 +42,12 @@ import {
   slugifyCategoryLabel,
 } from './content/productCatalog'
 import { findAudiencePathById, getAudiencePaths } from './content/marketAudience'
+import CategoryFilterHeader from './components/landing/CategoryFilterHeader'
+import CookieConsentBanner from './components/layout/CookieConsentBanner'
 import SiteFooter from './components/layout/SiteFooter'
 import SiteHeader from './components/layout/SiteHeader'
+import { getConsentPreferences, hasAnalyticsConsent, setConsentPreferences } from './lib/consent'
+import { clearPersonalizationData, getPersonalizedProducts } from './lib/personalization'
 
 const qualityHighlights = [
   {
@@ -364,9 +368,26 @@ function App() {
   const [activeCatalogFilter, setActiveCatalogFilter] = useState('all')
   const [leadForm, setLeadForm] = useState(defaultLeadForm)
   const [leadStatus, setLeadStatus] = useState({ state: 'idle', message: '' })
+  const [consentPreferences, setConsentPreferencesState] = useState({
+    analytics: 'unknown',
+    personalization: 'unknown',
+  })
   const contactProfile = landingPageContent.brand
   const companyProfile = landingPageContent.companyProfile
   const leadSegments = getAudiencePaths(landingPageContent.audiencePaths)
+
+  useEffect(() => {
+    setConsentPreferencesState(getConsentPreferences())
+  }, [])
+
+  useEffect(() => {
+    if (!hasAnalyticsConsent()) {
+      return
+    }
+
+    initializeAnalytics()
+    trackPageView(window.location.pathname + window.location.search)
+  }, [])
 
   useEffect(() => {
     const start = Date.now()
@@ -597,7 +618,7 @@ function App() {
       ...current,
       segment: availableLeadSegments[0]?.id || defaultLeadForm.segment,
     }))
-  }, [leadForm.segment, landingPageContent.catalogCategories])
+  }, [leadForm.segment, landingPageContent.audiencePaths])
 
   useEffect(() => {
     faqContentRefs.current.forEach((element, index) => {
@@ -682,11 +703,36 @@ function App() {
           ...category,
           id: slugifyCategoryLabel(category.label),
         }))
-  const catalogFilters = [{ id: 'all', label: 'Semua' }, ...showcaseCategories]
+  const categoryProductCountMap = landingPageContent.products.reduce((accumulator, product) => {
+    const categoryId = product.categoryId || 'all'
+
+    accumulator[categoryId] = (accumulator[categoryId] || 0) + 1
+
+    return accumulator
+  }, {})
+  const categoryNavigationItems = [
+    {
+      id: 'all',
+      label: 'Semua Koleksi',
+      image: showcaseCategories[0]?.image || landingPageContent.products[0]?.image,
+      position: showcaseCategories[0]?.position || landingPageContent.products[0]?.imagePosition,
+      count: landingPageContent.products.length,
+    },
+    ...showcaseCategories.map((category) => ({
+      ...category,
+      count: categoryProductCountMap[category.id] || 0,
+    })),
+  ]
+  const personalizedProducts = useMemo(
+    () => getPersonalizedProducts(landingPageContent.products, 4),
+    [landingPageContent.products, consentPreferences],
+  )
   const visibleProducts =
     activeCatalogFilter === 'all'
       ? landingPageContent.products
       : landingPageContent.products.filter((product) => product.categoryId === activeCatalogFilter)
+  const activeCategory =
+    categoryNavigationItems.find((category) => category.id === activeCatalogFilter) || categoryNavigationItems[0]
 
   const scrollToSection = (sectionId) => {
     const target = document.querySelector(sectionId)
@@ -694,6 +740,25 @@ function App() {
     if (target) {
       target.scrollIntoView({ behavior: 'smooth', block: 'start' })
     }
+  }
+
+  const applyConsentPreferences = (nextPreferences) => {
+    setConsentPreferences(nextPreferences)
+    setConsentPreferencesState(nextPreferences)
+
+    if (nextPreferences.analytics === 'accepted') {
+      initializeAnalytics()
+    }
+
+    if (nextPreferences.personalization === 'rejected') {
+      clearPersonalizationData()
+    }
+
+    trackEvent('cookie_consent_updated', {
+      analytics_consent: nextPreferences.analytics,
+      personalization_consent: nextPreferences.personalization,
+      personalization_scope: 'homepage-top-listing',
+    })
   }
 
   const handleWhatsAppClick = (eventName, eventParams, message) => {
@@ -806,19 +871,6 @@ function App() {
       previous_filter: activeCatalogFilter,
     })
     setActiveCatalogFilter(filterId)
-  }
-
-  const handleCategoryNavigation = (category) => {
-    trackEvent('category_navigation_click', {
-      category_name: category.label,
-      destination: 'products',
-    })
-
-    if (category.id) {
-      setActiveCatalogFilter(category.id)
-    }
-
-    scrollToSection('#products')
   }
 
   const handlePricingInquiry = (pricingPackage) => {
@@ -950,50 +1002,17 @@ function App() {
           </div>
         </section>
 
-        <section className="content-block section-plain category-showcase" id="categories" data-reveal>
-          <div className="section-heading heading-inline" data-reveal-item>
-            <div>
-              <span>Temukan Kategori</span>
-              <h2>Pilih kategori dulu, lalu lanjut lihat koleksinya.</h2>
-            </div>
-            <a href="#products">
-              Lihat produk
-              <ArrowRight size={16} />
-            </a>
-          </div>
-
-          <div className="category-slider" data-reveal-item>
-            {showcaseCategories.map((category) => (
-              <button
-                className="category-card"
-                key={category.id || category.label}
-                type="button"
-                onClick={() => handleCategoryNavigation(category)}
-              >
-                <img
-                  className="category-card-image"
-                  src={category.image}
-                  alt={category.label}
-                  style={{ objectPosition: category.position }}
-                />
-                <span>{category.label}</span>
-              </button>
-            ))}
-          </div>
-        </section>
-
         <section className="content-block section-plain" id="products" data-reveal>
-          <div className="section-heading heading-inline" data-reveal-item>
-            <div>
-              <span>Discover Our Product</span>
-              <h2>Pilih model yang paling dekat dengan kebutuhanmu.</h2>
-              <p>Fokus pada visual, geser untuk lihat koleksi.</p>
-            </div>
-            <a href="#final-cta">
-              Mulai konsultasi
-              <ArrowRight size={16} />
-            </a>
-          </div>
+          <CategoryFilterHeader
+            categories={categoryNavigationItems}
+            activeCategoryId={activeCatalogFilter}
+            activeCategoryLabel={activeCategory?.label}
+            productCount={visibleProducts.length}
+            onCategorySelect={handleCatalogFilterClick}
+            getCategoryHref={(category) =>
+              category.id === 'all' ? '/all-products' : `/all-products?category=${category.id}`
+            }
+          />
 
           <div className="discover-grid" data-reveal-item>
             <div className="quality-panel">
@@ -1018,22 +1037,69 @@ function App() {
             </div>
           </div>
 
-          <div className="catalog-filter-row" data-reveal-item>
-            {catalogFilters.map((filter) => (
-              <button
-                className={activeCatalogFilter === filter.id ? 'catalog-filter active' : 'catalog-filter'}
-                key={filter.id}
-                type="button"
-                onClick={() => handleCatalogFilterClick(filter.id)}
-              >
-                {filter.label}
-              </button>
-            ))}
-          </div>
+          {consentPreferences.personalization === 'accepted' && personalizedProducts.length > 0 ? (
+            <div className="personalized-products-panel" data-reveal-item>
+              <div className="personalized-products-heading">
+                <div>
+                  <span>Top Produk Untuk Anda</span>
+                  <h3>Urutan ini menyesuaikan produk yang paling sering Anda lihat.</h3>
+                </div>
+                <p>Personalisasi ini hanya berlaku di browser Anda dan bisa berubah seiring pola kunjungan.</p>
+              </div>
+
+              <div className="personalized-products-grid">
+                {personalizedProducts.map((product) => (
+                  <article className={`product-card tone-${product.tone}`} key={`personalized-${product.slug}`}>
+                    <Link
+                      className="product-card-link"
+                      to={`/produk/${product.slug}`}
+                      state={{ product }}
+                      onClick={() => handleProductNavigate(product)}
+                      aria-label={`Lihat detail ${product.name}`}
+                    >
+                      <div className="product-media">
+                        <img
+                          className="product-image"
+                          src={product.image}
+                          alt={product.name}
+                          style={{ objectPosition: product.imagePosition || 'center center' }}
+                        />
+                      </div>
+                      <div className="product-body">
+                        <p className="product-category">{product.category}</p>
+                        <h3>{product.name}</h3>
+                        <span className="product-price">{product.price}</span>
+                      </div>
+                    </Link>
+                    <button
+                      className="wishlist-button"
+                      type="button"
+                      aria-label={`Tanya produk ${product.name}`}
+                      onClick={() => handleProductInquiry(product)}
+                    >
+                      <Heart size={18} />
+                    </button>
+                  </article>
+                ))}
+              </div>
+            </div>
+          ) : null}
 
           <div className="product-slider" data-reveal-item>
             <div className="product-slider-toolbar">
               <p className="product-slider-meta">{visibleProducts.length} produk. Geser ke samping untuk melihat semuanya.</p>
+              <Link
+                className="product-slider-view-all"
+                to={activeCatalogFilter === 'all' ? '/all-products' : `/all-products?category=${activeCatalogFilter}`}
+                onClick={() =>
+                  trackEvent('catalog_view_all_click', {
+                    active_filter: activeCatalogFilter,
+                    destination: '/all-products',
+                  })
+                }
+              >
+                Lihat Semua Produk
+              </Link>
             </div>
 
             <div className="product-slider-viewport">
@@ -1397,6 +1463,35 @@ function App() {
           )
         }
       />
+
+      {consentPreferences.analytics === 'unknown' && consentPreferences.personalization === 'unknown' ? (
+        <CookieConsentBanner
+          onAcceptAll={() =>
+            applyConsentPreferences({
+              analytics: 'accepted',
+              personalization: 'accepted',
+            })
+          }
+          onAcceptAnalyticsOnly={() =>
+            applyConsentPreferences({
+              analytics: 'accepted',
+              personalization: 'rejected',
+            })
+          }
+          onAcceptPersonalizationOnly={() =>
+            applyConsentPreferences({
+              analytics: 'rejected',
+              personalization: 'accepted',
+            })
+          }
+          onRejectAll={() =>
+            applyConsentPreferences({
+              analytics: 'rejected',
+              personalization: 'rejected',
+            })
+          }
+        />
+      ) : null}
     </div>
   )
 }

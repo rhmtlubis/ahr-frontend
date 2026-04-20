@@ -4,7 +4,7 @@ import { Link, useLocation, useParams } from 'react-router-dom'
 import gsap from 'gsap'
 import './App.css'
 import { normalizeProductDetail } from './content/productCatalog'
-import { trackEvent } from './lib/analytics'
+import { initializeAnalytics, trackEvent, trackPageView } from './lib/analytics'
 import { getApiUrl } from './lib/api'
 import { companyProfileContent } from './content/companyProfile'
 import howToMeasureImage from './assets/size-guide/how-to-measure.png'
@@ -15,8 +15,11 @@ import {
   sharedNavGroups,
   sharedUtilityLinks,
 } from './content/siteChrome'
+import CookieConsentBanner from './components/layout/CookieConsentBanner'
 import SiteFooter from './components/layout/SiteFooter'
 import SiteHeader from './components/layout/SiteHeader'
+import { getConsentPreferences, hasAnalyticsConsent, setConsentPreferences } from './lib/consent'
+import { clearPersonalizationData, recordProductView } from './lib/personalization'
 
 const detailPageChromeFallback = {
   brand: {
@@ -99,6 +102,23 @@ export default function ProductDetailPage() {
   const [openAccordion, setOpenAccordion] = useState('detail')
   const [status, setStatus] = useState(initialProduct ? 'ready' : 'loading')
   const [hasAnimatedEntry, setHasAnimatedEntry] = useState(false)
+  const [consentPreferences, setConsentPreferencesState] = useState({
+    analytics: 'unknown',
+    personalization: 'unknown',
+  })
+
+  useEffect(() => {
+    setConsentPreferencesState(getConsentPreferences())
+  }, [])
+
+  useEffect(() => {
+    if (!hasAnalyticsConsent()) {
+      return
+    }
+
+    initializeAnalytics()
+    trackPageView(window.location.pathname + window.location.search)
+  }, [productSlug])
 
   useEffect(() => {
     window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
@@ -192,6 +212,34 @@ export default function ProductDetailPage() {
     setOpenAccordion('detail')
     setHasAnimatedEntry(false)
   }, [productSlug])
+
+  useEffect(() => {
+    if (status !== 'ready' || !product || consentPreferences.personalization !== 'accepted') {
+      return
+    }
+
+    recordProductView(product)
+  }, [product, status, consentPreferences])
+
+  const applyConsentPreferences = (nextPreferences) => {
+    setConsentPreferences(nextPreferences)
+    setConsentPreferencesState(nextPreferences)
+
+    if (nextPreferences.analytics === 'accepted') {
+      initializeAnalytics()
+    }
+
+    if (nextPreferences.personalization === 'rejected') {
+      clearPersonalizationData()
+    }
+
+    trackEvent('cookie_consent_updated', {
+      analytics_consent: nextPreferences.analytics,
+      personalization_consent: nextPreferences.personalization,
+      personalization_scope: 'homepage-top-listing',
+      source_page: `/produk/${productSlug}`,
+    })
+  }
 
   useEffect(() => {
     if (!rootRef.current || status !== 'ready' || !product) {
@@ -725,6 +773,35 @@ Mohon info lanjutan untuk order produk ini ya.
         footerMessage={`Halo AHR, saya ingin order ${product.name} ukuran ${selectedSize}.`}
         onWhatsAppClick={() => handleInquiry()}
       />
+
+      {consentPreferences.analytics === 'unknown' && consentPreferences.personalization === 'unknown' ? (
+        <CookieConsentBanner
+          onAcceptAll={() =>
+            applyConsentPreferences({
+              analytics: 'accepted',
+              personalization: 'accepted',
+            })
+          }
+          onAcceptAnalyticsOnly={() =>
+            applyConsentPreferences({
+              analytics: 'accepted',
+              personalization: 'rejected',
+            })
+          }
+          onAcceptPersonalizationOnly={() =>
+            applyConsentPreferences({
+              analytics: 'rejected',
+              personalization: 'accepted',
+            })
+          }
+          onRejectAll={() =>
+            applyConsentPreferences({
+              analytics: 'rejected',
+              personalization: 'rejected',
+            })
+          }
+        />
+      ) : null}
     </div>
   )
 }
