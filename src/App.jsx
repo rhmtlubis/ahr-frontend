@@ -1,39 +1,81 @@
 import { useEffect, useRef, useState } from 'react'
+import { Link } from 'react-router-dom'
 import {
   ArrowRight,
   ChevronDown,
-  ChevronLeft,
   ChevronRight,
   FileCheck2,
   Heart,
+  MessageSquareMore,
   MapPin,
   LayoutGrid,
-  Menu,
+  Palette,
   MessageCircleMore,
   PackageCheck,
   Phone,
+  ScanSearch,
   Search,
   ShieldCheck,
   ShoppingBag,
   Store,
+  Shirt,
   Truck,
-  X,
 } from 'lucide-react'
 import gsap from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import './App.css'
 import { trackEvent } from './lib/analytics'
 import { getApiUrl } from './lib/api'
-import industrialSewingWorkshop from './assets/product-cards/industrial-sewing-workshop.jpg'
-import footballJerseysBerlin from './assets/product-cards/football-jerseys-berlin.webp'
-import usSoccerJersey from './assets/product-cards/us-soccer-jersey.jpg'
-import oregonJerseyExchange from './assets/product-cards/oregon-jersey-exchange.webp'
+import { companyProfileContent } from './content/companyProfile'
+import {
+  sharedFooterGroups,
+  sharedHeaderTicker,
+  sharedHeaderUtilityMessage,
+  sharedNavGroups,
+  sharedUtilityLinks,
+} from './content/siteChrome'
+import {
+  defaultShowcaseCategories,
+  homepageProducts,
+  normalizeProducts,
+  productVisuals,
+  slugifyCategoryLabel,
+} from './content/productCatalog'
+import { findAudiencePathById, getAudiencePaths } from './content/marketAudience'
+import SiteFooter from './components/layout/SiteFooter'
+import SiteHeader from './components/layout/SiteHeader'
 
-const productVisuals = [
-  footballJerseysBerlin,
-  usSoccerJersey,
-  industrialSewingWorkshop,
-  oregonJerseyExchange,
+const qualityHighlights = [
+  {
+    title: 'Bahan nyaman',
+    detail: 'Material dipilih supaya enak dipakai dan tetap rapi.',
+    icon: Shirt,
+  },
+  {
+    title: 'Print tajam',
+    detail: 'Warna dan detail desain dijaga tetap bersih.',
+    icon: ScanSearch,
+  },
+  {
+    title: 'Jahit rapi',
+    detail: 'Finishing dibuat konsisten untuk pemakaian harian.',
+    icon: ShieldCheck,
+  },
+  {
+    title: 'Revisi mudah',
+    detail: 'Arah desain dibahas singkat dan jelas.',
+    icon: Palette,
+  },
+  {
+    title: 'Produksi aman',
+    detail: 'Alur kerja dibuat terpantau sampai selesai.',
+    icon: PackageCheck,
+  },
+  {
+    title: 'Layanan responsif',
+    detail: 'Tim cepat membantu saat ada pertanyaan order.',
+    icon: MessageSquareMore,
+  },
 ]
 
 const homepageContent = {
@@ -44,226 +86,15 @@ const homepageContent = {
     whatsapp_number: '6281234567890',
     response_time: 'Balas cepat di jam kerja untuk kebutuhan retail maupun bulk order',
   },
-  companyProfile: {
-    about:
-      'Kami adalah perusahaan spesialis pembuatan jersey custom terbaik yang berlokasi di Katapang, Kabupaten Bandung. Dengan pengalaman dan dedikasi tinggi dalam industri printing, kami siap memenuhi kebutuhan jersey untuk tim olahraga, komunitas, sekolah, event, hingga kebutuhan personal. Kami mengutamakan kualitas bahan, ketepatan desain, dan kepuasan dalam hasil produksi. Dapatkan layanan cepat, desain menarik, dan hasil cetak yang awet hanya di AHR PRINTING.',
-    history:
-      'Sejak tahun 2020, AHR PRINTING hadir dengan tekad dan keyakinan usaha yang berfokus pada layanan printing cetak jersey. Berawal dari langkah sederhana, kami menjadikan komitmen, integritas, dan konsistensi sebagai fondasi utama dalam perjalanan bisnis kami. Dalam setiap proses, kami berpegang pada nilai jujur, amanah, dan penuh tanggung jawab untuk melayani pelanggan sekaligus membangun kemitraan jangka panjang.',
-    commitment:
-      'Kini AHR PRINTING berkembang menjadi penyedia cetak jersey yang dipercaya karena selalu mengutamakan kualitas, ketepatan waktu, dan kepuasan pelanggan. Dengan dukungan tim yang solid dan semangat inovasi, kami berkomitmen menghadirkan produk berkualitas prima dengan hasil cetak yang tajam, tahan lama, desain yang sesuai identitas pelanggan, serta pelayanan ramah dan profesional. Kami juga terus berinvestasi pada pembaruan mesin dan peralatan produksi untuk menjaga produktivitas dan daya saing perusahaan.',
-    reasons: [
-      {
-        title: 'Terpercaya',
-        detail:
-          'Sejak berdiri pada tahun 2020, AHR PRINTING tumbuh dengan reputasi yang dibangun dari kejujuran, tanggung jawab, kualitas hasil cetak, dan ketepatan waktu pengerjaan.',
-      },
-      {
-        title: 'Responsif',
-        detail:
-          'Tim kami siap merespons kebutuhan pelanggan dengan cepat, memberi solusi yang sesuai, dan memastikan setiap proses pemesanan berjalan lancar dari awal sampai selesai.',
-      },
-      {
-        title: 'Service Excellent',
-        detail:
-          'Kami menghadirkan pelayanan yang ramah, profesional, dan berorientasi pada kepuasan sehingga hubungan jangka panjang dengan pelanggan dapat terjaga dengan baik.',
-      },
-    ],
-    vision:
-      'Menciptakan jersey berkualitas tinggi, terpercaya dengan kualitas terbaik dan pelayanan unggul.',
-    missions: [
-      'Memberikan jersey berkualitas tinggi dengan standar cetak terbaik.',
-      'Menyediakan desain yang kreatif dan inovatif.',
-      'Menjaga ketepatan waktu dalam setiap proses produksi.',
-      'Menjalin hubungan jangka panjang dengan pelanggan melalui layanan profesional.',
-    ],
-    address: {
-      label: 'Workshop & Kantor AHR Printing',
-      line: 'Jl. Bojong Tanjung No.19, RW.005, Sangkanhurip, Kec. Katapang, Kabupaten Bandung, Jawa Barat 40921',
-      mapUrl: 'https://maps.app.goo.gl/68jDN3VNQZbLxG4o6',
-    },
-  },
-  utilityLinks: [
-    { label: 'Tentang Kami', href: '#about' },
-    { label: 'Visi & Misi', href: '#vision-mission' },
-    { label: 'FAQ', href: '#faq' },
-    { label: 'Alamat', href: '#contact' },
-  ],
-  footerGroups: [
-    {
-      title: 'Navigasi',
-      links: [
-        { label: 'Home', href: '#hero' },
-        { label: 'Tentang Kami', href: '#about' },
-        { label: 'Produk', href: '#products' },
-        { label: 'Kontak', href: '#contact' },
-      ],
-    },
-    {
-      title: 'Layanan',
-      links: [
-        { label: 'Custom Jersey', href: '#products' },
-        { label: 'Corporate Kit', href: '#products' },
-        { label: 'Reorder Support', href: '#process' },
-        { label: 'Konsultasi Desain', href: '#final-cta' },
-      ],
-    },
-    {
-      title: 'Informasi',
-      links: [
-        { label: 'Sejarah Kami', href: '#about' },
-        { label: 'Visi & Misi', href: '#vision-mission' },
-        { label: 'FAQ', href: '#faq' },
-        { label: 'Alamat Lengkap', href: '#contact' },
-      ],
-    },
-  ],
-  navGroups: [
-    {
-      id: 'custom-jersey',
-      label: 'CUSTOM JERSEY',
-      columns: [
-        {
-          title: 'Produk Utama',
-          links: [
-            { label: 'Jersey Tim', href: '#products' },
-            { label: 'Jersey Event', href: '#products' },
-            { label: 'Corporate Kit', href: '#products' },
-            { label: 'Order Personal', href: '#final-cta' },
-          ],
-        },
-        {
-          title: 'Alur Pesan',
-          links: [
-            { label: 'Konsultasi Awal', href: '#process' },
-            { label: 'Desain', href: '#process' },
-            { label: 'Produksi', href: '#process' },
-            { label: 'Pengiriman', href: '#contact' },
-          ],
-        },
-      ],
-      feature: {
-        title: 'Mulai dari kebutuhan nyata',
-        body: 'Custom jersey AHR dirancang untuk tim, komunitas, sekolah, event, dan kebutuhan personal dengan hasil yang rapi dan siap dipakai.',
-      },
-    },
-    {
-      id: 'katalog',
-      label: 'KATALOG',
-      columns: [
-        {
-          title: 'Segmentasi',
-          links: [
-            { label: 'Tim Olahraga', href: '#products' },
-            { label: 'Sekolah & Kampus', href: '#products' },
-            { label: 'Komunitas', href: '#products' },
-            { label: 'Corporate', href: '#products' },
-          ],
-        },
-        {
-          title: 'Kebutuhan',
-          links: [
-            { label: 'MOQ & Harga', href: '#products' },
-            { label: 'Request Sample', href: '#final-cta' },
-            { label: 'Reorder', href: '#process' },
-            { label: 'Tanya Produk', href: '#contact' },
-          ],
-        },
-      ],
-      feature: {
-        title: 'Katalog yang relevan',
-        body: 'Pilihan produk difokuskan pada jenis order yang paling sering dibutuhkan pelanggan AHR, bukan menu retail generik.',
-      },
-    },
-    {
-      id: 'layanan',
-      label: 'LAYANAN',
-      columns: [
-        {
-          title: 'Pelayanan',
-          links: [
-            { label: 'Konsultasi Desain', href: '#final-cta' },
-            { label: 'Proses Produksi', href: '#process' },
-            { label: 'Quality Control', href: '#process' },
-            { label: 'Support Reorder', href: '#faq' },
-          ],
-        },
-        {
-          title: 'Keunggulan',
-          links: [
-            { label: 'Terpercaya', href: '#about' },
-            { label: 'Responsif', href: '#about' },
-            { label: 'Service Excellent', href: '#about' },
-            { label: 'Layanan Cepat', href: '#contact' },
-          ],
-        },
-      ],
-      feature: {
-        title: 'Layanan yang bisa diandalkan',
-        body: 'Mulai dari briefing sampai hasil jadi, semua tahapan dibuat jelas agar pelanggan merasa aman selama proses order.',
-      },
-    },
-    {
-      id: 'tentang',
-      label: 'TENTANG KAMI',
-      columns: [
-        {
-          title: 'Profil AHR',
-          links: [
-            { label: 'Tentang Kami', href: '#about' },
-            { label: 'Sejarah Kami', href: '#about' },
-            { label: 'Visi & Misi', href: '#vision-mission' },
-            { label: 'Alamat Lengkap', href: '#contact' },
-          ],
-        },
-        {
-          title: 'Komitmen',
-          links: [
-            { label: 'Kualitas Bahan', href: '#about' },
-            { label: 'Ketepatan Desain', href: '#about' },
-            { label: 'Ketepatan Waktu', href: '#vision-mission' },
-            { label: 'Hubungan Jangka Panjang', href: '#vision-mission' },
-          ],
-        },
-      ],
-      feature: {
-        title: 'Perusahaan yang terus bertumbuh',
-        body: 'AHR PRINTING berkembang dari fondasi kejujuran, amanah, dan tanggung jawab untuk menjaga kepercayaan pelanggan.',
-      },
-    },
-    {
-      id: 'faq',
-      label: 'FAQ',
-      columns: [
-        {
-          title: 'Pertanyaan Umum',
-          links: [
-            { label: 'MOQ', href: '#faq' },
-            { label: 'Sample Fisik', href: '#faq' },
-            { label: 'Estimasi Produksi', href: '#faq' },
-            { label: 'Invoice & PO', href: '#faq' },
-          ],
-        },
-        {
-          title: 'Butuh Jawaban Cepat',
-          links: [
-            { label: 'Chat WhatsApp', href: '#contact' },
-            { label: 'Isi Form Inquiry', href: '#final-cta' },
-            { label: 'Lihat Proses', href: '#process' },
-            { label: 'Lokasi Workshop', href: '#contact' },
-          ],
-        },
-      ],
-      feature: {
-        title: 'Jawaban sebelum order',
-        body: 'FAQ dibuat untuk menjawab keberatan yang paling sering muncul sebelum pelanggan masuk ke tahap konsultasi lebih lanjut.',
-      },
-    },
-  ],
-  ticker: 'AHR Unified Homepage. Bulk order consultation and retail collection in one flow.',
+  companyProfile: companyProfileContent,
+  utilityLinks: sharedUtilityLinks,
+  footerGroups: sharedFooterGroups,
+  navGroups: sharedNavGroups,
+  ticker: sharedHeaderTicker,
   hero: {
     title: 'Produksi jersey kustom yang rapi, terbuka, dan nyaman diikuti prosesnya.',
     body:
-      'AHR hadir sebagai partner produksi yang profesional tapi tetap akrab. Detail teknis kami jelaskan dengan sederhana, prosesnya terlihat jelas, dan alurnya dibuat nyaman untuk buyer retail maupun bulk order.',
+      'Custom jersey untuk tim, komunitas, sekolah, event, dan personal dengan alur yang jelas dari desain sampai pengiriman.',
     primaryCta: 'Lihat pilihan',
     secondaryCta: 'Diskusi kebutuhan',
     eyebrow: 'AHR Production Motion',
@@ -296,48 +127,7 @@ const homepageContent = {
       icon: Truck,
     },
   ],
-  products: [
-    {
-      name: 'Matchday Teamwear',
-      category: 'Teamwear',
-      price: 'Rp 189.000',
-      tone: 'navy',
-      audience: 'Tim & Komunitas',
-      detail: 'Untuk klub, sekolah, dan komunitas yang butuh set jersey seragam dengan size run rapi.',
-      image: footballJerseysBerlin,
-      imagePosition: 'center center',
-    },
-    {
-      name: 'Training Capsule Top',
-      category: 'Retail Ready',
-      price: 'Rp 149.000',
-      tone: 'sand',
-      audience: 'Personal',
-      detail: 'Pilihan ringan untuk order personal, custom nama, atau koleksi latihan yang lebih kasual.',
-      image: usSoccerJersey,
-      imagePosition: 'center 26%',
-    },
-    {
-      name: 'Corporate Active Kit',
-      category: 'B2B Capsule',
-      price: 'Rp 229.000',
-      tone: 'orange',
-      audience: 'Event & Brand',
-      detail: 'Cocok untuk brand activation, seragam event, dan kebutuhan apparel perusahaan dalam jumlah lebih besar.',
-      image: industrialSewingWorkshop,
-      imagePosition: 'center center',
-    },
-    {
-      name: 'Personalized Fan Jersey',
-      category: 'Personal Order',
-      price: 'Rp 129.000',
-      tone: 'black',
-      audience: 'Custom Satuan',
-      detail: 'Jalur cepat untuk customer satuan yang ingin desain personal tetap terasa premium.',
-      image: oregonJerseyExchange,
-      imagePosition: 'center 30%',
-    },
-  ],
+  products: homepageProducts,
   clientBrands: [
     'Komunitas Futsal Bandung',
     'School League Series',
@@ -418,10 +208,9 @@ const defaultLeadForm = {
   phone: '',
   organization: '',
   quantity_estimate: '',
-  segment: 'teamwear-b2b',
+  segment: 'b2c-direct',
 }
 const capabilityIcons = [MessageCircleMore, LayoutGrid, ShieldCheck, Truck]
-const productTones = ['navy', 'sand', 'orange', 'black']
 const heroMessageFallback =
   'Halo AHR, saya ingin konsultasi bulk order untuk custom jersey dan teamwear.'
 const finalMessageFallback =
@@ -429,6 +218,7 @@ const finalMessageFallback =
 const footerMessageFallback =
   'Halo AHR, saya ingin berdiskusi tentang kebutuhan jersey atau apparel kustom.'
 const defaultMapLabel = 'Buka lokasi AHR Printing di Google Maps'
+
 function getUtmParams() {
   const searchParams = new URLSearchParams(window.location.search)
 
@@ -451,7 +241,7 @@ function buildWhatsAppUrl(phoneNumber, message, ctaContext) {
 }
 
 function buildInquiryMessage(leadForm) {
-  return `Halo AHR, saya ${leadForm.name} dari ${leadForm.organization || 'tim/instansi'} ingin konsultasi ${leadForm.segment} sekitar ${leadForm.quantity_estimate || 'belum ditentukan'} pcs.`
+  return `Halo AHR, saya ${leadForm.name} dari ${leadForm.organization || 'tim/instansi'} ingin konsultasi ${leadForm.segment_label || leadForm.segment} sekitar ${leadForm.quantity_estimate || 'belum ditentukan'} pcs.`
 }
 
 function normalizeLinks(links = [], defaultHref = '#final-cta') {
@@ -480,6 +270,7 @@ function normalizeLandingPageContent(payload = {}) {
   const trustBar = Array.isArray(payload.trust_bar) ? payload.trust_bar : []
   const testimonials = Array.isArray(payload.testimonials) ? payload.testimonials : []
   const pricingPackages = Array.isArray(payload.pricing_packages) ? payload.pricing_packages : []
+  const audiencePaths = getAudiencePaths(payload.audience_paths)
 
   return {
     ...homepageContent,
@@ -504,27 +295,7 @@ function normalizeLandingPageContent(payload = {}) {
             label: item.label,
           }))
         : homepageContent.stats,
-    products:
-      catalogItems.length > 0
-        ? catalogItems.map((item, index) => ({
-            id: item.id || `product-${index + 1}`,
-            name: item.name,
-            category:
-              catalogCategories.find((category) => category.id === item.category)?.label || item.category,
-            categoryId: item.category,
-            price: item.price_hint,
-            detail: `${item.material} • ${item.moq}`,
-            tone: productTones[index % productTones.length],
-            audience: homepageContent.products[index % homepageContent.products.length]?.audience || 'Pilihan Custom',
-            image: productVisuals[index % productVisuals.length],
-            imagePosition:
-              homepageContent.products[index % homepageContent.products.length]?.imagePosition || 'center center',
-          }))
-        : homepageContent.products.map((item, index) => ({
-            ...item,
-            id: item.id || `product-${index + 1}`,
-            categoryId: item.category?.toLowerCase().replace(/\s+/g, '-') || `category-${index + 1}`,
-          })),
+    products: normalizeProducts(catalogItems),
     processSteps:
       processSteps.length > 0
         ? processSteps.map((item, index) => ({
@@ -579,6 +350,9 @@ function normalizeLandingPageContent(payload = {}) {
         : homepageContent.pricingPackages,
     testimonials,
     catalogCategories,
+    audiencePaths,
+    leadForm: payload.lead_form || {},
+    marketPositioning: payload.market_positioning || {},
   }
 }
 
@@ -587,25 +361,12 @@ function App() {
   const faqContentRefs = useRef([])
   const [landingPageContent, setLandingPageContent] = useState(homepageContent)
   const [openFaqIndex, setOpenFaqIndex] = useState(0)
-  const [activeNav, setActiveNav] = useState('custom-jersey')
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
-  const [menuOpen, setMenuOpen] = useState(false)
   const [activeCatalogFilter, setActiveCatalogFilter] = useState('all')
-  const [productSlideIndex, setProductSlideIndex] = useState(0)
-  const [cardsPerView, setCardsPerView] = useState(4)
   const [leadForm, setLeadForm] = useState(defaultLeadForm)
   const [leadStatus, setLeadStatus] = useState({ state: 'idle', message: '' })
   const contactProfile = landingPageContent.brand
   const companyProfile = landingPageContent.companyProfile
-  const leadSegments =
-    landingPageContent.catalogCategories?.length > 0
-      ? landingPageContent.catalogCategories
-      : [
-          { id: 'teamwear-b2b', label: 'Teamwear B2B' },
-          { id: 'school-event', label: 'School / Campus Event' },
-          { id: 'corporate-kit', label: 'Corporate Kit' },
-          { id: 'retail-collab', label: 'Retail Collab' },
-        ]
+  const leadSegments = getAudiencePaths(landingPageContent.audiencePaths)
 
   useEffect(() => {
     const start = Date.now()
@@ -641,7 +402,7 @@ function App() {
     window.addEventListener('scroll', handleScroll, { passive: true })
     window.addEventListener('beforeunload', handleUnload)
 
-    fetch(getApiUrl('/api/b2b/landing-page'), {
+    fetch(getApiUrl('/api/catalog/landing-page'), {
       headers: {
         Accept: 'application/json',
       },
@@ -665,34 +426,6 @@ function App() {
     return () => {
       window.removeEventListener('scroll', handleScroll)
       window.removeEventListener('beforeunload', handleUnload)
-    }
-  }, [])
-
-  useEffect(() => {
-    const updateCardsPerView = () => {
-      if (window.innerWidth <= 720) {
-        setCardsPerView(1)
-        return
-      }
-
-      if (window.innerWidth <= 1080) {
-        setCardsPerView(2)
-        return
-      }
-
-      if (window.innerWidth <= 1320) {
-        setCardsPerView(3)
-        return
-      }
-
-      setCardsPerView(4)
-    }
-
-    updateCardsPerView()
-    window.addEventListener('resize', updateCardsPerView)
-
-    return () => {
-      window.removeEventListener('resize', updateCardsPerView)
     }
   }, [])
 
@@ -854,14 +587,7 @@ function App() {
 
   useEffect(() => {
     const availableLeadSegments =
-      landingPageContent.catalogCategories?.length > 0
-        ? landingPageContent.catalogCategories
-        : [
-            { id: 'teamwear-b2b', label: 'Teamwear B2B' },
-            { id: 'school-event', label: 'School / Campus Event' },
-            { id: 'corporate-kit', label: 'Corporate Kit' },
-            { id: 'retail-collab', label: 'Retail Collab' },
-          ]
+      getAudiencePaths(landingPageContent.audiencePaths)
 
     if (availableLeadSegments.some((segment) => segment.id === leadForm.segment)) {
       return
@@ -943,28 +669,24 @@ function App() {
     })
   }, [openFaqIndex, landingPageContent.faqs])
 
-  const activeGroup =
-    landingPageContent.navGroups.find((group) => group.id === activeNav) ?? landingPageContent.navGroups[0]
-  const catalogFilters =
+  const showcaseCategories =
     landingPageContent.catalogCategories?.length > 0
-      ? [{ id: 'all', label: 'Semua' }, ...landingPageContent.catalogCategories]
-      : [{ id: 'all', label: 'Semua' }]
+      ? landingPageContent.catalogCategories.map((category, index) => ({
+          id: category.id,
+          label: category.label,
+          image: defaultShowcaseCategories[index % defaultShowcaseCategories.length]?.image,
+          position: defaultShowcaseCategories[index % defaultShowcaseCategories.length]?.position || 'center center',
+          audience: category.audience,
+        }))
+      : defaultShowcaseCategories.map((category) => ({
+          ...category,
+          id: slugifyCategoryLabel(category.label),
+        }))
+  const catalogFilters = [{ id: 'all', label: 'Semua' }, ...showcaseCategories]
   const visibleProducts =
     activeCatalogFilter === 'all'
       ? landingPageContent.products
       : landingPageContent.products.filter((product) => product.categoryId === activeCatalogFilter)
-  const maxProductSlideIndex = Math.max(0, visibleProducts.length - cardsPerView)
-  const productTrackStyle = {
-    transform: `translateX(-${productSlideIndex * (100 / cardsPerView)}%)`,
-  }
-
-  useEffect(() => {
-    setProductSlideIndex(0)
-  }, [activeCatalogFilter])
-
-  useEffect(() => {
-    setProductSlideIndex((current) => Math.min(current, maxProductSlideIndex))
-  }, [cardsPerView, maxProductSlideIndex])
 
   const scrollToSection = (sectionId) => {
     const target = document.querySelector(sectionId)
@@ -993,6 +715,9 @@ function App() {
 
     const payload = {
       ...leadForm,
+      segment_label: findAudiencePathById(leadSegments, leadForm.segment)?.label,
+      market_type: findAudiencePathById(leadSegments, leadForm.segment)?.audience || 'hybrid',
+      buyer_type: findAudiencePathById(leadSegments, leadForm.segment)?.journey || 'consultative_bulk',
       source_page: window.location.pathname,
       cta_context: 'unified-homepage-form',
       referrer_url: document.referrer || undefined,
@@ -1000,7 +725,7 @@ function App() {
     }
 
     try {
-      const response = await fetch(getApiUrl('/api/b2b/leads'), {
+      const response = await fetch(getApiUrl('/api/catalog/leads'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -1067,12 +792,33 @@ function App() {
     )
   }
 
+  const handleProductNavigate = (product) => {
+    trackEvent('product_detail_open', {
+      product_name: product.name,
+      product_category: product.category,
+      destination: `/produk/${product.slug}`,
+    })
+  }
+
   const handleCatalogFilterClick = (filterId) => {
     trackEvent('catalog_filter_click', {
       filter_category: filterId,
       previous_filter: activeCatalogFilter,
     })
     setActiveCatalogFilter(filterId)
+  }
+
+  const handleCategoryNavigation = (category) => {
+    trackEvent('category_navigation_click', {
+      category_name: category.label,
+      destination: 'products',
+    })
+
+    if (category.id) {
+      setActiveCatalogFilter(category.id)
+    }
+
+    scrollToSection('#products')
   }
 
   const handlePricingInquiry = (pricingPackage) => {
@@ -1089,127 +835,29 @@ function App() {
 
   return (
     <div className="app-shell" ref={rootRef}>
-      <header className="site-header">
-        <div className="utility-links-row">
-          <div className="utility-bar">
-            <span className="utility-message">Konsultasi desain cepat untuk order tim, komunitas, dan event.</span>
-            <a href="#contact">Lihat workshop</a>
-          </div>
-          <div className="utility-links">
-            {landingPageContent.utilityLinks.map((item) => (
-              <a href={item.href} key={item.label}>
-                {item.label}
-              </a>
-            ))}
-          </div>
-        </div>
-
-        <div
-          className="header-menu-shell"
-          onMouseLeave={() => {
-            setMenuOpen(false)
-          }}
-        >
-          <div className="main-header">
-            <a className="brand" href="#hero" aria-label="AHR Home">
-              <img className="brand-mark" src="/ahr-brand-logo.webp" alt="AHR logo" />
-            </a>
-
-            <button
-              className="mobile-menu-button"
-              type="button"
-              aria-label="Toggle menu"
-              onClick={() => setMobileMenuOpen((current) => !current)}
-            >
-              {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
-            </button>
-
-            <nav className={mobileMenuOpen ? 'main-nav open' : 'main-nav'}>
-              {landingPageContent.navGroups.map((item) => (
-                <button
-                  className={activeNav === item.id ? 'nav-tab active' : 'nav-tab'}
-                  key={item.id}
-                  type="button"
-                  onMouseEnter={() => {
-                    setActiveNav(item.id)
-                    setMenuOpen(true)
-                  }}
-                  onFocus={() => {
-                    setActiveNav(item.id)
-                    setMenuOpen(true)
-                  }}
-                  onClick={() => {
-                    setActiveNav(item.id)
-                    setMenuOpen((current) => !current)
-                    trackEvent('nav_click', { nav_item: item.id })
-                  }}
-                >
-                  {item.label}
-                </button>
-              ))}
-            </nav>
-
-            <div className="header-actions">
-              <label className="search-box">
-                <input
-                  aria-label="Cari section atau kebutuhan"
-                  placeholder="Cari produk atau info"
-                  onFocus={() => scrollToSection('#products')}
-                  readOnly
-                />
-                <Search size={18} />
-              </label>
-              <button
-                className="header-cta"
-                type="button"
-                aria-label="Konsultasi Produk"
-                onClick={() => scrollToSection('#final-cta')}
-              >
-                <ShoppingBag size={18} />
-                <span>Konsultasi</span>
-              </button>
-            </div>
-          </div>
-
-          <div className="ticker-bar">
-            <span>{landingPageContent.ticker}</span>
-          </div>
-
-          <section
-            className={menuOpen || mobileMenuOpen ? 'mega-menu visible' : 'mega-menu'}
-            aria-label="Category menu"
-            onMouseEnter={() => setMenuOpen(true)}
-          >
-            <div className="mega-menu-columns">
-              {activeGroup.columns.map((column) => (
-                <div key={column.title}>
-                  <h3>{column.title}</h3>
-                  <ul>
-                    {normalizeLinks(column.links, '#products').map((link) => (
-                      <li key={link.label}>
-                        <a href={link.href}>{link.label}</a>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ))}
-            </div>
-
-            <aside className="mega-menu-feature">
-              <div className="feature-thumb" />
-              <div className="feature-card-body">
-                <strong>{activeGroup.feature.title}</strong>
-                <p>{activeGroup.feature.body}</p>
-              </div>
-            </aside>
-          </section>
-        </div>
-      </header>
+      <SiteHeader
+        brandHref="/"
+        navGroups={landingPageContent.navGroups}
+        ticker={landingPageContent.ticker}
+        utilityAction={{ href: '#contact', label: 'Lihat workshop' }}
+        utilityLinks={landingPageContent.utilityLinks}
+        utilityMessage={sharedHeaderUtilityMessage}
+        onNavInteraction={(navItem, surface) => trackEvent('nav_click', { nav_item: navItem, surface })}
+        onPrimaryAction={() => {
+          trackEvent('nav_click', {
+            nav_item: 'konsultasi',
+            surface: 'header-cta',
+          })
+          scrollToSection('#final-cta')
+        }}
+        onUtilityInteraction={(label, surface) => trackEvent('nav_click', { nav_item: label, surface })}
+        primaryActionLabel="Konsultasi"
+      />
 
       <main>
         <section className="hero-video-section" id="hero">
           <video
-            className="hero-video"
+            className="hero-video hero-video-desktop"
             autoPlay
             loop
             muted
@@ -1217,30 +865,24 @@ function App() {
             preload="auto"
             poster="/ahr-logo.webp"
           >
-            <source src="/videos/ahr-hero.mp4" type="video/mp4" />
+            <source src="/videos/ahr-hero-desktop.m4v" type="video/mp4" />
+          </video>
+          <video
+            className="hero-video hero-video-mobile"
+            autoPlay
+            loop
+            muted
+            playsInline
+            preload="auto"
+            poster="/ahr-logo.webp"
+          >
+            <source src="/videos/ahr-hero-mobile.mp4" type="video/mp4" />
           </video>
           <div className="hero-orb hero-orb-one" />
           <div className="hero-orb hero-orb-two" />
           <div className="hero-overlay" />
           <div className="hero-content">
-            <span className="hero-eyebrow">{landingPageContent.hero.eyebrow}</span>
-            <h1>{landingPageContent.hero.title}</h1>
-            <p>{landingPageContent.hero.body}</p>
             <div className="hero-cta-row">
-              <a
-                className="cta-button cta-button-light"
-                href="#products"
-                onClick={() =>
-                  trackEvent('hero_cta_click', {
-                    button_text: landingPageContent.hero.primaryCta,
-                    button_type: 'anchor',
-                    intent: 'lihat-katalog',
-                  })
-                }
-              >
-                {landingPageContent.hero.primaryCta}
-                <ChevronRight size={18} />
-              </a>
               <button
                 className="cta-button cta-button-outline"
                 onClick={() =>
@@ -1257,6 +899,20 @@ function App() {
               >
                 {landingPageContent.hero.secondaryCta}
               </button>
+              <a
+                className="cta-button cta-button-light"
+                href="#products"
+                onClick={() =>
+                  trackEvent('hero_cta_click', {
+                    button_text: landingPageContent.hero.primaryCta,
+                    button_type: 'anchor',
+                    intent: 'lihat-katalog',
+                  })
+                }
+              >
+                {landingPageContent.hero.primaryCta}
+                <ChevronRight size={18} />
+              </a>
             </div>
           </div>
         </section>
@@ -1273,10 +929,9 @@ function App() {
         <section className="content-block section-soft" data-reveal>
           <div className="section-heading" data-reveal-item>
             <span>AHR Unified Direction</span>
-            <h2>Struktur visual yang modern, tapi tetap dekat dengan cara kerja AHR sehari-hari.</h2>
+            <h2>Tampilan dibuat lebih ringan agar orang cepat paham pilihan dan alur ordernya.</h2>
             <p>
-              Bagian atas dibuat lebih ringan dan eksploratif, sementara isi halamannya tetap
-              menonjolkan capability produksi, alur kerja, dan titik kontak yang jelas.
+              Fokus utamanya tetap pada produk, proses, dan titik kontak yang mudah dijangkau.
             </p>
           </div>
 
@@ -1295,56 +950,34 @@ function App() {
           </div>
         </section>
 
-        <section className="content-block section-plain company-story" id="about" data-reveal>
-          <div className="about-hero-grid">
-            <div className="section-heading about-heading" data-reveal-item>
-              <span>Tentang Kami</span>
-              <h2>AHR PRINTING hadir sebagai spesialis jersey custom yang bertumbuh dari komitmen dan konsistensi.</h2>
-              <p>{companyProfile.about}</p>
+        <section className="content-block section-plain category-showcase" id="categories" data-reveal>
+          <div className="section-heading heading-inline" data-reveal-item>
+            <div>
+              <span>Temukan Kategori</span>
+              <h2>Pilih kategori dulu, lalu lanjut lihat koleksinya.</h2>
             </div>
+            <a href="#products">
+              Lihat produk
+              <ArrowRight size={16} />
+            </a>
+          </div>
 
-            <div className="about-visual-stack" data-reveal-item>
-              <div
-                className="about-visual about-visual-primary"
-                style={{ backgroundImage: `url(${industrialSewingWorkshop})` }}
-              />
-              <div className="about-visual-column">
-                <div
-                  className="about-visual about-visual-secondary"
-                  style={{ backgroundImage: `url(${footballJerseysBerlin})` }}
+          <div className="category-slider" data-reveal-item>
+            {showcaseCategories.map((category) => (
+              <button
+                className="category-card"
+                key={category.id || category.label}
+                type="button"
+                onClick={() => handleCategoryNavigation(category)}
+              >
+                <img
+                  className="category-card-image"
+                  src={category.image}
+                  alt={category.label}
+                  style={{ objectPosition: category.position }}
                 />
-                <article className="about-highlight-card">
-                  <strong>Katapang, Kabupaten Bandung</strong>
-                  <p>
-                    Workshop kami menjadi titik kerja untuk desain, printing, finishing, dan koordinasi
-                    order agar hasil tetap rapi, tajam, dan tahan lama.
-                  </p>
-                  <div className="about-highlight-meta">
-                    <span>Sejak 2020</span>
-                    <span>Fokus pada jersey custom</span>
-                  </div>
-                </article>
-              </div>
-            </div>
-          </div>
-
-          <div className="story-grid">
-            <article className="story-card story-card-primary" data-reveal-item>
-              <span>Sejarah dan Komitmen Kami</span>
-              <p>{companyProfile.history}</p>
-            </article>
-            <article className="story-card story-card-secondary" data-reveal-item>
-              <span>Perkembangan Perusahaan</span>
-              <p>{companyProfile.commitment}</p>
-            </article>
-          </div>
-
-          <div className="reason-grid">
-            {companyProfile.reasons.map((reason) => (
-              <article className="reason-card" key={reason.title} data-reveal-item>
-                <h3>{reason.title}</h3>
-                <p>{reason.detail}</p>
-              </article>
+                <span>{category.label}</span>
+              </button>
             ))}
           </div>
         </section>
@@ -1353,12 +986,8 @@ function App() {
           <div className="section-heading heading-inline" data-reveal-item>
             <div>
               <span>Discover Our Product</span>
-              <h2>Lihat dulu pilihan yang paling cocok, lalu lanjutkan ke jalur order yang terasa pas.</h2>
-              <p>
-                Kami buat bagian ini tetap ringan supaya orang bisa cepat menangkap pilihannya.
-                Mau pesan untuk tim, komunitas, sekolah, event, atau kebutuhan personal, semuanya
-                tetap terasa gampang dijelajahi sebelum masuk ke tahap konsultasi.
-              </p>
+              <h2>Pilih model yang paling dekat dengan kebutuhanmu.</h2>
+              <p>Fokus pada visual, geser untuk lihat koleksi.</p>
             </div>
             <a href="#final-cta">
               Mulai konsultasi
@@ -1367,25 +996,25 @@ function App() {
           </div>
 
           <div className="discover-grid" data-reveal-item>
-            <article className="discover-intro-card">
-              <span>Pilih yang paling dekat</span>
-              <h3>Produk kami disusun supaya kamu bisa cepat menemukan yang paling nyambung dengan kebutuhanmu.</h3>
-              <p>
-                Ada yang cocok untuk pesanan rame-rame, ada juga yang pas untuk order personal atau
-                custom satuan. Tujuannya sederhana: biar kamu tidak perlu menebak-nebak harus mulai
-                dari mana.
-              </p>
-            </article>
+            <div className="quality-panel">
+              <div className="quality-panel-heading">
+                <h3>We offer quality</h3>
+                <p>Material terbaik, proses rapi, dan layanan yang tetap mudah diikuti.</p>
+              </div>
 
-            <div className="discover-audience-grid">
-              <article className="audience-card audience-card-b2b">
-                <span>Untuk pesanan ramai</span>
-                <strong>Pas untuk tim, sekolah, komunitas, event, dan kebutuhan kerja bareng.</strong>
-              </article>
-              <article className="audience-card audience-card-b2c">
-                <span>Untuk order personal</span>
-                <strong>Cocok buat custom nama, jumlah satuan, atau pilihan yang lebih simpel dan cepat.</strong>
-              </article>
+              <div className="quality-grid">
+                {qualityHighlights.map((item) => {
+                  const Icon = item.icon
+
+                  return (
+                  <article className="quality-card" key={item.title}>
+                    <Icon size={18} />
+                    <h4>{item.title}</h4>
+                    <p>{item.detail}</p>
+                  </article>
+                  )
+                })}
+              </div>
             </div>
           </div>
 
@@ -1404,59 +1033,42 @@ function App() {
 
           <div className="product-slider" data-reveal-item>
             <div className="product-slider-toolbar">
-              <p className="product-slider-meta">
-                Menampilkan {Math.min(cardsPerView, visibleProducts.length)} dari {visibleProducts.length} produk
-              </p>
-              <div className="product-slider-controls">
-                <button
-                  className="slider-button"
-                  type="button"
-                  aria-label="Produk sebelumnya"
-                  onClick={() => setProductSlideIndex((current) => Math.max(0, current - 1))}
-                  disabled={productSlideIndex === 0}
-                >
-                  <ChevronLeft size={18} />
-                </button>
-                <button
-                  className="slider-button"
-                  type="button"
-                  aria-label="Produk berikutnya"
-                  onClick={() =>
-                    setProductSlideIndex((current) => Math.min(maxProductSlideIndex, current + 1))
-                  }
-                  disabled={productSlideIndex >= maxProductSlideIndex}
-                >
-                  <ChevronRight size={18} />
-                </button>
-              </div>
+              <p className="product-slider-meta">{visibleProducts.length} produk. Geser ke samping untuk melihat semuanya.</p>
             </div>
 
             <div className="product-slider-viewport">
-              <div className="product-slider-track" style={productTrackStyle}>
+              <div className="product-slider-track">
                 {visibleProducts.map((product) => (
                   <article className={`product-card tone-${product.tone}`} key={product.name}>
-                    <div className="product-media">
-                      <img
-                        className="product-image"
-                        src={product.image}
-                        alt={product.name}
-                        style={{ objectPosition: product.imagePosition || 'center center' }}
-                      />
-                      <span className="product-audience">{product.audience}</span>
-                      <button
-                        className="wishlist-button"
-                        type="button"
-                        aria-label={`Tanya produk ${product.name}`}
-                        onClick={() => handleProductInquiry(product)}
-                      >
-                        <Heart size={18} />
-                      </button>
-                    </div>
-                    <div className="product-body">
-                      <span>{product.price}</span>
-                      <h3>{product.name}</h3>
-                      <p>{product.detail || product.category}</p>
-                    </div>
+                    <Link
+                      className="product-card-link"
+                      to={`/produk/${product.slug}`}
+                      state={{ product }}
+                      onClick={() => handleProductNavigate(product)}
+                      aria-label={`Lihat detail ${product.name}`}
+                    >
+                      <div className="product-media">
+                        <img
+                          className="product-image"
+                          src={product.image}
+                          alt={product.name}
+                          style={{ objectPosition: product.imagePosition || 'center center' }}
+                        />
+                      </div>
+                      <div className="product-body">
+                        <p className="product-category">{product.category}</p>
+                        <h3>{product.name}</h3>
+                        <span className="product-price">{product.price}</span>
+                      </div>
+                    </Link>
+                    <button
+                      className="wishlist-button"
+                      type="button"
+                      aria-label={`Tanya produk ${product.name}`}
+                      onClick={() => handleProductInquiry(product)}
+                    >
+                      <Heart size={18} />
+                    </button>
                   </article>
                 ))}
               </div>
@@ -1503,28 +1115,6 @@ function App() {
                 </article>
               )
             })}
-          </div>
-        </section>
-
-        <section className="content-block section-plain vision-layout" id="vision-mission" data-reveal>
-          <div className="section-heading" data-reveal-item>
-            <span>Visi & Misi</span>
-            <h2>Visi yang jelas dan misi yang konsisten menjadi dasar cara AHR PRINTING bekerja.</h2>
-          </div>
-
-          <div className="vision-grid">
-            <article className="vision-card" data-reveal-item>
-              <span>Visi AHR Printing</span>
-              <p>{companyProfile.vision}</p>
-            </article>
-            <article className="vision-card" data-reveal-item>
-              <span>Misi AHR Printing</span>
-              <ul className="mission-list">
-                {companyProfile.missions.map((mission) => (
-                  <li key={mission}>{mission}</li>
-                ))}
-              </ul>
-            </article>
           </div>
         </section>
 
@@ -1676,7 +1266,7 @@ function App() {
             <article className="faq-visual-card" data-reveal-item>
               <div
                 className="faq-visual-media"
-                style={{ backgroundImage: `url(${oregonJerseyExchange})` }}
+                style={{ backgroundImage: `url(${productVisuals[3]})` }}
               />
               <div className="faq-visual-copy">
                 <span>Masih ragu sebelum order?</span>
@@ -1787,73 +1377,26 @@ function App() {
 
       </main>
 
-      <footer className="site-footer">
-        <div className="footer-top">
-          <div className="footer-brand">
-            <img className="footer-logo" src="/ahr-brand-logo.webp" alt="AHR logo" />
-            <p>
-              CV AHR Printing bergerak di bidang apparel dan percetakan kustom, dengan fokus pada
-              sublimasi jersey serta kebutuhan teamwear yang rapi dan mudah diikuti prosesnya.
-            </p>
-            <div className="footer-social">
-              <a href={companyProfile.address.mapUrl} aria-label={defaultMapLabel} target="_blank" rel="noreferrer">
-                <MapPin size={18} />
-              </a>
-              <a href="#about" aria-label="Profil AHR">
-                <Store size={18} />
-              </a>
-              <a href="#final-cta" aria-label="WhatsApp AHR">
-                <Phone size={18} />
-              </a>
-            </div>
-          </div>
-
-          <div className="footer-links-grid">
-            {landingPageContent.footerGroups.map((group) => (
-              <div key={group.title}>
-                <h3>{group.title}</h3>
-                <ul>
-                  {normalizeLinks(group.links).map((link) => (
-                    <li key={link.label}>
-                      <a href={link.href}>{link.label}</a>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
-          </div>
-
-          <div className="footer-contact-card">
-            <span>Kontak</span>
-            <h3>{contactProfile.lockup}</h3>
-            <p>{contactProfile.tagline}</p>
-            <button
-              className="cta-button cta-button-dark"
-              onClick={() =>
-                handleWhatsAppClick(
-                  'nav_wa_click',
-                  {
-                    button_location: 'footer',
-                    intent: 'footer-whatsapp',
-                  },
-                  footerMessageFallback,
-                )
-              }
-            >
-              Hubungi via WhatsApp
-            </button>
-          </div>
-        </div>
-
-        <div className="footer-bottom">
-          <span>© 2026 AHR Printing. Dibangun untuk kebutuhan retail dan teamwear.</span>
-          <div className="footer-bottom-links">
-            <a href="#about">Tentang Kami</a>
-            <a href="#vision-mission">Visi & Misi</a>
-            <a href="#hero">Kembali ke atas</a>
-          </div>
-        </div>
-      </footer>
+      <SiteFooter
+        companyProfile={companyProfile}
+        contactProfile={contactProfile}
+        defaultMapLabel={defaultMapLabel}
+        footerGroups={landingPageContent.footerGroups.map((group) => ({
+          ...group,
+          links: normalizeLinks(group.links),
+        }))}
+        footerMessage={footerMessageFallback}
+        onWhatsAppClick={(message) =>
+          handleWhatsAppClick(
+            'nav_wa_click',
+            {
+              button_location: 'footer',
+              intent: 'footer-whatsapp',
+            },
+            message,
+          )
+        }
+      />
     </div>
   )
 }

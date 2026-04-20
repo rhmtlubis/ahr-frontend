@@ -1,10 +1,10 @@
 # AHR Frontend
 
-Frontend ini adalah landing page React + Vite untuk funnel B2B jersey AHR. Aplikasi ini berfungsi sebagai layer presentasi dan konversi yang mengonsumsi API Laravel di folder [backend](/opt/homebrew/var/www/ahr/backend).
+Frontend ini adalah landing page React + Vite untuk funnel jersey AHR. Aplikasi ini berfungsi sebagai layer presentasi dan konversi yang mengonsumsi API Laravel di folder [backend](/opt/homebrew/var/www/ahr/backend), dengan struktur baru yang memisahkan audience path B2B/B2C dari listing produk customer-direct.
 
 ## Peran Frontend
 
-- merender landing page B2B
+- merender landing page hybrid B2B/B2C
 - mengambil konten dinamis dari endpoint backend
 - menangkap UTM parameter dari URL
 - mengirim form lead ke backend
@@ -13,10 +13,13 @@ Frontend ini adalah landing page React + Vite untuk funnel B2B jersey AHR. Aplik
 
 ## Integrasi Backend
 
-Secara default frontend akan memanggil route berikut:
+Secara default frontend akan memanggil route generik berikut:
 
-- `GET /api/b2b/landing-page`
-- `POST /api/b2b/leads`
+- `GET /api/catalog/landing-page`
+- `GET /api/catalog/products/{slug}`
+- `POST /api/catalog/leads`
+
+Kompatibilitas route lama `/api/b2b/*` tetap dipertahankan di backend untuk migrasi bertahap.
 
 Saat development lokal, Vite sudah dipasang proxy `/api` ke backend Laravel sehingga frontend bisa dijalankan tanpa harus hardcode domain backend.
 
