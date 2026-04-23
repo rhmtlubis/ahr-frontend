@@ -25,7 +25,7 @@ import gsap from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import './App.css'
 import { initializeAnalytics, trackEvent, trackPageView } from './lib/analytics'
-import { getApiUrl } from './lib/api'
+import { fetchCatalogPriceQuote, getApiUrl, getPreferredCurrency } from './lib/api'
 import {
   getDefaultShowcaseCategories,
   getHomepageProducts,
@@ -35,6 +35,7 @@ import {
 } from './content/productCatalog'
 import { findAudiencePathById, getAudiencePaths } from './content/marketAudience'
 import CategoryFilterHeader from './components/landing/CategoryFilterHeader'
+import ProductPrice from './components/catalog/ProductPrice'
 import CookieConsentBanner from './components/layout/CookieConsentBanner'
 import SiteFooter from './components/layout/SiteFooter'
 import SiteHeader from './components/layout/SiteHeader'
@@ -250,6 +251,7 @@ function App() {
   const [activeCatalogFilter, setActiveCatalogFilter] = useState('all')
   const [leadForm, setLeadForm] = useState(defaultLeadForm)
   const [leadStatus, setLeadStatus] = useState({ state: 'idle', message: '' })
+  const [activeQuoteProduct, setActiveQuoteProduct] = useState('')
   const [consentPreferences, setConsentPreferencesState] = useState({
     analytics: 'unknown',
     personalization: 'unknown',
@@ -760,6 +762,41 @@ function App() {
     })
   }
 
+  const handleValidatedProductInquiry = async (product) => {
+    const eventParams = {
+      product_name: product.name,
+      product_category: product.category,
+      product_moq: product.detail?.split('â€¢')[1]?.trim() || 'not-set',
+    }
+
+    setActiveQuoteProduct(product.slug)
+
+    try {
+      const quote = await fetchCatalogPriceQuote({
+        productSlug: product.slug,
+        quantity: 1,
+        locale: language,
+        currency: getPreferredCurrency(language),
+        expectedTotalAmountMinor: product.pricing?.final_amount_minor ?? undefined,
+      })
+
+      handleWhatsAppClick(
+        'product_card_click',
+        {
+          ...eventParams,
+          quote_currency: quote?.currency,
+          quote_amount_minor: quote?.total_amount_minor,
+          amount_validated: quote?.amount_validation?.is_valid ?? true,
+        },
+        `Halo AHR, saya tertarik dengan ${product.name}. Mohon info detail bahan, MOQ, dan estimasi produksinya.${quote?.formatted_unit_amount ? ` Harga tervalidasi saat ini: ${quote.formatted_unit_amount}.` : ''}`,
+      )
+    } catch {
+      handleProductInquiry(product)
+    } finally {
+      setActiveQuoteProduct('')
+    }
+  }
+
   const handleCatalogFilterClick = (filterId) => {
     trackEvent('catalog_filter_click', {
       filter_category: filterId,
@@ -973,23 +1010,31 @@ function App() {
                     >
                       <div className="product-media">
                         <img
-                          className="product-image"
+                          className="product-image product-image-primary"
                           src={product.image}
                           alt={product.name}
                           style={{ objectPosition: product.imagePosition || 'center center' }}
                         />
+                        {product.gallery?.[1] ? (
+                          <img
+                            className="product-image product-image-hover"
+                            src={product.gallery[1]}
+                            alt={`${product.name} alternate`}
+                            style={{ objectPosition: product.imagePosition || 'center center' }}
+                          />
+                        ) : null}
                       </div>
                       <div className="product-body">
-                        <p className="product-category">{product.category}</p>
-                        <h3>{product.name}</h3>
-                        <span className="product-price">{product.price}</span>
+                        <ProductPrice product={product} />
+                        <h3 className="product-card-name">{product.name}</h3>
                       </div>
                     </Link>
                     <button
                       className="wishlist-button"
                       type="button"
                       aria-label={`${t('common.askProduct')} ${product.name}`}
-                      onClick={() => handleProductInquiry(product)}
+                      onClick={() => handleValidatedProductInquiry(product)}
+                      disabled={activeQuoteProduct === product.slug}
                     >
                       <Heart size={18} />
                     </button>
@@ -1031,23 +1076,31 @@ function App() {
                     >
                       <div className="product-media">
                         <img
-                          className="product-image"
+                          className="product-image product-image-primary"
                           src={product.image}
                           alt={product.name}
                           style={{ objectPosition: product.imagePosition || 'center center' }}
                         />
+                        {product.gallery?.[1] ? (
+                          <img
+                            className="product-image product-image-hover"
+                            src={product.gallery[1]}
+                            alt={`${product.name} alternate`}
+                            style={{ objectPosition: product.imagePosition || 'center center' }}
+                          />
+                        ) : null}
                       </div>
                       <div className="product-body">
-                        <p className="product-category">{product.category}</p>
-                        <h3>{product.name}</h3>
-                        <span className="product-price">{product.price}</span>
+                        <ProductPrice product={product} />
+                        <h3 className="product-card-name">{product.name}</h3>
                       </div>
                     </Link>
                     <button
                       className="wishlist-button"
                       type="button"
                       aria-label={`${t('common.askProduct')} ${product.name}`}
-                      onClick={() => handleProductInquiry(product)}
+                      onClick={() => handleValidatedProductInquiry(product)}
+                      disabled={activeQuoteProduct === product.slug}
                     >
                       <Heart size={18} />
                     </button>

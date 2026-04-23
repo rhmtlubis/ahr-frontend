@@ -1,5 +1,5 @@
 import { ChevronRight, Menu, ShoppingBag, X } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useLanguage } from '../../lib/i18n.jsx'
 
@@ -27,6 +27,12 @@ export default function SiteHeader({
   const [activeNav, setActiveNav] = useState(navGroups[0]?.id || '')
   const [menuOpen, setMenuOpen] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [desktopLanguageMenuOpen, setDesktopLanguageMenuOpen] = useState(false)
+  const [mobileLanguageMenuOpen, setMobileLanguageMenuOpen] = useState(false)
+  const [pendingDesktopLanguage, setPendingDesktopLanguage] = useState(language)
+  const [pendingMobileLanguage, setPendingMobileLanguage] = useState(language)
+  const desktopLanguageMenuRef = useRef(null)
+  const mobileLanguageMenuRef = useRef(null)
 
   const activeGroup = navGroups.find((group) => group.id === activeNav) ?? navGroups[0]
 
@@ -37,13 +43,54 @@ export default function SiteHeader({
 
   const handleMobileMenuClose = (source = 'sidebar') => {
     setMobileMenuOpen(false)
+    setMobileLanguageMenuOpen(false)
     onNavInteraction?.('mobile-menu-close', source)
   }
 
   const languageOptions = [
-    { value: 'id', label: t('language.options.id') },
-    { value: 'en', label: t('language.options.en') },
+    { value: 'id', label: t('language.options.id'), shortLabel: 'IND', flag: '🇮🇩' },
+    { value: 'en', label: t('language.options.en'), shortLabel: 'ENG', flag: '🇬🇧' },
   ]
+  const activeLanguageOption =
+    languageOptions.find((option) => option.value === language) ?? languageOptions[0]
+
+  useEffect(() => {
+    setPendingDesktopLanguage(language)
+    setPendingMobileLanguage(language)
+  }, [language])
+
+  useEffect(() => {
+    const handlePointerDown = (event) => {
+      const clickedDesktop = desktopLanguageMenuRef.current?.contains(event.target)
+      const clickedMobile = mobileLanguageMenuRef.current?.contains(event.target)
+
+      if (!clickedDesktop && !clickedMobile) {
+        setDesktopLanguageMenuOpen(false)
+        setMobileLanguageMenuOpen(false)
+      }
+    }
+
+    const handleEscape = (event) => {
+      if (event.key === 'Escape') {
+        setDesktopLanguageMenuOpen(false)
+        setMobileLanguageMenuOpen(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handlePointerDown)
+    document.addEventListener('keydown', handleEscape)
+
+    return () => {
+      document.removeEventListener('mousedown', handlePointerDown)
+      document.removeEventListener('keydown', handleEscape)
+    }
+  }, [])
+
+  const handleLanguageSave = (value) => {
+    setLanguage(value)
+    setDesktopLanguageMenuOpen(false)
+    setMobileLanguageMenuOpen(false)
+  }
 
   return (
     <header className="site-header product-page-header">
@@ -66,17 +113,67 @@ export default function SiteHeader({
             ) : null}
           </div>
           <div className="utility-links">
-            <div className="language-switcher" aria-label={t('language.switchLabel')}>
-              {languageOptions.map((option) => (
-                <button
-                  key={option.value}
-                  className={language === option.value ? 'language-switcher-button active' : 'language-switcher-button'}
-                  type="button"
-                  onClick={() => setLanguage(option.value)}
-                >
-                  {option.label}
-                </button>
-              ))}
+            <div className="language-switcher" ref={desktopLanguageMenuRef}>
+              <button
+                className={desktopLanguageMenuOpen ? 'language-switcher-trigger open' : 'language-switcher-trigger'}
+                type="button"
+                aria-haspopup="dialog"
+                aria-expanded={desktopLanguageMenuOpen}
+                aria-label={t('language.switchLabel')}
+                onClick={() => {
+                  setDesktopLanguageMenuOpen((current) => !current)
+                  setMobileLanguageMenuOpen(false)
+                  setPendingDesktopLanguage(language)
+                }}
+              >
+                <span className="language-switcher-flag-chip" aria-hidden="true">
+                  {activeLanguageOption.flag}
+                </span>
+              </button>
+
+              <div
+                className={desktopLanguageMenuOpen ? 'language-switcher-menu open' : 'language-switcher-menu'}
+                role="dialog"
+                aria-label={t('language.switchLabel')}
+              >
+                <div className="language-switcher-panel">
+                  <p className="language-switcher-title">
+                    {language === 'id' ? 'Pilih bahasa kamu' : 'Choose your language'}
+                  </p>
+                  <div className="language-switcher-options" role="radiogroup" aria-label={t('language.switchLabel')}>
+                    {languageOptions.map((option) => (
+                      <label
+                        key={option.value}
+                        className={
+                          pendingDesktopLanguage === option.value
+                            ? 'language-switcher-radio active'
+                            : 'language-switcher-radio'
+                        }
+                      >
+                        <input
+                          type="radio"
+                          name="desktop-language"
+                          value={option.value}
+                          checked={pendingDesktopLanguage === option.value}
+                          onChange={() => setPendingDesktopLanguage(option.value)}
+                        />
+                        <span className="language-switcher-radio-mark" aria-hidden="true" />
+                        <span className="language-switcher-radio-copy">
+                          <span>{option.label}</span>
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                  <button
+                    className="language-switcher-save"
+                    type="button"
+                    onClick={() => handleLanguageSave(pendingDesktopLanguage)}
+                  >
+                    <span>{language === 'id' ? 'Simpan' : 'Save'}</span>
+                    <ChevronRight size={18} />
+                  </button>
+                </div>
+              </div>
             </div>
             {utilityLinks.map((item) => (
               <a
@@ -97,17 +194,67 @@ export default function SiteHeader({
         <aside className={mobileMenuOpen ? 'mobile-sidebar open' : 'mobile-sidebar'} aria-label="Mobile navigation">
           <div className="mobile-sidebar-header">
             <img className="mobile-sidebar-logo" src="/ahr-brand-logo.webp" alt="AHR logo" />
-            <div className="mobile-language-switcher" aria-label={t('language.switchLabel')}>
-              {languageOptions.map((option) => (
-                <button
-                  key={option.value}
-                  className={language === option.value ? 'language-switcher-button active' : 'language-switcher-button'}
-                  type="button"
-                  onClick={() => setLanguage(option.value)}
-                >
-                  {option.value.toUpperCase()}
-                </button>
-              ))}
+            <div className="mobile-language-switcher" ref={mobileLanguageMenuRef}>
+              <button
+                className={mobileLanguageMenuOpen ? 'language-switcher-trigger open' : 'language-switcher-trigger'}
+                type="button"
+                aria-haspopup="dialog"
+                aria-expanded={mobileLanguageMenuOpen}
+                aria-label={t('language.switchLabel')}
+                onClick={() => {
+                  setMobileLanguageMenuOpen((current) => !current)
+                  setDesktopLanguageMenuOpen(false)
+                  setPendingMobileLanguage(language)
+                }}
+              >
+                <span className="language-switcher-flag-chip" aria-hidden="true">
+                  {activeLanguageOption.flag}
+                </span>
+              </button>
+
+              <div
+                className={mobileLanguageMenuOpen ? 'language-switcher-menu open' : 'language-switcher-menu'}
+                role="dialog"
+                aria-label={t('language.switchLabel')}
+              >
+                <div className="language-switcher-panel">
+                  <p className="language-switcher-title">
+                    {language === 'id' ? 'Pilih bahasa kamu' : 'Choose your language'}
+                  </p>
+                  <div className="language-switcher-options" role="radiogroup" aria-label={t('language.switchLabel')}>
+                    {languageOptions.map((option) => (
+                      <label
+                        key={option.value}
+                        className={
+                          pendingMobileLanguage === option.value
+                            ? 'language-switcher-radio active'
+                            : 'language-switcher-radio'
+                        }
+                      >
+                        <input
+                          type="radio"
+                          name="mobile-language"
+                          value={option.value}
+                          checked={pendingMobileLanguage === option.value}
+                          onChange={() => setPendingMobileLanguage(option.value)}
+                        />
+                        <span className="language-switcher-radio-mark" aria-hidden="true" />
+                        <span className="language-switcher-radio-copy">
+                          <span>{option.label}</span>
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                  <button
+                    className="language-switcher-save"
+                    type="button"
+                    onClick={() => handleLanguageSave(pendingMobileLanguage)}
+                  >
+                    <span>{language === 'id' ? 'Simpan' : 'Save'}</span>
+                    <ChevronRight size={18} />
+                  </button>
+                </div>
+              </div>
             </div>
             <button
               className="mobile-sidebar-close"
@@ -179,6 +326,7 @@ export default function SiteHeader({
             aria-label="Toggle menu"
             onClick={() => {
               setMobileMenuOpen((current) => !current)
+              setMobileLanguageMenuOpen(false)
               onNavInteraction?.('mobile-menu-toggle', 'header')
             }}
           >

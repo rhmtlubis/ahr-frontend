@@ -28,3 +28,39 @@ export function getBackendUrl(path) {
 export async function ensureCsrfCookie() {
   await apiClient.get('/sanctum/csrf-cookie')
 }
+
+export function getPreferredCurrency(locale = 'id') {
+  return locale === 'en' ? 'USD' : 'IDR'
+}
+
+export async function fetchCatalogPriceQuote({
+  productSlug,
+  quantity = 1,
+  locale = 'id',
+  currency = getPreferredCurrency(locale),
+  expectedTotalAmountMinor,
+}) {
+  const response = await fetch(getApiUrl('/api/catalog/pricing/quote'), {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+    },
+    body: JSON.stringify({
+      product_slug: productSlug,
+      quantity,
+      locale,
+      currency,
+      expected_total_amount_minor: expectedTotalAmountMinor,
+    }),
+  })
+
+  if (!response.ok) {
+    const payload = await response.json().catch(() => null)
+    throw new Error(payload?.message || 'Gagal memvalidasi amount produk')
+  }
+
+  const payload = await response.json()
+
+  return payload?.data || null
+}

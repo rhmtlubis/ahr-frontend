@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { ArrowLeft, Heart, MessageSquareMore, Info } from 'lucide-react'
+import { ArrowLeft, Heart, MessageSquareMore } from 'lucide-react'
 import gsap from 'gsap'
 import { Link, useSearchParams } from 'react-router-dom'
 import './App.css'
 import CategoryFilterHeader from './components/landing/CategoryFilterHeader'
+import ProductPrice from './components/catalog/ProductPrice'
 import CookieConsentBanner from './components/layout/CookieConsentBanner'
 import SiteFooter from './components/layout/SiteFooter'
 import SiteHeader from './components/layout/SiteHeader'
@@ -14,7 +15,7 @@ import {
   slugifyCategoryLabel,
 } from './content/productCatalog'
 import { initializeAnalytics, trackEvent, trackPageView } from './lib/analytics'
-import { getApiUrl } from './lib/api'
+import { fetchCatalogPriceQuote, getApiUrl, getPreferredCurrency } from './lib/api'
 import { getConsentPreferences, hasAnalyticsConsent, setConsentPreferences } from './lib/consent'
 import { useLanguage } from './lib/i18n.jsx'
 import { getLandingChromeContent } from './lib/landingContent'
@@ -91,6 +92,7 @@ export default function AllProductsPage() {
     analytics: 'unknown',
     personalization: 'unknown',
   })
+  const [activeQuoteProduct, setActiveQuoteProduct] = useState('')
 
   useEffect(() => {
     setConsentPreferencesState(getConsentPreferences())
@@ -279,21 +281,44 @@ export default function AllProductsPage() {
     })
   }
 
-  const handleProductInquiry = (product) => {
+  const handleProductInquiry = async (product) => {
+    setActiveQuoteProduct(product.slug)
+
     trackEvent('product_card_click', {
       product_name: product.name,
       product_category: product.category,
       source_page: '/all-products',
     })
 
-    window.open(
-      buildWhatsAppUrl(
-        listingContent.brand.whatsapp_number,
-        t('allProducts.inquiryMessage', { name: product.name }),
-      ),
-      '_blank',
-      'noopener,noreferrer',
-    )
+    try {
+      const quote = await fetchCatalogPriceQuote({
+        productSlug: product.slug,
+        quantity: 1,
+        locale: language,
+        currency: getPreferredCurrency(language),
+        expectedTotalAmountMinor: product.pricing?.final_amount_minor ?? undefined,
+      })
+
+      window.open(
+        buildWhatsAppUrl(
+          listingContent.brand.whatsapp_number,
+          `${t('allProducts.inquiryMessage', { name: product.name })}${quote?.formatted_unit_amount ? ` Harga tervalidasi saat ini: ${quote.formatted_unit_amount}.` : ''}`,
+        ),
+        '_blank',
+        'noopener,noreferrer',
+      )
+    } catch {
+      window.open(
+        buildWhatsAppUrl(
+          listingContent.brand.whatsapp_number,
+          t('allProducts.inquiryMessage', { name: product.name }),
+        ),
+        '_blank',
+        'noopener,noreferrer',
+      )
+    } finally {
+      setActiveQuoteProduct('')
+    }
   }
 
   const handleFooterWhatsApp = (message) => {
@@ -388,35 +413,23 @@ export default function AllProductsPage() {
                 >
                   <div className="product-media">
                     <img
-                      className="product-image"
+                      className="product-image product-image-primary"
                       src={product.image}
                       alt={product.name}
                       style={{ objectPosition: product.imagePosition || 'center center' }}
                     />
+                    {product.gallery?.[1] ? (
+                      <img
+                        className="product-image product-image-hover"
+                        src={product.gallery[1]}
+                        alt={`${product.name} alternate`}
+                        style={{ objectPosition: product.imagePosition || 'center center' }}
+                      />
+                    ) : null}
                   </div>
                   <div className="product-body">
-                    <p className="product-category">{product.category}</p>
-                    <div className="product-title-row">
-                      <h3>{product.name}</h3>
-                      {product.summary ? (
-                        <div
-                          className="product-info-tooltip"
-                          role="tooltip"
-                          aria-label={product.summary}
-                          tabIndex={0}
-                          onClick={(e) => {
-                            e.preventDefault()
-                            e.stopPropagation()
-                          }}
-                        >
-                          <Info size={16} className="product-info-icon" />
-                          <div className="product-info-popup">
-                            <p>{product.summary}</p>
-                          </div>
-                        </div>
-                      ) : null}
-                    </div>
-                    <span className="product-price">{product.price}</span>
+                    <ProductPrice product={product} />
+                    <h3 className="product-card-name">{product.name}</h3>
                   </div>
                 </Link>
 
@@ -426,10 +439,16 @@ export default function AllProductsPage() {
                     type="button"
                     aria-label={`${t('common.askProduct')} ${product.name}`}
                     onClick={() => handleProductInquiry(product)}
+                    disabled={activeQuoteProduct === product.slug}
                   >
                     <Heart size={18} />
                   </button>
-                  <button className="all-products-inquiry" type="button" onClick={() => handleProductInquiry(product)}>
+                  <button
+                    className="all-products-inquiry"
+                    type="button"
+                    onClick={() => handleProductInquiry(product)}
+                    disabled={activeQuoteProduct === product.slug}
+                  >
                     <MessageSquareMore size={16} />
                     <span>{t('common.askProduct')}</span>
                   </button>

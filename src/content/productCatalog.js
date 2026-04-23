@@ -103,6 +103,8 @@ function buildExtendedGallery(primaryImage) {
 function createProductDetail(baseProduct, index) {
   const material = baseProduct.material || 'Dry-fit premium'
   const moq = baseProduct.moq || 'MOQ mulai 10 pcs'
+  const bestPrice = baseProduct.bestPrice || baseProduct.promoPrice || null
+  const originalPrice = baseProduct.originalPrice || (bestPrice ? baseProduct.price : null)
 
   return {
     ...baseProduct,
@@ -117,6 +119,12 @@ function createProductDetail(baseProduct, index) {
     summary:
       baseProduct.summary ||
       `${baseProduct.name} dirancang untuk kebutuhan ${baseProduct.audience?.toLowerCase() || 'custom apparel'} dengan tampilan rapi dan nyaman dipakai.`,
+    price: bestPrice || baseProduct.price,
+    originalPrice,
+    bestPrice,
+    promoBadge: bestPrice ? baseProduct.promoBadge || 'Best Price' : null,
+    hasPromo: Boolean(bestPrice),
+    pricing: baseProduct.pricing || null,
     availability: baseProduct.availability || 'Estimasi produksi 7-14 hari kerja',
     color: baseProduct.color || 'Custom warna sesuai brief',
     detail: baseProduct.detail || `${material} • ${moq}`,
@@ -164,6 +172,8 @@ const homepageProductsByLocale = {
         name: 'Matchday Teamwear',
         category: 'Teamwear',
         price: 'Rp 189.000',
+        bestPrice: 'Rp 149.000',
+        promoBadge: 'Promo Tim',
         tone: 'navy',
         audience: 'Tim & Komunitas',
         detail: 'Dry-fit premium • MOQ 10 pcs',
@@ -189,6 +199,8 @@ const homepageProductsByLocale = {
         name: 'Training Capsule Top',
         category: 'Retail Ready',
         price: 'Rp 149.000',
+        bestPrice: 'Rp 119.000',
+        promoBadge: 'Best Price',
         tone: 'sand',
         audience: 'Personal',
         detail: 'Micro mesh ringan • MOQ 1 pcs',
@@ -235,6 +247,8 @@ const homepageProductsByLocale = {
         name: 'Matchday Teamwear',
         category: 'Teamwear',
         price: 'IDR 189,000',
+        bestPrice: 'IDR 149,000',
+        promoBadge: 'Team Promo',
         tone: 'navy',
         audience: 'Teams & Communities',
         detail: 'Premium dry-fit • MOQ 10 pcs',
@@ -260,6 +274,8 @@ const homepageProductsByLocale = {
         name: 'Training Capsule Top',
         category: 'Retail Ready',
         price: 'IDR 149,000',
+        bestPrice: 'IDR 119,000',
+        promoBadge: 'Best Price',
         tone: 'sand',
         audience: 'Personal',
         detail: 'Light micro mesh • MOQ 1 pc',
@@ -319,6 +335,10 @@ export function normalizeProducts(catalogItems = [], locale = 'id') {
           category: resolveCategoryLabel(item.category, index, locale),
           categoryId: item.category || slugifyCategoryLabel(item.category),
           price: item.price_hint,
+          originalPrice: item.promo_price_hint ? item.price_hint : null,
+          bestPrice: item.promo_price_hint,
+          promoBadge: item.promo_badge,
+          pricing: item.pricing,
           detail: `${item.material} • ${item.moq}`,
           tone: productTones[index % productTones.length],
           audience: item.audience || item.segment || 'Pilihan Custom',
@@ -371,6 +391,10 @@ export function normalizeProductDetail(item, locale = 'id') {
       category: resolveCategoryLabel(item.category || item.category_label, visualIndex, locale),
       categoryId: item.category || slugifyCategoryLabel(item.category_label || item.category),
       price: item.price_hint,
+      originalPrice: item.promo_price_hint ? item.price_hint : null,
+      bestPrice: item.promo_price_hint,
+      promoBadge: item.promo_badge,
+      pricing: item.pricing,
       detail: item.detail || `${item.material} • ${item.moq}`,
       tone: item.tone || productTones[visualIndex % productTones.length],
       audience: item.audience || item.segment || item.category_label || 'Pilihan Custom',

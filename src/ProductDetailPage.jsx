@@ -5,8 +5,9 @@ import gsap from 'gsap'
 import './App.css'
 import { normalizeProductDetail } from './content/productCatalog'
 import { initializeAnalytics, trackEvent, trackPageView } from './lib/analytics'
-import { getApiUrl } from './lib/api'
+import { fetchCatalogPriceQuote, getApiUrl, getPreferredCurrency } from './lib/api'
 import howToMeasureImage from './assets/size-guide/how-to-measure.png'
+import ProductPrice from './components/catalog/ProductPrice'
 import CookieConsentBanner from './components/layout/CookieConsentBanner'
 import SiteFooter from './components/layout/SiteFooter'
 import SiteHeader from './components/layout/SiteHeader'
@@ -83,6 +84,7 @@ export default function ProductDetailPage() {
   const [openAccordion, setOpenAccordion] = useState('detail')
   const [status, setStatus] = useState(initialProduct ? 'ready' : 'loading')
   const [hasAnimatedEntry, setHasAnimatedEntry] = useState(false)
+  const [quoteStatus, setQuoteStatus] = useState('idle')
   const [consentPreferences, setConsentPreferencesState] = useState({
     analytics: 'unknown',
     personalization: 'unknown',
@@ -353,7 +355,9 @@ export default function ProductDetailPage() {
     })
   }
 
-  const handleInquiry = () => {
+  const handleInquiry = async () => {
+    setQuoteStatus('loading')
+
     trackEvent('product_detail_whatsapp_click', {
       product_name: product.name,
       product_category: product.category,
@@ -362,21 +366,33 @@ export default function ProductDetailPage() {
       product_stock: availableStock,
     })
 
-    const message = encodeURIComponent(
-      t('productDetail.inquiryMessage', {
-        name: product.name,
-        category: product.category,
-        price: product.price,
-        size: selectedSize,
-        stock: availableStock,
-      }),
-    )
+    try {
+      const quote = await fetchCatalogPriceQuote({
+        productSlug: product.slug,
+        quantity: 1,
+        locale: language,
+        currency: getPreferredCurrency(language),
+        expectedTotalAmountMinor: product.pricing?.final_amount_minor ?? undefined,
+      })
 
-    window.open(
-      `https://wa.me/${chromeContent.brand.whatsapp_number}?text=${message}`,
-      '_blank',
-      'noopener,noreferrer',
-    )
+      const message = encodeURIComponent(
+        `${t('productDetail.inquiryMessage', {
+          name: product.name,
+          category: product.category,
+          price: quote?.formatted_unit_amount || product.price,
+          size: selectedSize,
+          stock: availableStock,
+        })}${quote?.amount_validation?.is_valid === false ? ' Tolong cek ulang harga sebelum checkout.' : ''}`,
+      )
+
+      window.open(
+        `https://wa.me/${chromeContent.brand.whatsapp_number}?text=${message}`,
+        '_blank',
+        'noopener,noreferrer',
+      )
+    } finally {
+      setQuoteStatus('idle')
+    }
   }
 
   return (
@@ -465,7 +481,7 @@ export default function ProductDetailPage() {
                 {product.audience} • {product.category}
               </p>
               <h1>{product.name}</h1>
-              <p className="product-detail-price">{product.price}</p>
+              <ProductPrice product={product} variant="detail" />
 
               <div className="product-detail-meta">
                 <div>
@@ -504,7 +520,12 @@ export default function ProductDetailPage() {
               </div>
 
               <div className="product-detail-actions">
-                <button className="product-detail-primary" type="button" onClick={handleInquiry}>
+                <button
+                  className="product-detail-primary"
+                  type="button"
+                  onClick={handleInquiry}
+                  disabled={quoteStatus === 'loading'}
+                >
                   <MessageCircleMore size={18} />
                   <span>{t('common.orderViaWhatsApp')}</span>
                 </button>
