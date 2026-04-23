@@ -17,6 +17,14 @@ export function getApiUrl(path) {
   return `${apiBaseUrl}${path}`
 }
 
+export function getBackendUrl(path) {
+  if (apiBaseUrl) {
+    return `${apiBaseUrl}${path}`
+  }
+
+  return `http://127.0.0.1:8000${path}`
+}
+
 export async function ensureCsrfCookie() {
   await apiClient.get('/sanctum/csrf-cookie')
 }

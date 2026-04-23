@@ -1,6 +1,7 @@
 import { ChevronRight, Menu, ShoppingBag, X } from 'lucide-react'
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
+import { useLanguage } from '../../lib/i18n.jsx'
 
 function normalizeLinks(links = [], defaultHref = '/#products') {
   return links.map((link) =>
@@ -22,6 +23,7 @@ export default function SiteHeader({
   onNavInteraction,
   onUtilityInteraction,
 }) {
+  const { language, setLanguage, t } = useLanguage()
   const [activeNav, setActiveNav] = useState(navGroups[0]?.id || '')
   const [menuOpen, setMenuOpen] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
@@ -37,6 +39,11 @@ export default function SiteHeader({
     setMobileMenuOpen(false)
     onNavInteraction?.('mobile-menu-close', source)
   }
+
+  const languageOptions = [
+    { value: 'id', label: t('language.options.id') },
+    { value: 'en', label: t('language.options.en') },
+  ]
 
   return (
     <header className="site-header product-page-header">
@@ -59,6 +66,18 @@ export default function SiteHeader({
             ) : null}
           </div>
           <div className="utility-links">
+            <div className="language-switcher" aria-label={t('language.switchLabel')}>
+              {languageOptions.map((option) => (
+                <button
+                  key={option.value}
+                  className={language === option.value ? 'language-switcher-button active' : 'language-switcher-button'}
+                  type="button"
+                  onClick={() => setLanguage(option.value)}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
             {utilityLinks.map((item) => (
               <a
                 href={item.href}
@@ -78,10 +97,22 @@ export default function SiteHeader({
         <aside className={mobileMenuOpen ? 'mobile-sidebar open' : 'mobile-sidebar'} aria-label="Mobile navigation">
           <div className="mobile-sidebar-header">
             <img className="mobile-sidebar-logo" src="/ahr-brand-logo.webp" alt="AHR logo" />
+            <div className="mobile-language-switcher" aria-label={t('language.switchLabel')}>
+              {languageOptions.map((option) => (
+                <button
+                  key={option.value}
+                  className={language === option.value ? 'language-switcher-button active' : 'language-switcher-button'}
+                  type="button"
+                  onClick={() => setLanguage(option.value)}
+                >
+                  {option.value.toUpperCase()}
+                </button>
+              ))}
+            </div>
             <button
               className="mobile-sidebar-close"
               type="button"
-              aria-label="Tutup menu"
+              aria-label={language === 'id' ? 'Tutup menu' : 'Close menu'}
               onClick={() => handleMobileMenuClose('close-button')}
             >
               <X size={20} />

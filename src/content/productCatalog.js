@@ -10,20 +10,42 @@ export const productVisuals = [
   oregonJerseyExchange,
 ]
 
-export const defaultShowcaseCategories = [
-  { label: 'Futsal', image: footballJerseysBerlin, position: 'center center' },
-  { label: 'E-Sport', image: usSoccerJersey, position: 'center 26%' },
-  { label: 'Trail', image: industrialSewingWorkshop, position: 'center center' },
-  { label: 'Baseball', image: oregonJerseyExchange, position: 'center 30%' },
-  { label: 'Sepak bola', image: footballJerseysBerlin, position: 'center center' },
-  { label: 'Badminton', image: usSoccerJersey, position: 'center 26%' },
-  { label: 'Sepeda', image: industrialSewingWorkshop, position: 'center center' },
-  { label: 'Fitness', image: oregonJerseyExchange, position: 'center 30%' },
-  { label: 'Basket', image: footballJerseysBerlin, position: 'center center' },
-  { label: 'Mancing', image: usSoccerJersey, position: 'center 26%' },
-  { label: 'Running', image: industrialSewingWorkshop, position: 'center center' },
-  { label: 'Casual', image: oregonJerseyExchange, position: 'center 30%' },
-]
+const defaultShowcaseCategoriesByLocale = {
+  id: [
+    { label: 'Futsal', image: footballJerseysBerlin, position: 'center center' },
+    { label: 'E-Sport', image: usSoccerJersey, position: 'center 26%' },
+    { label: 'Trail', image: industrialSewingWorkshop, position: 'center center' },
+    { label: 'Baseball', image: oregonJerseyExchange, position: 'center 30%' },
+    { label: 'Sepak bola', image: footballJerseysBerlin, position: 'center center' },
+    { label: 'Badminton', image: usSoccerJersey, position: 'center 26%' },
+    { label: 'Sepeda', image: industrialSewingWorkshop, position: 'center center' },
+    { label: 'Fitness', image: oregonJerseyExchange, position: 'center 30%' },
+    { label: 'Basket', image: footballJerseysBerlin, position: 'center center' },
+    { label: 'Mancing', image: usSoccerJersey, position: 'center 26%' },
+    { label: 'Running', image: industrialSewingWorkshop, position: 'center center' },
+    { label: 'Casual', image: oregonJerseyExchange, position: 'center 30%' },
+  ],
+  en: [
+    { label: 'Futsal', image: footballJerseysBerlin, position: 'center center' },
+    { label: 'E-Sport', image: usSoccerJersey, position: 'center 26%' },
+    { label: 'Trail', image: industrialSewingWorkshop, position: 'center center' },
+    { label: 'Baseball', image: oregonJerseyExchange, position: 'center 30%' },
+    { label: 'Football', image: footballJerseysBerlin, position: 'center center' },
+    { label: 'Badminton', image: usSoccerJersey, position: 'center 26%' },
+    { label: 'Cycling', image: industrialSewingWorkshop, position: 'center center' },
+    { label: 'Fitness', image: oregonJerseyExchange, position: 'center 30%' },
+    { label: 'Basketball', image: footballJerseysBerlin, position: 'center center' },
+    { label: 'Fishing', image: usSoccerJersey, position: 'center 26%' },
+    { label: 'Running', image: industrialSewingWorkshop, position: 'center center' },
+    { label: 'Casual', image: oregonJerseyExchange, position: 'center 30%' },
+  ],
+}
+
+export function getDefaultShowcaseCategories(locale = 'id') {
+  return defaultShowcaseCategoriesByLocale[locale] || defaultShowcaseCategoriesByLocale.id
+}
+
+export const defaultShowcaseCategories = defaultShowcaseCategoriesByLocale.id
 
 export const productTones = ['navy', 'sand', 'orange', 'black']
 
@@ -31,12 +53,13 @@ export function slugifyCategoryLabel(label = '') {
   return label.toLowerCase().trim().replace(/\s+/g, '-')
 }
 
-function resolveCategoryLabel(categoryKey = '', fallbackIndex = 0) {
-  const matchedCategory = defaultShowcaseCategories.find(
+function resolveCategoryLabel(categoryKey = '', fallbackIndex = 0, locale = 'id') {
+  const showcaseCategories = getDefaultShowcaseCategories(locale)
+  const matchedCategory = showcaseCategories.find(
     (category) => slugifyCategoryLabel(category.label) === categoryKey,
   )
 
-  return matchedCategory?.label || defaultShowcaseCategories[fallbackIndex % defaultShowcaseCategories.length]?.label || categoryKey
+  return matchedCategory?.label || showcaseCategories[fallbackIndex % showcaseCategories.length]?.label || categoryKey
 }
 
 function slugifyProductName(name = '') {
@@ -87,7 +110,10 @@ function createProductDetail(baseProduct, index) {
     slug: baseProduct.slug || baseProduct.id || slugifyProductName(baseProduct.name),
     categoryId: baseProduct.categoryId || slugifyCategoryLabel(baseProduct.category) || `category-${index + 1}`,
     imagePosition: baseProduct.imagePosition || 'center center',
-    gallery: baseProduct.gallery || buildExtendedGallery(baseProduct.image),
+    gallery:
+      Array.isArray(baseProduct.gallery) && baseProduct.gallery.length > 0
+        ? baseProduct.gallery
+        : buildExtendedGallery(baseProduct.image),
     summary:
       baseProduct.summary ||
       `${baseProduct.name} dirancang untuk kebutuhan ${baseProduct.audience?.toLowerCase() || 'custom apparel'} dengan tampilan rapi dan nyaman dipakai.`,
@@ -95,23 +121,30 @@ function createProductDetail(baseProduct, index) {
     color: baseProduct.color || 'Custom warna sesuai brief',
     detail: baseProduct.detail || `${material} • ${moq}`,
     description:
-      baseProduct.description ||
-      [
-        `${baseProduct.name} cocok untuk kebutuhan ${baseProduct.audience?.toLowerCase() || 'tim, komunitas, dan event'} yang ingin hasil visual tetap kuat tanpa bikin flow order terasa rumit.`,
-        `Material ${material.toLowerCase()} dipilih agar nyaman dipakai, mudah dirawat, dan tetap enak dilihat untuk aktivitas harian maupun event intens.`,
-        'Finishing produksi dijaga supaya warna, jahitan, dan penempatan desain tetap konsisten saat masuk ke produksi batch kecil maupun besar.',
-      ],
-    specifications: baseProduct.specifications || [
-      `Material: ${material}`,
-      moq,
-      'Ukuran: bisa menyesuaikan size run tim atau komunitas',
-      'Opsi custom: nama, nomor, logo, sponsor, dan penyesuaian warna',
-    ],
-    careInstructions: baseProduct.careInstructions || [
-      'Cuci dengan air dingin dan pisahkan dari warna pekat pada pencucian pertama.',
-      'Hindari pemutih dan suhu setrika tinggi pada area print.',
-      'Jemur terbalik agar warna dan detail printing lebih awet.',
-    ],
+      Array.isArray(baseProduct.description) && baseProduct.description.length > 0
+        ? baseProduct.description
+        : [
+            `${baseProduct.name} cocok untuk kebutuhan ${baseProduct.audience?.toLowerCase() || 'tim, komunitas, dan event'} yang ingin hasil visual tetap kuat tanpa bikin flow order terasa rumit.`,
+            `Material ${material.toLowerCase()} dipilih agar nyaman dipakai, mudah dirawat, dan tetap enak dilihat untuk aktivitas harian maupun event intens.`,
+            'Finishing produksi dijaga supaya warna, jahitan, dan penempatan desain tetap konsisten saat masuk ke produksi batch kecil maupun besar.',
+          ],
+    specifications:
+      Array.isArray(baseProduct.specifications) && baseProduct.specifications.length > 0
+        ? baseProduct.specifications
+        : [
+            `Material: ${material}`,
+            moq,
+            'Ukuran: bisa menyesuaikan size run tim atau komunitas',
+            'Opsi custom: nama, nomor, logo, sponsor, dan penyesuaian warna',
+          ],
+    careInstructions:
+      Array.isArray(baseProduct.careInstructions) && baseProduct.careInstructions.length > 0
+        ? baseProduct.careInstructions
+        : [
+            'Cuci dengan air dingin dan pisahkan dari warna pekat pada pencucian pertama.',
+            'Hindari pemutih dan suhu setrika tinggi pada area print.',
+            'Jemur terbalik agar warna dan detail printing lebih awet.',
+          ],
     sizeStock: baseProduct.sizeStock || {
       XS: 0,
       S: 0,
@@ -124,79 +157,158 @@ function createProductDetail(baseProduct, index) {
   }
 }
 
-export const homepageProducts = [
-  createProductDetail(
-    {
-      name: 'Matchday Teamwear',
-      category: 'Teamwear',
-      price: 'Rp 189.000',
-      tone: 'navy',
-      audience: 'Tim & Komunitas',
-      detail: 'Dry-fit premium • MOQ 10 pcs',
-      image: footballJerseysBerlin,
-      imagePosition: 'center center',
-      summary: 'Set jersey seragam untuk klub, sekolah, dan komunitas dengan tampilan profesional.',
-      description: [
-        'Matchday Teamwear dibuat untuk kebutuhan tim yang ingin identitas visualnya terlihat solid sejak pertama kali masuk lapangan.',
-        'Potongan, bahan, dan hasil print disiapkan agar enak dipakai saat latihan maupun pertandingan, sambil tetap mudah diatur untuk order per size.',
-        'Pilihan ini cocok saat Anda butuh jersey custom yang terasa rapi, punya warna stabil, dan tetap fleksibel untuk reorder berikutnya.',
-      ],
-      specifications: [
-        'Material: Dry-fit premium yang ringan dan cepat kering',
-        'MOQ: mulai 10 pcs per desain',
-        'Custom: nama, nomor, sponsor, dan revisi warna tim',
-        'Cocok untuk: futsal, sepak bola, sekolah, dan komunitas',
-      ],
-    },
-    0,
-  ),
-  createProductDetail(
-    {
-      name: 'Training Capsule Top',
-      category: 'Retail Ready',
-      price: 'Rp 149.000',
-      tone: 'sand',
-      audience: 'Personal',
-      detail: 'Micro mesh ringan • MOQ 1 pcs',
-      image: usSoccerJersey,
-      imagePosition: 'center 26%',
-      summary: 'Atasan latihan ringan untuk order personal, nama custom, atau koleksi kasual.',
-      color: 'Off white',
-      availability: 'Estimasi produksi 3-7 hari kerja',
-    },
-    1,
-  ),
-  createProductDetail(
-    {
-      name: 'Corporate Active Kit',
-      category: 'B2B Capsule',
-      price: 'Rp 229.000',
-      tone: 'orange',
-      audience: 'Event & Brand',
-      detail: 'Polyester aktif • MOQ 24 pcs',
-      image: industrialSewingWorkshop,
-      imagePosition: 'center center',
-      summary: 'Seragam event dan apparel brand activation dengan fokus presentasi visual yang rapi.',
-    },
-    2,
-  ),
-  createProductDetail(
-    {
-      name: 'Personalized Fan Jersey',
-      category: 'Personal Order',
-      price: 'Rp 129.000',
-      tone: 'black',
-      audience: 'Custom Satuan',
-      detail: 'Poly soft-touch • MOQ 1 pcs',
-      image: oregonJerseyExchange,
-      imagePosition: 'center 30%',
-      summary: 'Jalur custom satuan untuk desain personal yang tetap terasa premium.',
-    },
-    3,
-  ),
-]
+const homepageProductsByLocale = {
+  id: [
+    createProductDetail(
+      {
+        name: 'Matchday Teamwear',
+        category: 'Teamwear',
+        price: 'Rp 189.000',
+        tone: 'navy',
+        audience: 'Tim & Komunitas',
+        detail: 'Dry-fit premium • MOQ 10 pcs',
+        image: footballJerseysBerlin,
+        imagePosition: 'center center',
+        summary: 'Set jersey seragam untuk klub, sekolah, dan komunitas dengan tampilan profesional.',
+        description: [
+          'Matchday Teamwear dibuat untuk kebutuhan tim yang ingin identitas visualnya terlihat solid sejak pertama kali masuk lapangan.',
+          'Potongan, bahan, dan hasil print disiapkan agar enak dipakai saat latihan maupun pertandingan, sambil tetap mudah diatur untuk order per size.',
+          'Pilihan ini cocok saat Anda butuh jersey custom yang terasa rapi, punya warna stabil, dan tetap fleksibel untuk reorder berikutnya.',
+        ],
+        specifications: [
+          'Material: Dry-fit premium yang ringan dan cepat kering',
+          'MOQ: mulai 10 pcs per desain',
+          'Custom: nama, nomor, sponsor, dan revisi warna tim',
+          'Cocok untuk: futsal, sepak bola, sekolah, dan komunitas',
+        ],
+      },
+      0,
+    ),
+    createProductDetail(
+      {
+        name: 'Training Capsule Top',
+        category: 'Retail Ready',
+        price: 'Rp 149.000',
+        tone: 'sand',
+        audience: 'Personal',
+        detail: 'Micro mesh ringan • MOQ 1 pcs',
+        image: usSoccerJersey,
+        imagePosition: 'center 26%',
+        summary: 'Atasan latihan ringan untuk order personal, nama custom, atau koleksi kasual.',
+        color: 'Off white',
+        availability: 'Estimasi produksi 3-7 hari kerja',
+      },
+      1,
+    ),
+    createProductDetail(
+      {
+        name: 'Corporate Active Kit',
+        category: 'B2B Capsule',
+        price: 'Rp 229.000',
+        tone: 'orange',
+        audience: 'Event & Brand',
+        detail: 'Polyester aktif • MOQ 24 pcs',
+        image: industrialSewingWorkshop,
+        imagePosition: 'center center',
+        summary: 'Seragam event dan apparel brand activation dengan fokus presentasi visual yang rapi.',
+      },
+      2,
+    ),
+    createProductDetail(
+      {
+        name: 'Personalized Fan Jersey',
+        category: 'Personal Order',
+        price: 'Rp 129.000',
+        tone: 'black',
+        audience: 'Custom Satuan',
+        detail: 'Poly soft-touch • MOQ 1 pcs',
+        image: oregonJerseyExchange,
+        imagePosition: 'center 30%',
+        summary: 'Jalur custom satuan untuk desain personal yang tetap terasa premium.',
+      },
+      3,
+    ),
+  ],
+  en: [
+    createProductDetail(
+      {
+        name: 'Matchday Teamwear',
+        category: 'Teamwear',
+        price: 'IDR 189,000',
+        tone: 'navy',
+        audience: 'Teams & Communities',
+        detail: 'Premium dry-fit • MOQ 10 pcs',
+        image: footballJerseysBerlin,
+        imagePosition: 'center center',
+        summary: 'A uniform jersey set for clubs, schools, and communities with a polished look.',
+        description: [
+          'Matchday Teamwear is built for teams that want their visual identity to feel solid from the moment they step onto the field.',
+          'The cut, material, and print quality are prepared for comfort during training and matches while staying easy to organize by size.',
+          'This option works well when you need custom jerseys that feel neat, keep colors stable, and stay flexible for future reorders.',
+        ],
+        specifications: [
+          'Material: lightweight, quick-dry premium dry-fit',
+          'MOQ: starting from 10 pcs per design',
+          'Custom: name, number, sponsor, and team color revisions',
+          'Suitable for: futsal, football, schools, and communities',
+        ],
+      },
+      0,
+    ),
+    createProductDetail(
+      {
+        name: 'Training Capsule Top',
+        category: 'Retail Ready',
+        price: 'IDR 149,000',
+        tone: 'sand',
+        audience: 'Personal',
+        detail: 'Light micro mesh • MOQ 1 pc',
+        image: usSoccerJersey,
+        imagePosition: 'center 26%',
+        summary: 'A lightweight training top for personal orders, custom names, or casual collection drops.',
+        color: 'Off white',
+        availability: 'Estimated production 3-7 working days',
+      },
+      1,
+    ),
+    createProductDetail(
+      {
+        name: 'Corporate Active Kit',
+        category: 'B2B Capsule',
+        price: 'IDR 229,000',
+        tone: 'orange',
+        audience: 'Events & Brands',
+        detail: 'Active polyester • MOQ 24 pcs',
+        image: industrialSewingWorkshop,
+        imagePosition: 'center center',
+        summary: 'Event uniforms and brand activation apparel with a cleaner visual presentation.',
+      },
+      2,
+    ),
+    createProductDetail(
+      {
+        name: 'Personalized Fan Jersey',
+        category: 'Personal Order',
+        price: 'IDR 129,000',
+        tone: 'black',
+        audience: 'Single Custom Order',
+        detail: 'Soft-touch poly • MOQ 1 pc',
+        image: oregonJerseyExchange,
+        imagePosition: 'center 30%',
+        summary: 'A single-order custom path for personal designs that still feels premium.',
+      },
+      3,
+    ),
+  ],
+}
 
-export function normalizeProducts(catalogItems = []) {
+export function getHomepageProducts(locale = 'id') {
+  return homepageProductsByLocale[locale] || homepageProductsByLocale.id
+}
+
+export const homepageProducts = homepageProductsByLocale.id
+
+export function normalizeProducts(catalogItems = [], locale = 'id') {
   if (catalogItems.length > 0) {
     return catalogItems.map((item, index) =>
       createProductDetail(
@@ -204,16 +316,20 @@ export function normalizeProducts(catalogItems = []) {
           id: item.id || item.slug,
           slug: item.slug || item.id,
           name: item.name,
-          category: resolveCategoryLabel(item.category, index),
+          category: resolveCategoryLabel(item.category, index, locale),
           categoryId: item.category || slugifyCategoryLabel(item.category),
           price: item.price_hint,
           detail: `${item.material} • ${item.moq}`,
           tone: productTones[index % productTones.length],
           audience: item.audience || item.segment || 'Pilihan Custom',
-          image: productImageMap[item.slug || item.id] || productVisuals[index % productVisuals.length],
+          image:
+            item.image ||
+            item.featured_image?.url ||
+            productImageMap[item.slug || item.id] ||
+            productVisuals[index % productVisuals.length],
           imagePosition:
             categoryImagePositionMap[item.category] ||
-            homepageProducts[index % homepageProducts.length]?.imagePosition ||
+            getHomepageProducts(locale)[index % getHomepageProducts(locale).length]?.imagePosition ||
             'center center',
           material: item.material,
           moq: item.moq,
@@ -224,25 +340,27 @@ export function normalizeProducts(catalogItems = []) {
           specifications: item.specifications,
           careInstructions: item.care_instructions,
           sizeStock: item.size_stock,
+          gallery: item.gallery,
         },
         index,
       ),
     )
   }
 
-  return homepageProducts
+  return getHomepageProducts(locale)
 }
 
 export function findProductBySlug(products = [], slug = '') {
   return products.find((product) => product.slug === slug)
 }
 
-export function normalizeProductDetail(item) {
+export function normalizeProductDetail(item, locale = 'id') {
   if (!item) {
     return null
   }
 
-  const fallbackIndex = homepageProducts.findIndex((product) => product.slug === (item.slug || item.id))
+  const localizedHomepageProducts = getHomepageProducts(locale)
+  const fallbackIndex = localizedHomepageProducts.findIndex((product) => product.slug === (item.slug || item.id))
   const visualIndex = fallbackIndex >= 0 ? fallbackIndex : 0
 
   return createProductDetail(
@@ -250,15 +368,19 @@ export function normalizeProductDetail(item) {
       id: item.id || item.slug,
       slug: item.slug || item.id,
       name: item.name,
-      category: resolveCategoryLabel(item.category || item.category_label, visualIndex),
+      category: resolveCategoryLabel(item.category || item.category_label, visualIndex, locale),
       categoryId: item.category || slugifyCategoryLabel(item.category_label || item.category),
       price: item.price_hint,
       detail: item.detail || `${item.material} • ${item.moq}`,
       tone: item.tone || productTones[visualIndex % productTones.length],
       audience: item.audience || item.segment || item.category_label || 'Pilihan Custom',
-      image: productImageMap[item.slug || item.id] || productVisuals[visualIndex % productVisuals.length],
+      image:
+        item.image ||
+        item.featured_image?.url ||
+        productImageMap[item.slug || item.id] ||
+        productVisuals[visualIndex % productVisuals.length],
       imagePosition:
-        categoryImagePositionMap[item.category] || homepageProducts[visualIndex]?.imagePosition || 'center center',
+        categoryImagePositionMap[item.category] || localizedHomepageProducts[visualIndex]?.imagePosition || 'center center',
       material: item.material,
       moq: item.moq,
       summary: item.summary || item.lead,
@@ -269,9 +391,11 @@ export function normalizeProductDetail(item) {
       careInstructions: item.care_instructions,
       sizeStock: item.size_stock,
       gallery:
-        (item.slug || item.id) in productImageMap
-          ? buildExtendedGallery(productImageMap[item.slug || item.id])
-          : undefined,
+        Array.isArray(item.gallery) && item.gallery.length > 0
+          ? item.gallery
+          : (item.slug || item.id) in productImageMap
+            ? buildExtendedGallery(productImageMap[item.slug || item.id])
+            : undefined,
     },
     visualIndex >= 0 ? visualIndex : 0,
   )

@@ -6,6 +6,7 @@ Frontend ini adalah landing page React + Vite untuk funnel jersey AHR. Aplikasi 
 
 - merender landing page hybrid B2B/B2C
 - mengambil konten dinamis dari endpoint backend
+- mendukung switch bahasa `Indonesia` / `English`
 - menangkap UTM parameter dari URL
 - mengirim form lead ke backend
 - membuka WhatsApp dengan konteks CTA dan attribution
@@ -19,9 +20,35 @@ Secara default frontend akan memanggil route generik berikut:
 - `GET /api/catalog/products/{slug}`
 - `POST /api/catalog/leads`
 
+Untuk konten locale-aware, frontend sekarang mengirim:
+
+- `GET /api/catalog/landing-page?locale=id|en`
+- `GET /api/catalog/products/{slug}?locale=id|en`
+
 Kompatibilitas route lama `/api/b2b/*` tetap dipertahankan di backend untuk migrasi bertahap.
 
 Saat development lokal, Vite sudah dipasang proxy `/api` ke backend Laravel sehingga frontend bisa dijalankan tanpa harus hardcode domain backend.
+
+## Multi-Language
+
+Frontend sekarang memiliki fondasi multi-language penuh untuk `id/en`.
+
+Yang aktif:
+
+- default bahasa `Indonesia`
+- switch bahasa di header desktop dan mobile
+- pilihan bahasa disimpan ke `localStorage`
+- atribut `<html lang>` ikut diperbarui
+- landing page dan detail produk meminta locale ke backend
+- fallback statis frontend juga ikut locale bila backend belum menyediakan translation lengkap
+
+Area fallback frontend yang sudah locale-aware:
+
+- company profile
+- audience path
+- showcase category labels
+- homepage fallback products
+- product listing/detail normalization fallback
 
 ## Setup Lokal
 

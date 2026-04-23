@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useLanguage } from '../../lib/i18n.jsx'
 
 export default function CookieConsentBanner({
   onAcceptAll,
@@ -6,26 +7,30 @@ export default function CookieConsentBanner({
   onAcceptPersonalizationOnly,
   onRejectAll,
 }) {
+  const { t } = useLanguage()
   const [showPreferences, setShowPreferences] = useState(false)
 
   return (
     <div className="cookie-consent-overlay">
-      <div className="cookie-consent-banner" role="dialog" aria-modal="true" aria-live="polite" aria-label="Izin cookies">
+      <div
+        className="cookie-consent-banner"
+        role="dialog"
+        aria-modal="true"
+        aria-live="polite"
+        aria-label={t('cookie.ariaLabel')}
+      >
         <div className="cookie-consent-copy">
-          <span className="cookie-consent-eyebrow">Pengaturan cookies</span>
-          <strong>Pilih izin pelacakan untuk pengalaman AHR yang lebih rapi</strong>
-          <p>
-            Kami memakai cookies dan penyimpanan browser untuk dua hal: membaca performa funnel lewat analytics dan
-            menampilkan rekomendasi produk yang lebih relevan di beranda.
-          </p>
+          <span className="cookie-consent-eyebrow">{t('cookie.eyebrow')}</span>
+          <strong>{t('cookie.title')}</strong>
+          <p>{t('cookie.body')}</p>
         </div>
 
         <div className="cookie-consent-actions cookie-consent-actions-primary">
           <button className="cookie-consent-button cookie-consent-button-primary" type="button" onClick={onAcceptAll}>
-            Setujui Semua
+            {t('cookie.acceptAll')}
           </button>
           <button className="cookie-consent-button cookie-consent-button-dark" type="button" onClick={onRejectAll}>
-            Tolak Semua
+            {t('cookie.rejectAll')}
           </button>
         </div>
 
@@ -35,7 +40,7 @@ export default function CookieConsentBanner({
             type="button"
             onClick={() => setShowPreferences((current) => !current)}
           >
-            {showPreferences ? 'Sembunyikan pengaturan detail' : 'Atur pilihan analytics dan personalization'}
+            {showPreferences ? t('cookie.hidePreferences') : t('cookie.showPreferences')}
           </button>
         </div>
 
@@ -46,14 +51,14 @@ export default function CookieConsentBanner({
               type="button"
               onClick={onAcceptAnalyticsOnly}
             >
-              Analytics Saja
+              {t('cookie.analyticsOnly')}
             </button>
             <button
               className="cookie-consent-button cookie-consent-button-secondary"
               type="button"
               onClick={onAcceptPersonalizationOnly}
             >
-              Personalization Saja
+              {t('cookie.personalizationOnly')}
             </button>
           </div>
         ) : null}

@@ -1,13 +1,14 @@
 import { useEffect, useRef } from 'react'
 import gsap from 'gsap'
 import { Link } from 'react-router-dom'
+import { useLanguage } from '../../lib/i18n.jsx'
 
-function formatCategoryTitle(activeCategoryLabel) {
-  if (!activeCategoryLabel || activeCategoryLabel === 'Semua Koleksi') {
-    return 'SEMUA KOLEKSI'
+function formatCategoryTitle(activeCategoryLabel, t) {
+  if (!activeCategoryLabel || activeCategoryLabel === t('common.allCollections')) {
+    return t('category.titleAll')
   }
 
-  return `KOLEKSI ${activeCategoryLabel}`.toUpperCase()
+  return t('category.titleByCategory', { label: activeCategoryLabel }).toUpperCase()
 }
 
 export default function CategoryFilterHeader({
@@ -18,6 +19,7 @@ export default function CategoryFilterHeader({
   onCategorySelect,
   getCategoryHref,
 }) {
+  const { t } = useLanguage()
   const rootRef = useRef(null)
 
   useEffect(() => {
@@ -43,12 +45,12 @@ export default function CategoryFilterHeader({
     <section className="category-filter-header" ref={rootRef}>
       <div className="category-filter-heading" data-category-card>
         <div className="category-filter-title-row">
-          <h2>{formatCategoryTitle(activeCategoryLabel)}</h2>
+          <h2>{formatCategoryTitle(activeCategoryLabel, t)}</h2>
           <span className="category-filter-count">[{productCount}]</span>
         </div>
       </div>
 
-      <div className="category-filter-carousel" aria-label="Pilih kategori produk">
+      <div className="category-filter-carousel" aria-label={t('category.pickProductCategory')}>
         {categories.map((category) => {
           const isActive = category.id === activeCategoryId
           const categoryHref = getCategoryHref?.(category)

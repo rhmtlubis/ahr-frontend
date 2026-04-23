@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { ArrowLeft, Heart, MessageSquareMore } from 'lucide-react'
+import { ArrowLeft, Heart, MessageSquareMore, Info } from 'lucide-react'
 import gsap from 'gsap'
 import { Link, useSearchParams } from 'react-router-dom'
 import './App.css'
@@ -7,66 +7,49 @@ import CategoryFilterHeader from './components/landing/CategoryFilterHeader'
 import CookieConsentBanner from './components/layout/CookieConsentBanner'
 import SiteFooter from './components/layout/SiteFooter'
 import SiteHeader from './components/layout/SiteHeader'
-import { companyProfileContent } from './content/companyProfile'
 import {
-  defaultShowcaseCategories,
-  homepageProducts,
+  getDefaultShowcaseCategories,
+  getHomepageProducts,
   normalizeProducts,
   slugifyCategoryLabel,
 } from './content/productCatalog'
-import {
-  sharedFooterGroups,
-  sharedHeaderTicker,
-  sharedHeaderUtilityMessage,
-  sharedNavGroups,
-  sharedUtilityLinks,
-} from './content/siteChrome'
 import { initializeAnalytics, trackEvent, trackPageView } from './lib/analytics'
 import { getApiUrl } from './lib/api'
 import { getConsentPreferences, hasAnalyticsConsent, setConsentPreferences } from './lib/consent'
+import { useLanguage } from './lib/i18n.jsx'
+import { getLandingChromeContent } from './lib/landingContent'
 import { clearPersonalizationData } from './lib/personalization'
 
-const defaultBrand = {
-  name: 'AHR',
-  lockup: 'CV AHR Printing',
-  tagline: 'Apparel dan percetakan kustom dengan spesialisasi sublimasi jersey.',
-  whatsapp_number: '6281234567890',
-}
-
-const defaultMapLabel = 'Buka lokasi AHR Printing di Google Maps'
-const footerMessage =
-  'Halo AHR, saya ingin berdiskusi tentang kebutuhan jersey atau apparel kustom.'
 const PRODUCTS_PER_PAGE = 8
 
 function buildWhatsAppUrl(phoneNumber, message) {
   return `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`
 }
 
-function normalizeListingContent(payload = {}) {
+function normalizeListingContent(payload = {}, language = 'id') {
   const catalogCategories = Array.isArray(payload.catalog_categories) ? payload.catalog_categories : []
   const catalogItems = Array.isArray(payload.catalog_items) ? payload.catalog_items : []
 
   return {
-    brand: {
-      ...defaultBrand,
-      ...payload.brand,
-    },
-    products: normalizeProducts(catalogItems),
+    ...getLandingChromeContent(payload, { hashPrefix: '/', locale: language }),
+    products: normalizeProducts(catalogItems, language),
     catalogCategories,
   }
 }
 
-function buildCategoryNavigationItems(products = [], catalogCategories = []) {
+function buildCategoryNavigationItems(products = [], catalogCategories = [], allCollectionsLabel, language = 'id') {
   const showcaseCategories =
     catalogCategories.length > 0
       ? catalogCategories.map((category, index) => ({
           id: category.id,
           label: category.label,
-          image: defaultShowcaseCategories[index % defaultShowcaseCategories.length]?.image,
-          position: defaultShowcaseCategories[index % defaultShowcaseCategories.length]?.position || 'center center',
+          image: category.image || getDefaultShowcaseCategories(language)[index % getDefaultShowcaseCategories(language).length]?.image,
+          position:
+            getDefaultShowcaseCategories(language)[index % getDefaultShowcaseCategories(language).length]?.position ||
+            'center center',
           audience: category.audience,
         }))
-      : defaultShowcaseCategories.map((category) => ({
+      : getDefaultShowcaseCategories(language).map((category) => ({
           ...category,
           id: slugifyCategoryLabel(category.label),
         }))
@@ -82,7 +65,7 @@ function buildCategoryNavigationItems(products = [], catalogCategories = []) {
   return [
     {
       id: 'all',
-      label: 'Semua Koleksi',
+      label: allCollectionsLabel,
       image: showcaseCategories[0]?.image || products[0]?.image,
       position: showcaseCategories[0]?.position || products[0]?.imagePosition || 'center center',
       count: products.length,
@@ -95,11 +78,13 @@ function buildCategoryNavigationItems(products = [], catalogCategories = []) {
 }
 
 export default function AllProductsPage() {
+  const { language, t } = useLanguage()
+  const localizedHomepageProducts = useMemo(() => getHomepageProducts(language), [language])
   const rootRef = useRef(null)
   const [searchParams, setSearchParams] = useSearchParams()
   const [listingContent, setListingContent] = useState({
-    brand: defaultBrand,
-    products: homepageProducts,
+    ...getLandingChromeContent({}, { hashPrefix: '/', locale: language }),
+    products: localizedHomepageProducts,
     catalogCategories: [],
   })
   const [consentPreferences, setConsentPreferencesState] = useState({
@@ -121,7 +106,7 @@ export default function AllProductsPage() {
   }, [searchParams])
 
   useEffect(() => {
-    fetch(getApiUrl('/api/catalog/landing-page'), {
+    fetch(getApiUrl(`/api/catalog/landing-page?locale=${language}`), {
       headers: {
         Accept: 'application/json',
       },
@@ -135,21 +120,27 @@ export default function AllProductsPage() {
       })
       .then((payload) => {
         if (payload?.data) {
-          setListingContent(normalizeListingContent(payload.data))
+          setListingContent(normalizeListingContent(payload.data, language))
         }
       })
       .catch(() => {
         setListingContent({
-          brand: defaultBrand,
-          products: homepageProducts,
+          ...getLandingChromeContent({}, { hashPrefix: '/', locale: language }),
+          products: localizedHomepageProducts,
           catalogCategories: [],
         })
       })
-  }, [])
+  }, [language, localizedHomepageProducts])
 
   const categoryNavigationItems = useMemo(
-    () => buildCategoryNavigationItems(listingContent.products, listingContent.catalogCategories),
-    [listingContent.catalogCategories, listingContent.products],
+    () =>
+      buildCategoryNavigationItems(
+        listingContent.products,
+        listingContent.catalogCategories,
+        t('common.allCollections'),
+        language,
+      ),
+    [language, listingContent.catalogCategories, listingContent.products, t],
   )
 
   const requestedCategory = searchParams.get('category') || 'all'
@@ -298,7 +289,7 @@ export default function AllProductsPage() {
     window.open(
       buildWhatsAppUrl(
         listingContent.brand.whatsapp_number,
-        `Halo AHR, saya tertarik dengan ${product.name}. Mohon info detail bahan, MOQ, dan estimasi produksinya.`,
+        t('allProducts.inquiryMessage', { name: product.name }),
       ),
       '_blank',
       'noopener,noreferrer',
@@ -342,12 +333,12 @@ export default function AllProductsPage() {
     <div className="app-shell" ref={rootRef}>
       <SiteHeader
         brandHref="/"
-        navGroups={sharedNavGroups}
-        ticker={sharedHeaderTicker}
-        utilityLinks={sharedUtilityLinks}
-        utilityMessage={sharedHeaderUtilityMessage}
-        primaryActionLabel="Hubungi AHR"
-        onPrimaryAction={() => handleFooterWhatsApp(footerMessage)}
+        navGroups={listingContent.navGroups}
+        ticker={listingContent.ticker}
+        utilityLinks={listingContent.utilityLinks}
+        utilityMessage={listingContent.utilityMessage}
+        primaryActionLabel={t('allProducts.contactAhr')}
+        onPrimaryAction={() => handleFooterWhatsApp(t('allProducts.footerMessage'))}
       />
 
       <main className="all-products-page">
@@ -355,13 +346,13 @@ export default function AllProductsPage() {
           <div className="all-products-breadcrumb">
             <Link to="/">
               <ArrowLeft size={16} />
-              <span>Kembali ke beranda</span>
+              <span>{t('common.backToHome')}</span>
             </Link>
           </div>
 
           <div className="section-heading heading-inline all-products-heading">
             <div>
-              <span>Product Listing</span>
+              <span>{t('allProducts.heroEyebrow')}</span>
             </div>
           </div>
 
@@ -377,14 +368,12 @@ export default function AllProductsPage() {
         <section className="content-block section-soft all-products-results">
           <div className="all-products-toolbar" data-products-hero>
             <div>
-              <span className="all-products-toolbar-label">Kategori aktif</span>
-              <h2>{activeCategory?.label || 'Semua Koleksi'}</h2>
+              <span className="all-products-toolbar-label">{t('common.activeCategory')}</span>
+              <h2>{activeCategory?.label || t('common.allCollections')}</h2>
             </div>
             <div className="all-products-toolbar-meta">
-              <p>{visibleProducts.length} produk tersedia.</p>
-              <p>
-                Menampilkan {paginatedProducts.length} produk di halaman {currentPage} dari {totalPages}.
-              </p>
+              <p>{t('common.productsAvailable', { count: visibleProducts.length })}</p>
+              <p>{t('common.showingProducts', { showing: paginatedProducts.length, page: currentPage, total: totalPages })}</p>
             </div>
           </div>
 
@@ -407,8 +396,26 @@ export default function AllProductsPage() {
                   </div>
                   <div className="product-body">
                     <p className="product-category">{product.category}</p>
-                    <h3>{product.name}</h3>
-                    <p className="all-products-summary">{product.summary}</p>
+                    <div className="product-title-row">
+                      <h3>{product.name}</h3>
+                      {product.summary ? (
+                        <div
+                          className="product-info-tooltip"
+                          role="tooltip"
+                          aria-label={product.summary}
+                          tabIndex={0}
+                          onClick={(e) => {
+                            e.preventDefault()
+                            e.stopPropagation()
+                          }}
+                        >
+                          <Info size={16} className="product-info-icon" />
+                          <div className="product-info-popup">
+                            <p>{product.summary}</p>
+                          </div>
+                        </div>
+                      ) : null}
+                    </div>
                     <span className="product-price">{product.price}</span>
                   </div>
                 </Link>
@@ -417,14 +424,14 @@ export default function AllProductsPage() {
                   <button
                     className="wishlist-button"
                     type="button"
-                    aria-label={`Tanya produk ${product.name}`}
+                    aria-label={`${t('common.askProduct')} ${product.name}`}
                     onClick={() => handleProductInquiry(product)}
                   >
                     <Heart size={18} />
                   </button>
                   <button className="all-products-inquiry" type="button" onClick={() => handleProductInquiry(product)}>
                     <MessageSquareMore size={16} />
-                    <span>Tanya Produk</span>
+                    <span>{t('common.askProduct')}</span>
                   </button>
                 </div>
               </article>
@@ -439,11 +446,11 @@ export default function AllProductsPage() {
                 onClick={() => handlePageChange(currentPage - 1)}
                 disabled={currentPage === 1}
               >
-                Sebelumnya
+                {t('common.previous')}
               </button>
 
               <div className="all-products-pagination-status">
-                <span>Halaman {currentPage} dari {totalPages}</span>
+                <span>{t('common.pageStatus', { page: currentPage, total: totalPages })}</span>
               </div>
 
               <button
@@ -452,7 +459,7 @@ export default function AllProductsPage() {
                 onClick={() => handlePageChange(currentPage + 1)}
                 disabled={currentPage === totalPages}
               >
-                Berikutnya
+                {t('common.next')}
               </button>
             </div>
           ) : null}
@@ -460,12 +467,13 @@ export default function AllProductsPage() {
       </main>
 
       <SiteFooter
-        footerGroups={sharedFooterGroups}
-        companyProfile={companyProfileContent}
+        footerGroups={listingContent.footerGroups}
+        companyProfile={listingContent.companyProfile}
         contactProfile={listingContent.brand}
-        defaultMapLabel={defaultMapLabel}
+        defaultMapLabel={t('common.mapLabel')}
         onWhatsAppClick={handleFooterWhatsApp}
-        footerMessage={footerMessage}
+        footerMessage={t('allProducts.footerMessage')}
+        bottomText={listingContent.footerBottomText}
       />
 
       {consentPreferences.analytics === 'unknown' && consentPreferences.personalization === 'unknown' ? (

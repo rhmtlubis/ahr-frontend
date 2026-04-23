@@ -6,44 +6,14 @@ import './App.css'
 import { normalizeProductDetail } from './content/productCatalog'
 import { initializeAnalytics, trackEvent, trackPageView } from './lib/analytics'
 import { getApiUrl } from './lib/api'
-import { companyProfileContent } from './content/companyProfile'
 import howToMeasureImage from './assets/size-guide/how-to-measure.png'
-import {
-  sharedFooterGroups,
-  sharedHeaderTicker,
-  sharedHeaderUtilityMessage,
-  sharedNavGroups,
-  sharedUtilityLinks,
-} from './content/siteChrome'
 import CookieConsentBanner from './components/layout/CookieConsentBanner'
 import SiteFooter from './components/layout/SiteFooter'
 import SiteHeader from './components/layout/SiteHeader'
 import { getConsentPreferences, hasAnalyticsConsent, setConsentPreferences } from './lib/consent'
+import { useLanguage } from './lib/i18n.jsx'
+import { getLandingChromeContent } from './lib/landingContent'
 import { clearPersonalizationData, recordProductView } from './lib/personalization'
-
-const detailPageChromeFallback = {
-  brand: {
-    name: 'AHR',
-    lockup: 'CV AHR Printing',
-    tagline: 'Apparel dan percetakan kustom dengan spesialisasi sublimasi jersey.',
-    whatsapp_number: '6281234567890',
-    response_time: 'Balas cepat di jam kerja untuk kebutuhan retail maupun bulk order',
-  },
-  utilityLinks: [
-    ...sharedUtilityLinks.map((item) => ({
-      ...item,
-      href: item.href.startsWith('#') ? `/${item.href}` : item.href,
-    })),
-  ],
-  footerGroups: sharedFooterGroups.map((group) => ({
-    ...group,
-    links: group.links.map((link) => ({
-      ...link,
-      href: link.href.startsWith('#') ? `/${link.href}` : link.href,
-    })),
-  })),
-  ticker: sharedHeaderTicker,
-}
 
 const productSizes = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL']
 const adultSizeChart = [
@@ -55,7 +25,7 @@ const adultSizeChart = [
   { size: 'XXL', measurement: '76 x 56' },
   { size: 'XXXL', measurement: '78 x 58' },
 ]
-function ProductAccordion({ title, items, open = false, onToggle }) {
+function ProductAccordion({ title, items, open = false, onToggle, isList = true }) {
   return (
     <div className={open ? 'product-detail-accordion open' : 'product-detail-accordion'}>
       <button
@@ -68,13 +38,21 @@ function ProductAccordion({ title, items, open = false, onToggle }) {
         <ChevronDown size={18} />
       </button>
 
-      {open ? (
+      {open && items?.length > 0 ? (
         <div className="product-detail-accordion-content">
-          <ul>
-            {items.map((item) => (
-              <li key={item}>{item}</li>
-            ))}
-          </ul>
+          {isList ? (
+            <ul>
+              {items.map((item) => (
+                <li key={item}>{item}</li>
+              ))}
+            </ul>
+          ) : (
+            <div className="product-detail-accordion-text" style={{ color: 'var(--text-700)', lineHeight: 1.8 }}>
+              {items.map((item, index) => (
+                <p key={index} style={{ margin: index === items.length - 1 ? 0 : '0 0 12px' }}>{item}</p>
+              ))}
+            </div>
+          )}
         </div>
       ) : null}
     </div>
@@ -82,15 +60,18 @@ function ProductAccordion({ title, items, open = false, onToggle }) {
 }
 
 export default function ProductDetailPage() {
+  const { language, t } = useLanguage()
   const { productSlug } = useParams()
   const location = useLocation()
   const initialProduct = useMemo(
-    () => (location.state?.product ? normalizeProductDetail(location.state.product) : null),
-    [location.state],
+    () => (location.state?.product ? normalizeProductDetail(location.state.product, language) : null),
+    [language, location.state],
   )
   const rootRef = useRef(null)
   const [product, setProduct] = useState(initialProduct)
-  const [chromeContent, setChromeContent] = useState(detailPageChromeFallback)
+  const [chromeContent, setChromeContent] = useState(() =>
+    getLandingChromeContent({}, { hashPrefix: '/', locale: language }),
+  )
   const [selectedSize, setSelectedSize] = useState('M')
   const [sizeGuideOpen, setSizeGuideOpen] = useState(false)
   const [showAllImages, setShowAllImages] = useState(false)
@@ -131,7 +112,7 @@ export default function ProductDetailPage() {
     setStatus(initialProduct ? 'ready' : 'loading')
 
     Promise.all([
-      fetch(getApiUrl(`/api/catalog/products/${productSlug}`), {
+      fetch(getApiUrl(`/api/catalog/products/${productSlug}?locale=${language}`), {
         headers: {
           Accept: 'application/json',
         },
@@ -142,7 +123,7 @@ export default function ProductDetailPage() {
 
         return response.json()
       }),
-      fetch(getApiUrl('/api/catalog/landing-page'), {
+      fetch(getApiUrl(`/api/catalog/landing-page?locale=${language}`), {
         headers: {
           Accept: 'application/json',
         },
@@ -155,34 +136,11 @@ export default function ProductDetailPage() {
           return
         }
 
-        setProduct(normalizeProductDetail(productPayload?.data))
+        setProduct(normalizeProductDetail(productPayload?.data, language))
         setStatus('ready')
 
         if (landingPayload?.data) {
-          setChromeContent((current) => ({
-            ...current,
-            brand: {
-              ...current.brand,
-              ...landingPayload.data.brand,
-              lockup: current.brand.lockup,
-            },
-            utilityLinks: landingPayload.data.utilityLinks?.length
-              ? landingPayload.data.utilityLinks.map((item) => ({
-                  label: item.label,
-                  href: item.href?.startsWith('#') ? `/${item.href}` : item.href,
-                }))
-              : current.utilityLinks,
-            footerGroups: landingPayload.data.footerGroups?.length
-              ? landingPayload.data.footerGroups.map((group) => ({
-                  ...group,
-                  links: group.links.map((link) => ({
-                    ...link,
-                    href: link.href?.startsWith('#') ? `/${link.href}` : link.href,
-                  })),
-                }))
-              : current.footerGroups,
-            ticker: landingPayload.data.ticker || current.ticker,
-          }))
+          setChromeContent(getLandingChromeContent(landingPayload.data, { hashPrefix: '/', locale: language }))
         }
       })
       .catch(() => {
@@ -198,7 +156,7 @@ export default function ProductDetailPage() {
     return () => {
       cancelled = true
     }
-  }, [initialProduct, productSlug])
+  }, [initialProduct, language, productSlug])
 
   useEffect(() => {
     setSelectedSize('M')
@@ -322,7 +280,7 @@ export default function ProductDetailPage() {
     return (
       <main className="product-detail-shell">
         <div className="product-detail-empty">
-          <p>Memuat detail produk...</p>
+          <p>{t('common.loadingProductDetail')}</p>
         </div>
       </main>
     )
@@ -332,8 +290,8 @@ export default function ProductDetailPage() {
     return (
       <main className="product-detail-shell">
         <div className="product-detail-empty">
-          <p>Produk tidak ditemukan.</p>
-          <Link to="/">Kembali ke katalog</Link>
+          <p>{t('common.productNotFound')}</p>
+          <Link to="/">{t('common.backToCatalog')}</Link>
         </div>
       </main>
     )
@@ -404,17 +362,15 @@ export default function ProductDetailPage() {
       product_stock: availableStock,
     })
 
-    const message = encodeURIComponent(`
-Halo AHR, saya tertarik dengan produk berikut:
-
-Produk: ${product.name}
-Kategori: ${product.category}
-Harga: ${product.price}
-Ukuran dipilih: ${selectedSize}
-Stok ukuran ${selectedSize}: ${availableStock} pcs
-
-Mohon info lanjutan untuk order produk ini ya.
-    `.trim())
+    const message = encodeURIComponent(
+      t('productDetail.inquiryMessage', {
+        name: product.name,
+        category: product.category,
+        price: product.price,
+        size: selectedSize,
+        stock: availableStock,
+      }),
+    )
 
     window.open(
       `https://wa.me/${chromeContent.brand.whatsapp_number}?text=${message}`,
@@ -427,20 +383,11 @@ Mohon info lanjutan untuk order produk ini ya.
     <div className="app-shell" ref={rootRef}>
       <SiteHeader
         brandHref="/"
-        navGroups={sharedNavGroups.map((item) => ({
-          ...item,
-          columns: item.columns.map((column) => ({
-            ...column,
-            links: column.links.map((link) => ({
-              ...link,
-              href: link.href.startsWith('#') ? `/${link.href}` : link.href,
-            })),
-          })),
-        }))}
+        navGroups={chromeContent.navGroups}
         ticker={chromeContent.ticker}
-        utilityAction={{ href: '/#contact', label: 'Hubungi tim' }}
+        utilityAction={{ href: '/#contact', label: t('productDetail.utilityAction') }}
         utilityLinks={chromeContent.utilityLinks}
-        utilityMessage={sharedHeaderUtilityMessage}
+        utilityMessage={chromeContent.utilityMessage}
         onNavInteraction={(navItem, surface) => trackEvent('nav_click', { nav_item: navItem, surface })}
         onPrimaryAction={() => {
           trackEvent('nav_click', {
@@ -451,16 +398,18 @@ Mohon info lanjutan untuk order produk ini ya.
           window.location.href = '/#final-cta'
         }}
         onUtilityInteraction={(label, surface) => trackEvent('nav_click', { nav_item: label, surface })}
-        primaryActionLabel="Konsultasi"
+        primaryActionLabel={t('common.consult')}
       />
 
       <main className="product-detail-shell">
         <header className="product-detail-header">
           <Link className="product-detail-back" to="/">
             <MoveLeft size={18} />
-            <span>Kembali</span>
+            <span>{t('common.back')}</span>
           </Link>
-          <span className="product-detail-breadcrumb">Beranda / Produk / {product.category}</span>
+          <span className="product-detail-breadcrumb">
+            {t('productDetail.breadcrumb', { category: product.category })}
+          </span>
         </header>
 
         <section className="product-detail-hero">
@@ -503,7 +452,7 @@ Mohon info lanjutan untuk order produk ini ya.
                   type="button"
                   onClick={() => setShowAllImages((current) => !current)}
                 >
-                  {showAllImages ? 'Tampilkan lebih sedikit' : 'Tampilkan lebih banyak'}
+                  {showAllImages ? t('common.showLess') : t('common.showMore')}
                   <ChevronDown size={18} />
                 </button>
               </div>
@@ -520,14 +469,14 @@ Mohon info lanjutan untuk order produk ini ya.
 
               <div className="product-detail-meta">
                 <div>
-                  <span>Warna</span>
+                  <span>{t('common.color')}</span>
                   <strong>{product.color}</strong>
                 </div>
               </div>
 
               <div className="product-detail-size-block">
                 <div className="product-detail-size-header">
-                  <span>Ukuran</span>
+                  <span>{t('common.size')}</span>
                   <strong>{selectedSize}</strong>
                 </div>
                 <div className="product-detail-size-options">
@@ -547,17 +496,17 @@ Mohon info lanjutan untuk order produk ini ya.
                   type="button"
                   onClick={() => setSizeGuideOpen(true)}
                 >
-                  Panduan ukuran
+                  {t('common.sizeGuide')}
                 </button>
                 <p className="product-detail-stock">
-                  Sisa produk ukuran {selectedSize}: <strong>{availableStock} pcs</strong>
+                  {t('productDetail.stockLeft', { size: selectedSize, stock: availableStock })}
                 </p>
               </div>
 
               <div className="product-detail-actions">
                 <button className="product-detail-primary" type="button" onClick={handleInquiry}>
                   <MessageCircleMore size={18} />
-                  <span>Pesan via WhatsApp</span>
+                  <span>{t('common.orderViaWhatsApp')}</span>
                 </button>
                 <button
                   className="product-detail-secondary"
@@ -569,7 +518,7 @@ Mohon info lanjutan untuk order produk ini ya.
                   }
                 >
                   <Heart size={18} />
-                  <span>Simpan</span>
+                  <span>{t('common.save')}</span>
                 </button>
               </div>
             </div>
@@ -579,16 +528,23 @@ Mohon info lanjutan untuk order produk ini ya.
         <section className="product-detail-content">
           <div className="product-detail-accordion-list">
             <ProductAccordion
-              items={product.specifications}
+              items={product.description}
+              isList={false}
               onToggle={() => setOpenAccordion((current) => (current === 'detail' ? '' : 'detail'))}
               open={openAccordion === 'detail'}
-              title="Detail"
+              title={t('common.detail')}
+            />
+            <ProductAccordion
+              items={product.specifications}
+              onToggle={() => setOpenAccordion((current) => (current === 'specification' ? '' : 'specification'))}
+              open={openAccordion === 'specification'}
+              title={t('common.specification')}
             />
             <ProductAccordion
               items={product.careInstructions}
               onToggle={() => setOpenAccordion((current) => (current === 'care' ? '' : 'care'))}
               open={openAccordion === 'care'}
-              title="Perawatan"
+              title={t('common.care')}
             />
           </div>
         </section>
@@ -598,21 +554,25 @@ Mohon info lanjutan untuk order produk ini ya.
         className={sizeGuideOpen ? 'size-guide-backdrop visible' : 'size-guide-backdrop'}
         onClick={() => setSizeGuideOpen(false)}
       />
-      <aside className={sizeGuideOpen ? 'size-guide-drawer open' : 'size-guide-drawer'} aria-label="Panduan ukuran">
+      <aside
+        className={sizeGuideOpen ? 'size-guide-drawer open' : 'size-guide-drawer'}
+        aria-label={t('productDetail.sizeGuide.title')}
+      >
         <div className="size-guide-drawer-header">
           <div>
-            <span>Panduan ukuran</span>
-            <h2>Size Chart Dewasa</h2>
+            <span>{t('productDetail.sizeGuide.title')}</span>
+            <h2>{t('productDetail.sizeGuide.subtitle')}</h2>
           </div>
-          <button type="button" onClick={() => setSizeGuideOpen(false)} aria-label="Tutup panduan ukuran">
+          <button
+            type="button"
+            onClick={() => setSizeGuideOpen(false)}
+            aria-label={t('productDetail.sizeGuide.closeLabel')}
+          >
             <X size={20} />
           </button>
         </div>
 
-        <p className="size-guide-drawer-copy">
-          Pilih ukuran yang paling mendekati ukuran baju yang biasa dipakai. Jika ingin lebih aman untuk order tim,
-          ukur lebar dan panjang kaos pembanding lalu cocokkan ke tabel berikut.
-        </p>
+        <p className="size-guide-drawer-copy">{t('productDetail.sizeGuide.body')}</p>
 
         <div className="size-guide-table-wrap">
           <table className="size-guide-table">
@@ -626,7 +586,7 @@ Mohon info lanjutan untuk order produk ini ya.
             </thead>
             <tbody>
               <tr>
-                <td>P x L</td>
+                <td>{t('productDetail.sizeGuide.sizeAxis')}</td>
                 {adultSizeChart.map((item) => (
                   <td key={item.size}>{item.measurement}</td>
                 ))}
@@ -636,45 +596,36 @@ Mohon info lanjutan untuk order produk ini ya.
         </div>
 
         <section className="size-guide-measurement">
-          <h3>How to measure</h3>
-          <p>
-            Ambil meteran, catat ukuran badan, lalu cocokan dengan size chart untuk memilih ukuran yang paling pas.
-          </p>
+          <h3>{t('productDetail.sizeGuide.howToMeasureTitle')}</h3>
+          <p>{t('productDetail.sizeGuide.howToMeasureBody')}</p>
 
           <div className="size-guide-measurement-card">
-            <img src={howToMeasureImage} alt="Panduan cara mengukur badan" />
+            <img src={howToMeasureImage} alt={t('productDetail.sizeGuide.imageAlt')} />
             <div className="size-guide-measurement-copy">
-              <p>Pegang meteran secara horizontal untuk mengukur:</p>
+              <p>{t('productDetail.sizeGuide.horizontalTitle')}</p>
               <ol>
-                <li>
-                  <strong>Dada</strong>, di bagian paling lebar.
-                </li>
-                <li>
-                  <strong>Pinggang</strong>, di bagian paling ramping.
-                </li>
-                <li>
-                  <strong>Pinggul</strong>, di bagian paling lebar dengan kaki rapat.
-                </li>
+                {t('productDetail.sizeGuide.measurements')
+                  .slice(0, 3)
+                  .map((measurement) => (
+                    <li key={measurement} dangerouslySetInnerHTML={{ __html: measurement }} />
+                  ))}
               </ol>
 
-              <p>Pegang meteran secara vertikal untuk mengukur:</p>
+              <p>{t('productDetail.sizeGuide.verticalTitle')}</p>
               <ol start="4">
-                <li>
-                  <strong>Panjang kaki dalam</strong>, dari selangkangan ke bawah.
-                </li>
-                <li>
-                  <strong>Tinggi badan</strong>, dari kepala sampai kaki dengan posisi tegak.
-                </li>
+                {t('productDetail.sizeGuide.measurements')
+                  .slice(3)
+                  .map((measurement) => (
+                    <li key={measurement} dangerouslySetInnerHTML={{ __html: measurement }} />
+                  ))}
               </ol>
             </div>
           </div>
         </section>
 
         <section className="size-guide-footnote">
-          <h3>Ukuran masih ragu?</h3>
-          <p>
-            Tidak masalah. Saat ini order masih dibantu via WhatsApp, jadi tim AHR bisa bantu cek ukuran paling aman sebelum produksi.
-          </p>
+          <h3>{t('productDetail.sizeGuide.footnoteTitle')}</h3>
+          <p>{t('productDetail.sizeGuide.footnoteBody')}</p>
         </section>
       </aside>
 
@@ -683,7 +634,7 @@ Mohon info lanjutan untuk order produk ini ya.
           <button
             className="product-lightbox-close"
             type="button"
-            aria-label="Tutup preview gambar"
+            aria-label={t('productDetail.lightbox.close')}
             onClick={() => setLightboxOpen(false)}
           >
             <X size={20} />
@@ -691,7 +642,7 @@ Mohon info lanjutan untuk order produk ini ya.
           <button
             className="product-lightbox-arrow left"
             type="button"
-            aria-label="Gambar sebelumnya"
+            aria-label={t('productDetail.lightbox.previous')}
             onClick={(event) => {
               event.stopPropagation()
               moveLightbox(-1)
@@ -702,7 +653,7 @@ Mohon info lanjutan untuk order produk ini ya.
           <button
             className="product-lightbox-arrow right"
             type="button"
-            aria-label="Gambar berikutnya"
+            aria-label={t('productDetail.lightbox.next')}
             onClick={(event) => {
               event.stopPropagation()
               moveLightbox(1)
@@ -742,7 +693,7 @@ Mohon info lanjutan untuk order produk ini ya.
               />
             </div>
             <p className="product-lightbox-hint">
-              {lightboxZoomed ? 'Klik gambar untuk kembali ke ukuran normal.' : 'Klik gambar untuk zoom detail.'}
+              {lightboxZoomed ? t('productDetail.lightbox.zoomOut') : t('productDetail.lightbox.zoomIn')}
             </p>
             <div className="product-lightbox-thumbs">
               {product.gallery.map((image, index) => (
@@ -765,12 +716,12 @@ Mohon info lanjutan untuk order produk ini ya.
       ) : null}
 
       <SiteFooter
-        bottomText="© 2026 AHR Printing. Dibangun untuk kebutuhan retail dan teamwear."
-        companyProfile={companyProfileContent}
+        bottomText={chromeContent.footerBottomText}
+        companyProfile={chromeContent.companyProfile}
         contactProfile={chromeContent.brand}
-        defaultMapLabel="Buka lokasi AHR"
+        defaultMapLabel={t('common.mapLabel')}
         footerGroups={chromeContent.footerGroups}
-        footerMessage={`Halo AHR, saya ingin order ${product.name} ukuran ${selectedSize}.`}
+        footerMessage={t('productDetail.footerMessage', { name: product.name, size: selectedSize })}
         onWhatsAppClick={() => handleInquiry()}
       />
 

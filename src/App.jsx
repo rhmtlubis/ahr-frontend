@@ -26,17 +26,9 @@ import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import './App.css'
 import { initializeAnalytics, trackEvent, trackPageView } from './lib/analytics'
 import { getApiUrl } from './lib/api'
-import { companyProfileContent } from './content/companyProfile'
 import {
-  sharedFooterGroups,
-  sharedHeaderTicker,
-  sharedHeaderUtilityMessage,
-  sharedNavGroups,
-  sharedUtilityLinks,
-} from './content/siteChrome'
-import {
-  defaultShowcaseCategories,
-  homepageProducts,
+  getDefaultShowcaseCategories,
+  getHomepageProducts,
   normalizeProducts,
   productVisuals,
   slugifyCategoryLabel,
@@ -47,165 +39,9 @@ import CookieConsentBanner from './components/layout/CookieConsentBanner'
 import SiteFooter from './components/layout/SiteFooter'
 import SiteHeader from './components/layout/SiteHeader'
 import { getConsentPreferences, hasAnalyticsConsent, setConsentPreferences } from './lib/consent'
+import { useLanguage } from './lib/i18n.jsx'
+import { defaultQualityHighlights, getLandingChromeContent } from './lib/landingContent'
 import { clearPersonalizationData, getPersonalizedProducts } from './lib/personalization'
-
-const qualityHighlights = [
-  {
-    title: 'Bahan nyaman',
-    detail: 'Material dipilih supaya enak dipakai dan tetap rapi.',
-    icon: Shirt,
-  },
-  {
-    title: 'Print tajam',
-    detail: 'Warna dan detail desain dijaga tetap bersih.',
-    icon: ScanSearch,
-  },
-  {
-    title: 'Jahit rapi',
-    detail: 'Finishing dibuat konsisten untuk pemakaian harian.',
-    icon: ShieldCheck,
-  },
-  {
-    title: 'Revisi mudah',
-    detail: 'Arah desain dibahas singkat dan jelas.',
-    icon: Palette,
-  },
-  {
-    title: 'Produksi aman',
-    detail: 'Alur kerja dibuat terpantau sampai selesai.',
-    icon: PackageCheck,
-  },
-  {
-    title: 'Layanan responsif',
-    detail: 'Tim cepat membantu saat ada pertanyaan order.',
-    icon: MessageSquareMore,
-  },
-]
-
-const homepageContent = {
-  brand: {
-    name: 'AHR',
-    lockup: 'CV AHR Printing',
-    tagline: 'Apparel dan percetakan kustom dengan spesialisasi sublimasi jersey.',
-    whatsapp_number: '6281234567890',
-    response_time: 'Balas cepat di jam kerja untuk kebutuhan retail maupun bulk order',
-  },
-  companyProfile: companyProfileContent,
-  utilityLinks: sharedUtilityLinks,
-  footerGroups: sharedFooterGroups,
-  navGroups: sharedNavGroups,
-  ticker: sharedHeaderTicker,
-  hero: {
-    title: 'Produksi jersey kustom yang rapi, terbuka, dan nyaman diikuti prosesnya.',
-    body:
-      'Custom jersey untuk tim, komunitas, sekolah, event, dan personal dengan alur yang jelas dari desain sampai pengiriman.',
-    primaryCta: 'Lihat pilihan',
-    secondaryCta: 'Diskusi kebutuhan',
-    eyebrow: 'AHR Production Motion',
-  },
-  stats: [
-    { value: '500+', label: 'team, school, dan komunitas ditangani' },
-    { value: '10 pcs', label: 'MOQ custom jersey mulai' },
-    { value: '7-14 hari', label: 'estimasi produksi' },
-    { value: '34 kota', label: 'cakupan pengiriman aktif' },
-  ],
-  capabilities: [
-    {
-      title: 'Design-to-Delivery Workflow',
-      detail: 'Alur bulk order dijelaskan dari awal supaya tim procurement, EO, sekolah, dan klub bisa mengikuti dengan tenang.',
-      icon: MessageCircleMore,
-    },
-    {
-      title: 'Retail Collection Entry',
-      detail: 'Jalur retail tetap ringan dan mudah dijelajahi untuk pembelian langsung tanpa terasa bercampur dengan flow produksi.',
-      icon: ShoppingBag,
-    },
-    {
-      title: 'QC dan Reorder Support',
-      detail: 'Nomor, warna, size run, dan file desain dijaga rapi supaya repeat order lebih mudah saat dibutuhkan.',
-      icon: ShieldCheck,
-    },
-    {
-      title: 'Invoice & Shipment Ready',
-      detail: 'Flow administrasi, approval, dan pengiriman dijelaskan dengan lebih terbuka agar buyer bisa menyesuaikan ritme kerjanya.',
-      icon: Truck,
-    },
-  ],
-  products: homepageProducts,
-  clientBrands: [
-    'Komunitas Futsal Bandung',
-    'School League Series',
-    'Corporate Fun Run',
-    'Event Organizer Jawa Barat',
-    'Campus Sports Week',
-    'Brand Activation Team',
-  ],
-  pricingPackages: [
-    {
-      id: 'starter',
-      name: 'Starter',
-      quantity: '10 pcs',
-      price: 'Mulai Rp 95.000 / pcs',
-      featured: false,
-      features: ['1 desain utama', '2x revisi gratis', 'Cocok untuk tim baru'],
-    },
-    {
-      id: 'tim',
-      name: 'Tim',
-      quantity: '25 pcs',
-      price: 'Mulai Rp 88.000 / pcs',
-      featured: true,
-      features: ['Harga paling ideal', 'Sample fisik opsional', 'Prioritas slot produksi'],
-    },
-    {
-      id: 'komunitas',
-      name: 'Komunitas',
-      quantity: '100 pcs',
-      price: 'Custom volume pricing',
-      featured: false,
-      features: ['Tier khusus reseller/EO', 'Split ukuran & chapter', 'Pendampingan reorder'],
-    },
-  ],
-  processSteps: [
-    {
-      title: 'Brief',
-      detail: 'Kebutuhan, jumlah, dan target deadline dibicarakan lebih dulu supaya arahnya sama.',
-      icon: MessageCircleMore,
-    },
-    {
-      title: 'Approval',
-      detail: 'Mockup dan revisi final dirapikan sebelum masuk line produksi.',
-      icon: FileCheck2,
-    },
-    {
-      title: 'Production',
-      detail: 'Tahap cut, print, sewing, dan quality check dijalankan dengan standar yang konsisten.',
-      icon: PackageCheck,
-    },
-    {
-      title: 'Ship',
-      detail: 'Setelah selesai, pengiriman dan kebutuhan reorder berikutnya bisa disiapkan lebih mudah.',
-      icon: ArrowRight,
-    },
-  ],
-  faqs: [
-    {
-      question: 'Apakah layout ini meniru adidas secara persis?',
-      answer:
-        'Tidak. Kami mengambil pola navigasi dan komposisi visualnya, lalu menyesuaikan warna, copy, logo, dan fokus pesan agar konsisten dengan guideline brand AHR.',
-    },
-    {
-      question: 'Apakah halaman ini tetap mendukung B2B dan B2C sekaligus?',
-      answer:
-        'Ya. Hero dan CTA sengaja dibuat dual-path agar shopper retail dan buyer wholesale bisa masuk ke jalur yang sesuai tanpa bingung.',
-    },
-    {
-      question: 'Video hero bisa diganti dengan video brand AHR?',
-      answer:
-        'Bisa. Saya sudah set sebagai file lokal di frontend sehingga nanti tinggal ganti asset videonya tanpa ubah struktur layout.',
-    },
-  ],
-}
 
 const defaultLeadForm = {
   name: '',
@@ -215,13 +51,6 @@ const defaultLeadForm = {
   segment: 'b2c-direct',
 }
 const capabilityIcons = [MessageCircleMore, LayoutGrid, ShieldCheck, Truck]
-const heroMessageFallback =
-  'Halo AHR, saya ingin konsultasi bulk order untuk custom jersey dan teamwear.'
-const finalMessageFallback =
-  'Halo AHR, saya ingin konsultasi kebutuhan bulk order dan procurement.'
-const footerMessageFallback =
-  'Halo AHR, saya ingin berdiskusi tentang kebutuhan jersey atau apparel kustom.'
-const defaultMapLabel = 'Buka lokasi AHR Printing di Google Maps'
 
 function getUtmParams() {
   const searchParams = new URLSearchParams(window.location.search)
@@ -264,7 +93,7 @@ function resolvePageSectionByDepth(depth) {
   return 'hero'
 }
 
-function normalizeLandingPageContent(payload = {}) {
+function normalizeLandingPageContent(payload = {}, homepageContent, language) {
   const catalogCategories = Array.isArray(payload.catalog_categories) ? payload.catalog_categories : []
   const catalogItems = Array.isArray(payload.catalog_items) ? payload.catalog_items : []
   const heroStats = Array.isArray(payload.hero?.stats) ? payload.hero.stats : []
@@ -274,14 +103,21 @@ function normalizeLandingPageContent(payload = {}) {
   const trustBar = Array.isArray(payload.trust_bar) ? payload.trust_bar : []
   const testimonials = Array.isArray(payload.testimonials) ? payload.testimonials : []
   const pricingPackages = Array.isArray(payload.pricing_packages) ? payload.pricing_packages : []
-  const audiencePaths = getAudiencePaths(payload.audience_paths)
+  const clientBrands = Array.isArray(payload.client_brands) ? payload.client_brands : []
+  const audiencePaths = getAudiencePaths(payload.audience_paths, language)
+  const categoryImageFallbacks = new Map(
+    getDefaultShowcaseCategories(language).map((category) => [slugifyCategoryLabel(category.label), category]),
+  )
+  const chromeContent = getLandingChromeContent(payload, { locale: language })
+  const qualityHighlights = chromeContent.qualityHighlights.map((item, index) => ({
+    ...item,
+    icon: [Shirt, ScanSearch, ShieldCheck, Palette, PackageCheck, MessageSquareMore][index % 6],
+  }))
 
   return {
     ...homepageContent,
-    brand: {
-      ...homepageContent.brand,
-      ...payload.brand,
-    },
+    ...chromeContent,
+    qualityHighlights,
     hero: payload.hero
       ? {
           ...homepageContent.hero,
@@ -290,6 +126,8 @@ function normalizeLandingPageContent(payload = {}) {
           body: payload.hero.subheadline || homepageContent.hero.body,
           primaryCta: payload.hero.primary_cta || homepageContent.hero.primaryCta,
           secondaryCta: payload.hero.secondary_cta || homepageContent.hero.secondaryCta,
+          desktopMedia: payload.hero.desktop_media || null,
+          mobileMedia: payload.hero.mobile_media || null,
         }
       : homepageContent.hero,
     stats:
@@ -299,7 +137,7 @@ function normalizeLandingPageContent(payload = {}) {
             label: item.label,
           }))
         : homepageContent.stats,
-    products: normalizeProducts(catalogItems),
+    products: normalizeProducts(catalogItems, language),
     processSteps:
       processSteps.length > 0
         ? processSteps.map((item, index) => ({
@@ -320,27 +158,6 @@ function normalizeLandingPageContent(payload = {}) {
             icon: capabilityIcons[index % capabilityIcons.length],
           }))
         : homepageContent.capabilities,
-    utilityLinks:
-      catalogCategories.length > 0
-        ? catalogCategories.slice(0, 4).map((item) => ({ label: item.label, href: '#products' }))
-        : homepageContent.utilityLinks,
-    ticker:
-      trustBar.length > 0
-        ? trustBar.join(' • ')
-        : homepageContent.ticker,
-    footerGroups:
-      catalogCategories.length > 0
-        ? [
-            {
-              title: 'Segmen',
-              links: catalogCategories.slice(0, 4).map((item) => ({
-                label: item.label,
-                href: '#products',
-              })),
-            },
-            ...homepageContent.footerGroups.slice(1),
-          ]
-        : homepageContent.footerGroups,
     pricingPackages:
       pricingPackages.length > 0
         ? pricingPackages.map((item) => ({
@@ -353,16 +170,81 @@ function normalizeLandingPageContent(payload = {}) {
           }))
         : homepageContent.pricingPackages,
     testimonials,
-    catalogCategories,
+    clientBrands:
+      clientBrands.length > 0
+        ? clientBrands.map((item) =>
+            typeof item === 'string'
+              ? { label: item, image: null, url: null }
+              : {
+                  label: item.label,
+                  image: item.image || item.logo?.url || null,
+                  url: item.url || null,
+                },
+          )
+        : homepageContent.clientBrands.map((brand) =>
+            typeof brand === 'string' ? { label: brand, image: null, url: null } : brand,
+          ),
+    catalogCategories: catalogCategories.map((item, index) => {
+      const fallbackCategory =
+        categoryImageFallbacks.get(item.id) ||
+        getDefaultShowcaseCategories(language)[index % getDefaultShowcaseCategories(language).length]
+
+      return {
+        ...item,
+        image: item.image || fallbackCategory?.image,
+        position: fallbackCategory?.position || 'center center',
+      }
+    }),
     audiencePaths,
     leadForm: payload.lead_form || {},
     marketPositioning: payload.market_positioning || {},
   }
 }
 
+function getHomepageContent(language, t) {
+  return {
+    brand: {
+      name: 'AHR',
+      lockup: 'CV AHR Printing',
+      tagline: t('homepage.brand.tagline'),
+      whatsapp_number: '6281234567890',
+      response_time: t('homepage.brand.responseTime'),
+    },
+    ...getLandingChromeContent({}, { locale: language }),
+    qualityHighlights: defaultQualityHighlights.map((item, index) => ({
+      ...item,
+      icon: [Shirt, ScanSearch, ShieldCheck, Palette, PackageCheck, MessageSquareMore][index % 6],
+    })),
+    hero: t('homepage.hero'),
+    stats: t('homepage.stats'),
+    capabilities: t('homepage.capabilities').map((item, index) => ({
+      ...item,
+      icon: [MessageCircleMore, ShoppingBag, ShieldCheck, Truck][index % 4],
+    })),
+    products: getHomepageProducts(language),
+    clientBrands: [
+      'Komunitas Futsal Bandung',
+      'School League Series',
+      'Corporate Fun Run',
+      'Event Organizer Jawa Barat',
+      'Campus Sports Week',
+      'Brand Activation Team',
+    ],
+    pricingPackages: t('homepage.pricingPackages'),
+    processSteps: t('homepage.processSteps').map((item, index) => ({
+      ...item,
+      icon: [MessageCircleMore, FileCheck2, PackageCheck, ArrowRight][index % 4],
+    })),
+    faqs: t('homepage.faqs'),
+  }
+}
+
 function App() {
+  const { language, t } = useLanguage()
   const rootRef = useRef(null)
   const faqContentRefs = useRef([])
+  const homepageProducts = useMemo(() => getHomepageProducts(language), [language])
+  const homepageContent = useMemo(() => getHomepageContent(language, t), [language, t])
   const [landingPageContent, setLandingPageContent] = useState(homepageContent)
   const [openFaqIndex, setOpenFaqIndex] = useState(0)
   const [activeCatalogFilter, setActiveCatalogFilter] = useState('all')
@@ -374,7 +256,17 @@ function App() {
   })
   const contactProfile = landingPageContent.brand
   const companyProfile = landingPageContent.companyProfile
-  const leadSegments = getAudiencePaths(landingPageContent.audiencePaths)
+  const decorativeMedia = landingPageContent.decorativeMedia
+  const sectionContent = landingPageContent.sectionContent
+  const leadSegments = getAudiencePaths(landingPageContent.audiencePaths, language)
+  const heroMessageFallback = t('homepage.heroMessage')
+  const finalMessageFallback = t('homepage.finalMessage')
+  const footerMessageFallback = t('homepage.footerMessage')
+  const defaultMapLabel = t('common.mapLabel')
+
+  useEffect(() => {
+    setLandingPageContent(homepageContent)
+  }, [homepageContent])
 
   useEffect(() => {
     setConsentPreferencesState(getConsentPreferences())
@@ -423,7 +315,7 @@ function App() {
     window.addEventListener('scroll', handleScroll, { passive: true })
     window.addEventListener('beforeunload', handleUnload)
 
-    fetch(getApiUrl('/api/catalog/landing-page'), {
+    fetch(getApiUrl(`/api/catalog/landing-page?locale=${language}`), {
       headers: {
         Accept: 'application/json',
       },
@@ -437,7 +329,9 @@ function App() {
         })
         .then((payload) => {
           if (payload?.data) {
-            setLandingPageContent(normalizeLandingPageContent(payload.data))
+            setLandingPageContent({
+              ...normalizeLandingPageContent(payload.data, homepageContent, language),
+            })
           }
         })
         .catch(() => {
@@ -448,7 +342,7 @@ function App() {
       window.removeEventListener('scroll', handleScroll)
       window.removeEventListener('beforeunload', handleUnload)
     }
-  }, [])
+  }, [homepageContent, language])
 
   useEffect(() => {
     if (!rootRef.current) {
@@ -607,8 +501,7 @@ function App() {
   }, [])
 
   useEffect(() => {
-    const availableLeadSegments =
-      getAudiencePaths(landingPageContent.audiencePaths)
+    const availableLeadSegments = getAudiencePaths(landingPageContent.audiencePaths, language)
 
     if (availableLeadSegments.some((segment) => segment.id === leadForm.segment)) {
       return
@@ -618,7 +511,7 @@ function App() {
       ...current,
       segment: availableLeadSegments[0]?.id || defaultLeadForm.segment,
     }))
-  }, [leadForm.segment, landingPageContent.audiencePaths])
+  }, [language, leadForm.segment, landingPageContent.audiencePaths])
 
   useEffect(() => {
     faqContentRefs.current.forEach((element, index) => {
@@ -695,11 +588,13 @@ function App() {
       ? landingPageContent.catalogCategories.map((category, index) => ({
           id: category.id,
           label: category.label,
-          image: defaultShowcaseCategories[index % defaultShowcaseCategories.length]?.image,
-          position: defaultShowcaseCategories[index % defaultShowcaseCategories.length]?.position || 'center center',
+          image: getDefaultShowcaseCategories(language)[index % getDefaultShowcaseCategories(language).length]?.image,
+          position:
+            getDefaultShowcaseCategories(language)[index % getDefaultShowcaseCategories(language).length]?.position ||
+            'center center',
           audience: category.audience,
         }))
-      : defaultShowcaseCategories.map((category) => ({
+      : getDefaultShowcaseCategories(language).map((category) => ({
           ...category,
           id: slugifyCategoryLabel(category.label),
         }))
@@ -713,7 +608,7 @@ function App() {
   const categoryNavigationItems = [
     {
       id: 'all',
-      label: 'Semua Koleksi',
+      label: t('common.allCollections'),
       image: showcaseCategories[0]?.image || landingPageContent.products[0]?.image,
       position: showcaseCategories[0]?.position || landingPageContent.products[0]?.imagePosition,
       count: landingPageContent.products.length,
@@ -885,6 +780,10 @@ function App() {
     )
   }
 
+  const heroDesktopMediaUrl = landingPageContent.hero.desktopMedia?.url || null
+  const heroMobileMediaUrl = landingPageContent.hero.mobileMedia?.url || heroDesktopMediaUrl
+  const faqVisualUrl = decorativeMedia.faq_visual?.url || productVisuals[3]
+
   return (
     <div className="app-shell" ref={rootRef}>
       <SiteHeader
@@ -893,7 +792,7 @@ function App() {
         ticker={landingPageContent.ticker}
         utilityAction={{ href: '#contact', label: 'Lihat workshop' }}
         utilityLinks={landingPageContent.utilityLinks}
-        utilityMessage={sharedHeaderUtilityMessage}
+        utilityMessage={landingPageContent.utilityMessage}
         onNavInteraction={(navItem, surface) => trackEvent('nav_click', { nav_item: navItem, surface })}
         onPrimaryAction={() => {
           trackEvent('nav_click', {
@@ -903,45 +802,75 @@ function App() {
           scrollToSection('#final-cta')
         }}
         onUtilityInteraction={(label, surface) => trackEvent('nav_click', { nav_item: label, surface })}
-        primaryActionLabel="Konsultasi"
+        primaryActionLabel={t('common.consult')}
       />
 
       <main>
         <section className="hero-video-section" id="hero">
-          <video
-            className="hero-video hero-video-desktop"
-            autoPlay
-            loop
-            muted
-            playsInline
-            preload="auto"
-            poster="/ahr-logo.webp"
-          >
-            <source src="/videos/ahr-hero-desktop.m4v" type="video/mp4" />
-          </video>
-          <video
-            className="hero-video hero-video-mobile"
-            autoPlay
-            loop
-            muted
-            playsInline
-            preload="auto"
-            poster="/ahr-logo.webp"
-          >
-            <source src="/videos/ahr-hero-mobile.mp4" type="video/mp4" />
-          </video>
+          {heroDesktopMediaUrl ? (
+            <img
+              className="hero-video hero-video-desktop"
+              src={heroDesktopMediaUrl}
+              alt={landingPageContent.hero.desktopMedia?.alt_text || landingPageContent.hero.title}
+            />
+          ) : (
+            <video
+              className="hero-video hero-video-desktop"
+              autoPlay
+              loop
+              muted
+              playsInline
+              preload="auto"
+              poster="/ahr-logo.webp"
+            >
+              <source src="/videos/ahr-hero-desktop.m4v" type="video/mp4" />
+            </video>
+          )}
+          {heroMobileMediaUrl ? (
+            <img
+              className="hero-video hero-video-mobile"
+              src={heroMobileMediaUrl}
+              alt={landingPageContent.hero.mobileMedia?.alt_text || landingPageContent.hero.title}
+            />
+          ) : (
+            <video
+              className="hero-video hero-video-mobile"
+              autoPlay
+              loop
+              muted
+              playsInline
+              preload="auto"
+              poster="/ahr-logo.webp"
+            >
+              <source src="/videos/ahr-hero-mobile.mp4" type="video/mp4" />
+            </video>
+          )}
           <div className="hero-orb hero-orb-one" />
           <div className="hero-orb hero-orb-two" />
           <div className="hero-overlay" />
           <div className="hero-content">
             <div className="hero-cta-row">
-              <button
+              <Link
                 className="cta-button cta-button-outline"
+                to="/all-products"
+                onClick={() =>
+                  trackEvent('hero_cta_click', {
+                    button_text: landingPageContent.hero.secondaryCta,
+                    button_type: 'link',
+                    intent: 'lihat-katalog',
+                    destination: '/all-products',
+                  })
+                }
+              >
+                {landingPageContent.hero.secondaryCta}
+              </Link>
+              <button
+                className="cta-button cta-button-light"
                 onClick={() =>
                   handleWhatsAppClick(
                     'hero_cta_click',
                     {
-                      button_text: landingPageContent.hero.secondaryCta,
+                      button_text: landingPageContent.hero.primaryCta,
                       button_type: 'whatsapp',
                       intent: 'konsultasi-gratis',
                     },
@@ -949,22 +878,9 @@ function App() {
                   )
                 }
               >
-                {landingPageContent.hero.secondaryCta}
-              </button>
-              <a
-                className="cta-button cta-button-light"
-                href="#products"
-                onClick={() =>
-                  trackEvent('hero_cta_click', {
-                    button_text: landingPageContent.hero.primaryCta,
-                    button_type: 'anchor',
-                    intent: 'lihat-katalog',
-                  })
-                }
-              >
                 {landingPageContent.hero.primaryCta}
                 <ChevronRight size={18} />
-              </a>
+              </button>
             </div>
           </div>
         </section>
@@ -980,11 +896,9 @@ function App() {
 
         <section className="content-block section-soft" data-reveal>
           <div className="section-heading" data-reveal-item>
-            <span>AHR Unified Direction</span>
-            <h2>Tampilan dibuat lebih ringan agar orang cepat paham pilihan dan alur ordernya.</h2>
-            <p>
-              Fokus utamanya tetap pada produk, proses, dan titik kontak yang mudah dijangkau.
-            </p>
+            <span>{sectionContent.unified_direction_eyebrow}</span>
+            <h2>{sectionContent.unified_direction_title}</h2>
+            <p>{sectionContent.unified_direction_body}</p>
           </div>
 
           <div className="capability-grid">
@@ -1017,12 +931,12 @@ function App() {
           <div className="discover-grid" data-reveal-item>
             <div className="quality-panel">
               <div className="quality-panel-heading">
-                <h3>We offer quality</h3>
-                <p>Material terbaik, proses rapi, dan layanan yang tetap mudah diikuti.</p>
+                <h3>{sectionContent.quality_panel_title}</h3>
+                <p>{sectionContent.quality_panel_body}</p>
               </div>
 
               <div className="quality-grid">
-                {qualityHighlights.map((item) => {
+                {landingPageContent.qualityHighlights.map((item) => {
                   const Icon = item.icon
 
                   return (
@@ -1041,10 +955,10 @@ function App() {
             <div className="personalized-products-panel" data-reveal-item>
               <div className="personalized-products-heading">
                 <div>
-                  <span>Top Produk Untuk Anda</span>
-                  <h3>Urutan ini menyesuaikan produk yang paling sering Anda lihat.</h3>
+                  <span>{t('homepage.personalized.eyebrow')}</span>
+                  <h3>{t('homepage.personalized.title')}</h3>
                 </div>
-                <p>Personalisasi ini hanya berlaku di browser Anda dan bisa berubah seiring pola kunjungan.</p>
+                <p>{t('homepage.personalized.body')}</p>
               </div>
 
               <div className="personalized-products-grid">
@@ -1055,7 +969,7 @@ function App() {
                       to={`/produk/${product.slug}`}
                       state={{ product }}
                       onClick={() => handleProductNavigate(product)}
-                      aria-label={`Lihat detail ${product.name}`}
+                      aria-label={`${t('common.detail')} ${product.name}`}
                     >
                       <div className="product-media">
                         <img
@@ -1074,7 +988,7 @@ function App() {
                     <button
                       className="wishlist-button"
                       type="button"
-                      aria-label={`Tanya produk ${product.name}`}
+                      aria-label={`${t('common.askProduct')} ${product.name}`}
                       onClick={() => handleProductInquiry(product)}
                     >
                       <Heart size={18} />
@@ -1087,7 +1001,9 @@ function App() {
 
           <div className="product-slider" data-reveal-item>
             <div className="product-slider-toolbar">
-              <p className="product-slider-meta">{visibleProducts.length} produk. Geser ke samping untuk melihat semuanya.</p>
+              <p className="product-slider-meta">
+                {t('homepage.slider.meta', { count: visibleProducts.length })}
+              </p>
               <Link
                 className="product-slider-view-all"
                 to={activeCatalogFilter === 'all' ? '/all-products' : `/all-products?category=${activeCatalogFilter}`}
@@ -1098,7 +1014,7 @@ function App() {
                   })
                 }
               >
-                Lihat Semua Produk
+                {t('homepage.slider.viewAll')}
               </Link>
             </div>
 
@@ -1111,7 +1027,7 @@ function App() {
                       to={`/produk/${product.slug}`}
                       state={{ product }}
                       onClick={() => handleProductNavigate(product)}
-                      aria-label={`Lihat detail ${product.name}`}
+                      aria-label={`${t('common.detail')} ${product.name}`}
                     >
                       <div className="product-media">
                         <img
@@ -1130,7 +1046,7 @@ function App() {
                     <button
                       className="wishlist-button"
                       type="button"
-                      aria-label={`Tanya produk ${product.name}`}
+                      aria-label={`${t('common.askProduct')} ${product.name}`}
                       onClick={() => handleProductInquiry(product)}
                     >
                       <Heart size={18} />
@@ -1145,25 +1061,50 @@ function App() {
         <section className="content-block section-soft client-brand-section" data-reveal>
           <div className="section-heading heading-inline" data-reveal-item>
             <div>
-              <span>Our Client Brand</span>
-              <h2>Dipercaya brand, komunitas, sekolah, dan tim yang membutuhkan produksi lebih rapi dan mudah dikoordinasikan.</h2>
+              <span>{sectionContent.client_brands_eyebrow}</span>
+              <h2>{sectionContent.client_brands_title}</h2>
             </div>
-            <p className="client-brand-caption">Beberapa tipe klien dan kolaborator yang paling sering bekerja sama dengan AHR Printing.</p>
+            <p className="client-brand-caption">{sectionContent.client_brands_body}</p>
           </div>
 
           <div className="client-brand-grid">
-            {landingPageContent.clientBrands.map((brand) => (
-              <article className="client-brand-card" key={brand} data-reveal-item>
-                <span>{brand}</span>
-              </article>
-            ))}
+            {landingPageContent.clientBrands.map((brand, index) => {
+              const brandKey = `${brand.label}-${brand.url || brand.image || index}`
+
+              return (
+              brand.url ? (
+                <a
+                  className="client-brand-card"
+                  key={brandKey}
+                  data-reveal-item
+                  href={brand.url}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  {brand.image ? (
+                    <img className="client-brand-logo" src={brand.image} alt={brand.label} />
+                  ) : (
+                    <span>{brand.label}</span>
+                  )}
+                </a>
+              ) : (
+                <article className="client-brand-card" key={brandKey} data-reveal-item>
+                  {brand.image ? (
+                    <img className="client-brand-logo" src={brand.image} alt={brand.label} />
+                  ) : (
+                    <span>{brand.label}</span>
+                  )}
+                </article>
+              )
+              )
+            })}
           </div>
         </section>
 
         <section className="content-block section-soft process-layout" id="process" data-reveal>
           <div className="section-heading" data-reveal-item>
-            <span>Bulk order process</span>
-            <h2>Bagian proses membantu menjelaskan apa yang terjadi setelah percakapan dimulai.</h2>
+            <span>{sectionContent.process_eyebrow}</span>
+            <h2>{sectionContent.process_title}</h2>
           </div>
 
           <div className="process-grid">
@@ -1187,11 +1128,11 @@ function App() {
         <section className="content-block section-soft pricing-layout" id="pricing" data-reveal>
           <div className="section-heading heading-inline" data-reveal-item>
             <div>
-              <span>Paket Harga</span>
-              <h2>Pilih paket yang paling mendekati kebutuhan order, lalu lanjutkan konsultasi untuk detail finalnya.</h2>
+              <span>{sectionContent.pricing_eyebrow}</span>
+              <h2>{sectionContent.pricing_title}</h2>
             </div>
             <a href="#final-cta">
-              Minta penawaran
+              {t('homepage.pricing.requestQuote')}
               <ArrowRight size={16} />
             </a>
           </div>
@@ -1216,7 +1157,7 @@ function App() {
                   type="button"
                   onClick={() => handlePricingInquiry(pricingPackage)}
                 >
-                  Tanya Paket Ini
+                  {t('homepage.pricing.askThisPackage')}
                 </button>
               </article>
             ))}
@@ -1225,8 +1166,8 @@ function App() {
 
         <section className="final-panel section-accent" id="final-cta" data-reveal>
           <div className="final-panel-copy" data-reveal-item>
-            <span>Final CTA</span>
-            <h2>Pilih jalur yang paling sesuai, lalu lanjutkan percakapannya dengan cara yang nyaman.</h2>
+            <span>{sectionContent.final_cta_eyebrow}</span>
+            <h2>{sectionContent.final_cta_title}</h2>
             <div className="final-actions">
               <button
                 className="cta-button cta-button-dark"
@@ -1242,42 +1183,43 @@ function App() {
                   )
                 }
               >
-                Wholesale Consultation
+                {t('homepage.finalCta.wholesaleConsultation')}
               </button>
-              <a
+              <Link
                 className="cta-button cta-button-light"
-                href="#products"
+                to="/all-products"
                 onClick={() =>
                   trackEvent('hero_cta_click', {
-                    button_text: 'Shop Collection',
-                    button_type: 'anchor',
+                    button_text: t('homepage.finalCta.shopCollection'),
+                    button_type: 'link',
                     intent: 'shop-collection',
+                    destination: '/all-products',
                   })
                 }
               >
-                Shop Collection
-              </a>
+                {t('homepage.finalCta.shopCollection')}
+              </Link>
             </div>
           </div>
 
           <form className="lead-form" onSubmit={submitLead} data-reveal-item>
             <input
-              aria-label="Nama PIC"
-              placeholder="Nama PIC"
+              aria-label={t('homepage.leadForm.name')}
+              placeholder={t('homepage.leadForm.name')}
               value={leadForm.name}
               onChange={(event) => setLeadForm((current) => ({ ...current, name: event.target.value }))}
               required
             />
             <input
-              aria-label="Nomor WhatsApp"
-              placeholder="Nomor WhatsApp"
+              aria-label={t('homepage.leadForm.phone')}
+              placeholder={t('homepage.leadForm.phone')}
               value={leadForm.phone}
               onChange={(event) => setLeadForm((current) => ({ ...current, phone: event.target.value }))}
               required
             />
             <input
-              aria-label="Nama tim atau instansi"
-              placeholder="Tim / instansi / brand"
+              aria-label={t('homepage.leadForm.organization')}
+              placeholder={t('homepage.leadForm.organizationPlaceholder')}
               value={leadForm.organization}
               onChange={(event) =>
                 setLeadForm((current) => ({ ...current, organization: event.target.value }))
@@ -1285,8 +1227,8 @@ function App() {
             />
             <div className="lead-form-row">
               <input
-                aria-label="Estimasi jumlah pcs"
-                placeholder="Estimasi pcs"
+                aria-label={t('homepage.leadForm.quantity')}
+                placeholder={t('homepage.leadForm.quantityPlaceholder')}
                 value={leadForm.quantity_estimate}
                 onChange={(event) =>
                   setLeadForm((current) => ({
@@ -1296,7 +1238,7 @@ function App() {
                 }
               />
               <select
-                aria-label="Segmen"
+                aria-label={t('homepage.leadForm.segment')}
                 value={leadForm.segment}
                 onChange={(event) =>
                   setLeadForm((current) => ({ ...current, segment: event.target.value }))
@@ -1310,7 +1252,7 @@ function App() {
               </select>
             </div>
             <button className="submit-button" type="submit" disabled={leadStatus.state === 'loading'}>
-              {leadStatus.state === 'loading' ? 'Mengirim...' : 'Submit Inquiry'}
+              {leadStatus.state === 'loading' ? t('common.submitting') : t('common.submitInquiry')}
             </button>
             {leadStatus.message ? <small className={`lead-status ${leadStatus.state}`}>{leadStatus.message}</small> : null}
           </form>
@@ -1319,8 +1261,8 @@ function App() {
         <section className="content-block section-plain faq-layout" id="faq" data-reveal>
           <div className="section-heading heading-inline" data-reveal-item>
             <div>
-              <span>FAQ</span>
-              <h2>Beberapa hal yang biasanya ingin diketahui sebelum lanjut lebih jauh.</h2>
+              <span>{sectionContent.faq_eyebrow}</span>
+              <h2>{sectionContent.faq_title}</h2>
             </div>
             <div className="faq-badge">
               <Store size={16} />
@@ -1332,14 +1274,11 @@ function App() {
             <article className="faq-visual-card" data-reveal-item>
               <div
                 className="faq-visual-media"
-                style={{ backgroundImage: `url(${productVisuals[3]})` }}
+                style={{ backgroundImage: `url(${faqVisualUrl})` }}
               />
               <div className="faq-visual-copy">
-                <span>Masih ragu sebelum order?</span>
-                <p>
-                  FAQ ini kami susun untuk menjawab pertanyaan yang paling sering muncul dari buyer tim,
-                  sekolah, komunitas, maupun customer personal sebelum masuk ke tahap konsultasi.
-                </p>
+                <span>{sectionContent.faq_visual_title}</span>
+                <p>{sectionContent.faq_visual_body}</p>
               </div>
             </article>
 
@@ -1387,11 +1326,11 @@ function App() {
         <section className="content-block section-soft contact-layout" id="contact" data-reveal>
           <div className="section-heading heading-inline" data-reveal-item>
             <div>
-              <span>Alamat & Kontak</span>
-              <h2>Kunjungi workshop kami di Katapang atau mulai konsultasi lewat WhatsApp dan Google Maps.</h2>
+              <span>{sectionContent.contact_eyebrow}</span>
+              <h2>{sectionContent.contact_title}</h2>
             </div>
             <a href={companyProfile.address.mapUrl} target="_blank" rel="noreferrer">
-              Buka Maps
+              {t('common.openMaps')}
               <ArrowRight size={16} />
             </a>
           </div>
@@ -1407,7 +1346,7 @@ function App() {
             <article className="contact-card" data-reveal-item>
               <Phone size={20} />
               <div>
-                <h3>Hubungi Tim AHR</h3>
+                <h3>{t('homepage.contact.teamTitle')}</h3>
                 <p>{contactProfile.response_time}</p>
               </div>
             </article>
@@ -1421,7 +1360,7 @@ function App() {
               rel="noreferrer"
               aria-label={defaultMapLabel}
             >
-              Buka Lokasi di Google Maps
+              {t('common.openLocationInMaps')}
             </a>
             <button
               className="cta-button cta-button-light"
@@ -1436,7 +1375,7 @@ function App() {
                 )
               }
             >
-              Chat WhatsApp Sekarang
+              {t('common.chatWhatsAppNow')}
             </button>
           </div>
         </section>
@@ -1452,6 +1391,7 @@ function App() {
           links: normalizeLinks(group.links),
         }))}
         footerMessage={footerMessageFallback}
+        bottomText={landingPageContent.footerBottomText}
         onWhatsAppClick={(message) =>
           handleWhatsAppClick(
             'nav_wa_click',
