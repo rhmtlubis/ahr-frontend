@@ -112,7 +112,7 @@ export default function SiteHeader({
               </a>
             ) : null}
           </div>
-          <div className="utility-links">
+          <div className="utility-actions-group">
             <div className="language-switcher" ref={desktopLanguageMenuRef}>
               <button
                 className={desktopLanguageMenuOpen ? 'language-switcher-trigger open' : 'language-switcher-trigger'}
@@ -175,7 +175,8 @@ export default function SiteHeader({
                 </div>
               </div>
             </div>
-            {utilityLinks.map((item) => (
+            <div className="utility-links">
+              {utilityLinks.map((item) => (
               <a
                 href={item.href}
                 key={item.label}
@@ -183,7 +184,8 @@ export default function SiteHeader({
               >
                 {item.label}
               </a>
-            ))}
+              ))}
+            </div>
           </div>
         </div>
 
