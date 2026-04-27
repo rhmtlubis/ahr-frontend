@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { ChevronDown, ChevronLeft, ChevronRight, Heart, MessageCircleMore, MoveLeft, X } from 'lucide-react'
+import { ChevronDown, ChevronLeft, ChevronRight, MessageCircleMore, Minus, MoveLeft, Plus, ShoppingCart, X } from 'lucide-react'
 import { Link, useLocation, useParams } from 'react-router-dom'
 import gsap from 'gsap'
 import './App.css'
 import { normalizeProductDetail } from './content/productCatalog'
 import { initializeAnalytics, trackEvent, trackPageView } from './lib/analytics'
 import { fetchCatalogPriceQuote, getApiUrl, getPreferredCurrency } from './lib/api'
+import { useCart } from './lib/cart.jsx'
 import howToMeasureImage from './assets/size-guide/how-to-measure.png'
 import ProductPrice from './components/catalog/ProductPrice'
 import CookieConsentBanner from './components/layout/CookieConsentBanner'
@@ -62,6 +63,7 @@ function ProductAccordion({ title, items, open = false, onToggle, isList = true 
 
 export default function ProductDetailPage() {
   const { language, t } = useLanguage()
+  const { addCartItem, itemCount } = useCart()
   const { productSlug } = useParams()
   const location = useLocation()
   const initialProduct = useMemo(
@@ -85,6 +87,8 @@ export default function ProductDetailPage() {
   const [status, setStatus] = useState(initialProduct ? 'ready' : 'loading')
   const [hasAnimatedEntry, setHasAnimatedEntry] = useState(false)
   const [quoteStatus, setQuoteStatus] = useState('idle')
+  const [cartQuantity, setCartQuantity] = useState(1)
+  const [cartNotice, setCartNotice] = useState('')
   const [consentPreferences, setConsentPreferencesState] = useState({
     analytics: 'unknown',
     personalization: 'unknown',
@@ -171,6 +175,8 @@ export default function ProductDetailPage() {
     setLightboxZoomOrigin('50% 50%')
     setOpenAccordion('detail')
     setHasAnimatedEntry(false)
+    setCartQuantity(1)
+    setCartNotice('')
   }, [productSlug])
 
   useEffect(() => {
@@ -355,6 +361,33 @@ export default function ProductDetailPage() {
     })
   }
 
+  const handleAddToCart = () => {
+    const addedItem = addCartItem(product, {
+      size: selectedSize,
+      quantity: cartQuantity,
+    })
+
+    if (!addedItem) {
+      return
+    }
+
+    trackEvent('cart_add_item', {
+      source_page: `/produk/${product.slug}`,
+      product_name: product.name,
+      product_category: product.category,
+      product_size: selectedSize,
+      quantity: cartQuantity,
+    })
+
+    setCartNotice(
+      t('cart.addedNotice', {
+        quantity: cartQuantity,
+        name: product.name,
+        size: selectedSize,
+      }),
+    )
+  }
+
   const handleInquiry = async () => {
     setQuoteStatus('loading')
 
@@ -404,6 +437,7 @@ export default function ProductDetailPage() {
         utilityAction={{ href: '/#contact', label: t('productDetail.utilityAction') }}
         utilityLinks={chromeContent.utilityLinks}
         utilityMessage={chromeContent.utilityMessage}
+        cartItemCount={itemCount}
         onNavInteraction={(navItem, surface) => trackEvent('nav_click', { nav_item: navItem, surface })}
         onPrimaryAction={() => {
           trackEvent('nav_click', {
@@ -519,9 +553,38 @@ export default function ProductDetailPage() {
                 </p>
               </div>
 
+              <div className="product-detail-quantity-block">
+                <div className="product-detail-quantity-header">
+                  <span>{t('cart.quantity')}</span>
+                  <strong>{cartQuantity}</strong>
+                </div>
+                <div className="quantity-stepper">
+                  <button
+                    type="button"
+                    onClick={() => setCartQuantity((current) => Math.max(1, current - 1))}
+                    disabled={cartQuantity <= 1}
+                    aria-label={t('cart.decreaseQuantity')}
+                  >
+                    <Minus size={16} />
+                  </button>
+                  <span>{cartQuantity}</span>
+                  <button
+                    type="button"
+                    onClick={() => setCartQuantity((current) => Math.min(999, current + 1))}
+                    aria-label={t('cart.increaseQuantity')}
+                  >
+                    <Plus size={16} />
+                  </button>
+                </div>
+              </div>
+
               <div className="product-detail-actions">
+                <button className="product-detail-primary" type="button" onClick={handleAddToCart}>
+                  <ShoppingCart size={18} />
+                  <span>{t('cart.addToCart')}</span>
+                </button>
                 <button
-                  className="product-detail-primary"
+                  className="product-detail-secondary"
                   type="button"
                   onClick={handleInquiry}
                   disabled={quoteStatus === 'loading'}
@@ -529,19 +592,13 @@ export default function ProductDetailPage() {
                   <MessageCircleMore size={18} />
                   <span>{t('common.orderViaWhatsApp')}</span>
                 </button>
-                <button
-                  className="product-detail-secondary"
-                  type="button"
-                  onClick={() =>
-                    trackEvent('product_detail_favorite_click', {
-                      product_name: product.name,
-                    })
-                  }
-                >
-                  <Heart size={18} />
-                  <span>{t('common.save')}</span>
-                </button>
               </div>
+
+              {cartNotice ? (
+                <p className="product-detail-cart-notice">
+                  {cartNotice} <Link to="/cart">{t('cart.viewCart')}</Link>
+                </p>
+              ) : null}
             </div>
           </aside>
         </section>

@@ -1,4 +1,4 @@
-import { ChevronRight, Menu, ShoppingBag, X } from 'lucide-react'
+import { ChevronRight, Menu, ShoppingBag, ShoppingCart, X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useLanguage } from '../../lib/i18n.jsx'
@@ -18,6 +18,7 @@ export default function SiteHeader({
   utilityLinks = [],
   utilityMessage,
   utilityAction,
+  cartItemCount = 0,
   primaryActionLabel = 'Konsultasi',
   onPrimaryAction,
   onNavInteraction,
@@ -360,6 +361,12 @@ export default function SiteHeader({
           </nav>
 
           <div className="header-actions">
+            <Link className="header-cart-button" to="/cart" aria-label={t('cart.openCart')}>
+              <ShoppingCart size={18} />
+              {cartItemCount > 0 ? (
+                <span className="header-cart-count">{cartItemCount > 99 ? '99+' : cartItemCount}</span>
+              ) : null}
+            </Link>
             <button className="header-cta" type="button" aria-label={primaryActionLabel} onClick={onPrimaryAction}>
               <ShoppingBag size={18} />
               <span>{primaryActionLabel}</span>

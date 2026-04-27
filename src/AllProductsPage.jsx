@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { ArrowLeft, Heart, MessageSquareMore } from 'lucide-react'
+import { ArrowLeft, MessageSquareMore, ShoppingCart } from 'lucide-react'
 import gsap from 'gsap'
 import { Link, useSearchParams } from 'react-router-dom'
 import './App.css'
@@ -16,6 +16,7 @@ import {
 } from './content/productCatalog'
 import { initializeAnalytics, trackEvent, trackPageView } from './lib/analytics'
 import { fetchCatalogPriceQuote, getApiUrl, getPreferredCurrency } from './lib/api'
+import { useCart } from './lib/cart.jsx'
 import { getConsentPreferences, hasAnalyticsConsent, setConsentPreferences } from './lib/consent'
 import { useLanguage } from './lib/i18n.jsx'
 import { getLandingChromeContent } from './lib/landingContent'
@@ -80,6 +81,7 @@ function buildCategoryNavigationItems(products = [], catalogCategories = [], all
 
 export default function AllProductsPage() {
   const { language, t } = useLanguage()
+  const { addCartItem, itemCount } = useCart()
   const localizedHomepageProducts = useMemo(() => getHomepageProducts(language), [language])
   const rootRef = useRef(null)
   const [searchParams, setSearchParams] = useSearchParams()
@@ -321,6 +323,21 @@ export default function AllProductsPage() {
     }
   }
 
+  const handleAddToCart = (product) => {
+    addCartItem(product, {
+      size: 'M',
+      quantity: 1,
+    })
+
+    trackEvent('cart_add_item', {
+      source_page: '/all-products',
+      product_name: product.name,
+      product_category: product.category,
+      product_size: 'M',
+      quantity: 1,
+    })
+  }
+
   const handleFooterWhatsApp = (message) => {
     trackEvent('footer_cta_click', {
       source_page: '/all-products',
@@ -362,6 +379,7 @@ export default function AllProductsPage() {
         ticker={listingContent.ticker}
         utilityLinks={listingContent.utilityLinks}
         utilityMessage={listingContent.utilityMessage}
+        cartItemCount={itemCount}
         primaryActionLabel={t('allProducts.contactAhr')}
         onPrimaryAction={() => handleFooterWhatsApp(t('allProducts.footerMessage'))}
       />
@@ -435,13 +453,13 @@ export default function AllProductsPage() {
 
                 <div className="all-products-card-actions">
                   <button
-                    className="wishlist-button"
+                    className="all-products-cart"
                     type="button"
-                    aria-label={`${t('common.askProduct')} ${product.name}`}
-                    onClick={() => handleProductInquiry(product)}
-                    disabled={activeQuoteProduct === product.slug}
+                    aria-label={`${t('cart.addToCart')} ${product.name}`}
+                    onClick={() => handleAddToCart(product)}
                   >
-                    <Heart size={18} />
+                    <ShoppingCart size={16} />
+                    <span>{t('cart.addShort')}</span>
                   </button>
                   <button
                     className="all-products-inquiry"

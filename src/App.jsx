@@ -5,7 +5,6 @@ import {
   ChevronDown,
   ChevronRight,
   FileCheck2,
-  Heart,
   MessageSquareMore,
   MapPin,
   LayoutGrid,
@@ -17,6 +16,7 @@ import {
   Search,
   ShieldCheck,
   ShoppingBag,
+  ShoppingCart,
   Store,
   Shirt,
   Truck,
@@ -25,7 +25,8 @@ import gsap from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import './App.css'
 import { initializeAnalytics, trackEvent, trackPageView } from './lib/analytics'
-import { fetchCatalogPriceQuote, getApiUrl, getPreferredCurrency } from './lib/api'
+import { getApiUrl } from './lib/api'
+import { useCart } from './lib/cart.jsx'
 import {
   getDefaultShowcaseCategories,
   getHomepageProducts,
@@ -242,16 +243,15 @@ function getHomepageContent(language, t) {
 
 function App() {
   const { language, t } = useLanguage()
+  const { addCartItem, itemCount } = useCart()
   const rootRef = useRef(null)
   const faqContentRefs = useRef([])
-  const homepageProducts = useMemo(() => getHomepageProducts(language), [language])
   const homepageContent = useMemo(() => getHomepageContent(language, t), [language, t])
   const [landingPageContent, setLandingPageContent] = useState(homepageContent)
   const [openFaqIndex, setOpenFaqIndex] = useState(0)
   const [activeCatalogFilter, setActiveCatalogFilter] = useState('all')
   const [leadForm, setLeadForm] = useState(defaultLeadForm)
   const [leadStatus, setLeadStatus] = useState({ state: 'idle', message: '' })
-  const [activeQuoteProduct, setActiveQuoteProduct] = useState('')
   const [consentPreferences, setConsentPreferencesState] = useState({
     analytics: 'unknown',
     personalization: 'unknown',
@@ -622,7 +622,7 @@ function App() {
   ]
   const personalizedProducts = useMemo(
     () => getPersonalizedProducts(landingPageContent.products, 4),
-    [landingPageContent.products, consentPreferences],
+    [landingPageContent.products],
   )
   const visibleProducts =
     activeCatalogFilter === 'all'
@@ -742,18 +742,6 @@ function App() {
     }
   }
 
-  const handleProductInquiry = (product) => {
-    handleWhatsAppClick(
-      'product_card_click',
-      {
-        product_name: product.name,
-        product_category: product.category,
-        product_moq: product.detail?.split('•')[1]?.trim() || 'not-set',
-      },
-      `Halo AHR, saya tertarik dengan ${product.name}. Mohon info detail bahan, MOQ, dan estimasi produksinya.`,
-    )
-  }
-
   const handleProductNavigate = (product) => {
     trackEvent('product_detail_open', {
       product_name: product.name,
@@ -762,39 +750,19 @@ function App() {
     })
   }
 
-  const handleValidatedProductInquiry = async (product) => {
-    const eventParams = {
+  const handleAddToCart = (product) => {
+    addCartItem(product, {
+      size: 'M',
+      quantity: 1,
+    })
+
+    trackEvent('cart_add_item', {
+      source_page: '/',
       product_name: product.name,
       product_category: product.category,
-      product_moq: product.detail?.split('â€¢')[1]?.trim() || 'not-set',
-    }
-
-    setActiveQuoteProduct(product.slug)
-
-    try {
-      const quote = await fetchCatalogPriceQuote({
-        productSlug: product.slug,
-        quantity: 1,
-        locale: language,
-        currency: getPreferredCurrency(language),
-        expectedTotalAmountMinor: product.pricing?.final_amount_minor ?? undefined,
-      })
-
-      handleWhatsAppClick(
-        'product_card_click',
-        {
-          ...eventParams,
-          quote_currency: quote?.currency,
-          quote_amount_minor: quote?.total_amount_minor,
-          amount_validated: quote?.amount_validation?.is_valid ?? true,
-        },
-        `Halo AHR, saya tertarik dengan ${product.name}. Mohon info detail bahan, MOQ, dan estimasi produksinya.${quote?.formatted_unit_amount ? ` Harga tervalidasi saat ini: ${quote.formatted_unit_amount}.` : ''}`,
-      )
-    } catch {
-      handleProductInquiry(product)
-    } finally {
-      setActiveQuoteProduct('')
-    }
+      product_size: 'M',
+      quantity: 1,
+    })
   }
 
   const handleCatalogFilterClick = (filterId) => {
@@ -830,6 +798,7 @@ function App() {
         utilityAction={{ href: '#contact', label: 'Lihat workshop' }}
         utilityLinks={landingPageContent.utilityLinks}
         utilityMessage={landingPageContent.utilityMessage}
+        cartItemCount={itemCount}
         onNavInteraction={(navItem, surface) => trackEvent('nav_click', { nav_item: navItem, surface })}
         onPrimaryAction={() => {
           trackEvent('nav_click', {
@@ -1032,11 +1001,10 @@ function App() {
                     <button
                       className="wishlist-button"
                       type="button"
-                      aria-label={`${t('common.askProduct')} ${product.name}`}
-                      onClick={() => handleValidatedProductInquiry(product)}
-                      disabled={activeQuoteProduct === product.slug}
+                      aria-label={`${t('cart.addToCart')} ${product.name}`}
+                      onClick={() => handleAddToCart(product)}
                     >
-                      <Heart size={18} />
+                      <ShoppingCart size={18} />
                     </button>
                   </article>
                 ))}
@@ -1098,11 +1066,10 @@ function App() {
                     <button
                       className="wishlist-button"
                       type="button"
-                      aria-label={`${t('common.askProduct')} ${product.name}`}
-                      onClick={() => handleValidatedProductInquiry(product)}
-                      disabled={activeQuoteProduct === product.slug}
+                      aria-label={`${t('cart.addToCart')} ${product.name}`}
+                      onClick={() => handleAddToCart(product)}
                     >
-                      <Heart size={18} />
+                      <ShoppingCart size={18} />
                     </button>
                   </article>
                 ))}

@@ -6,6 +6,7 @@ import footballJerseysBerlin from './assets/product-cards/football-jerseys-berli
 import SiteFooter from './components/layout/SiteFooter'
 import SiteHeader from './components/layout/SiteHeader'
 import { getApiUrl } from './lib/api'
+import { useCart } from './lib/cart.jsx'
 import { useLanguage } from './lib/i18n.jsx'
 import { getLandingChromeContent } from './lib/landingContent'
 
@@ -15,6 +16,7 @@ function buildWhatsAppUrl(phoneNumber, message) {
 
 function CompanyProfilePage() {
   const { language, t } = useLanguage()
+  const { itemCount } = useCart()
   const [pageContent, setPageContent] = useState(() =>
     getLandingChromeContent({}, { hashPrefix: '/', locale: language }),
   )
@@ -69,6 +71,7 @@ function CompanyProfilePage() {
         utilityAction={{ href: '/#contact', label: t('profile.utilityAction') }}
         utilityLinks={utilityLinks}
         utilityMessage={utilityMessage}
+        cartItemCount={itemCount}
         onPrimaryAction={() => {
           window.location.href = '/'
         }}
