@@ -15,6 +15,7 @@ import { getConsentPreferences, hasAnalyticsConsent, setConsentPreferences } fro
 import { useLanguage } from './lib/i18n.jsx'
 import { getLandingChromeContent } from './lib/landingContent'
 import { clearPersonalizationData, recordProductView } from './lib/personalization'
+import useDocumentTitle from './lib/useDocumentTitle'
 
 const productSizes = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL']
 const adultSizeChart = [
@@ -95,6 +96,25 @@ export default function ProductDetailPage() {
     personalization: 'unknown',
   })
   const [animationsReady, setAnimationsReady] = useState(false)
+
+  useDocumentTitle(
+    product
+      ? [product.name, product.category ? `${product.category} Custom Sublimasi` : 'Jersey Custom']
+          .filter(Boolean)
+          .join(' - ')
+      : language === 'en'
+        ? 'Custom Jersey Product Detail'
+        : 'Detail Produk Jersey Custom',
+    product
+      ? [
+          product.name,
+          product.category ? `kategori ${product.category}` : 'produk jersey custom',
+          'AHR melayani pemesanan custom sublimasi dengan desain sesuai kebutuhan tim, komunitas, sekolah, dan perusahaan.',
+        ].join(' ')
+      : language === 'en'
+        ? 'View custom jersey details, specifications, and ordering information from AHR.'
+        : 'Lihat detail produk jersey custom, spesifikasi, dan informasi pemesanan dari AHR.',
+  )
 
   useEffect(() => {
     setConsentPreferencesState(getConsentPreferences())

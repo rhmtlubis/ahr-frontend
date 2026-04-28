@@ -8,6 +8,7 @@ import { useCart } from './lib/cart.jsx'
 import { companyProfilePlaceholderImage } from './lib/cmsContent.js'
 import { useLanguage } from './lib/i18n.jsx'
 import { getLandingChromeContent } from './lib/landingContent'
+import useDocumentTitle from './lib/useDocumentTitle'
 
 function buildWhatsAppUrl(phoneNumber, message) {
   return `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`
@@ -15,6 +16,12 @@ function buildWhatsAppUrl(phoneNumber, message) {
 
 function CompanyProfilePage() {
   const { language, t } = useLanguage()
+  useDocumentTitle(
+    language === 'en' ? 'Company Profile of Custom Jersey Manufacturer' : 'Profil Perusahaan Konveksi & Sublimasi',
+    language === 'en'
+      ? 'Learn about AHR as a custom jersey, sublimation apparel, and sportswear manufacturer for brands, teams, and organizations.'
+      : 'Kenali AHR sebagai perusahaan konveksi jersey custom, apparel sublimasi, dan seragam printing untuk brand, tim, dan instansi.',
+  )
   const { itemCount } = useCart()
   const [pageContent, setPageContent] = useState(() =>
     getLandingChromeContent({}, { hashPrefix: '/', locale: language }),

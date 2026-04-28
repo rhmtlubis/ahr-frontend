@@ -9,6 +9,7 @@ import {
 import { FaFacebookF, FaInstagram, FaTiktok } from 'react-icons/fa6'
 import { Link } from 'react-router-dom'
 import './LinktreePage.css'
+import useDocumentTitle from './lib/useDocumentTitle'
 
 const marketingContacts = [
   {
@@ -55,6 +56,11 @@ function buildWhatsAppUrl(phoneRaw) {
 }
 
 export default function LinktreePage() {
+  useDocumentTitle(
+    'Kontak Marketing Jersey Custom & Sublimasi',
+    'Hubungi tim marketing AHR untuk order jersey custom, konsultasi desain sublimasi, dan informasi pemesanan apparel printing.',
+  )
+
   return (
     <main className="linktree-shell">
       <div className="linktree-background" aria-hidden="true">

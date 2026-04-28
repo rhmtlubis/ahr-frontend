@@ -20,6 +20,7 @@ import { useLanguage } from './lib/i18n.jsx'
 import { getLandingChromeContent } from './lib/landingContent'
 import { clearPersonalizationData } from './lib/personalization'
 import { formatCurrencyAmount, getProductPriceDisplay } from './lib/price'
+import useDocumentTitle from './lib/useDocumentTitle'
 
 const defaultCheckoutForm = {
   name: '',
@@ -350,6 +351,12 @@ function buildCheckoutPayload(items, checkoutForm, language, cartTotals, locatio
 
 export default function CartPage() {
   const { language, t } = useLanguage()
+  useDocumentTitle(
+    language === 'en' ? 'Cart for Custom Jersey Orders' : 'Keranjang Belanja Jersey Custom',
+    language === 'en'
+      ? 'Review selected custom jerseys and sportswear before continuing your order with AHR.'
+      : 'Tinjau pilihan jersey custom dan apparel sublimasi Anda sebelum melanjutkan pemesanan bersama AHR.',
+  )
   const { items, itemCount, updateCartItemQuantity, updateCartItemSize, distributeCartItemSizes, removeCartItem, clearCart } = useCart()
   const [pageContent, setPageContent] = useState(() =>
     getLandingChromeContent({}, { hashPrefix: '/', locale: language }),

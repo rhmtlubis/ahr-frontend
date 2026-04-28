@@ -19,6 +19,7 @@ import { getConsentPreferences, hasAnalyticsConsent, setConsentPreferences } fro
 import { useLanguage } from './lib/i18n.jsx'
 import { getLandingChromeContent } from './lib/landingContent'
 import { clearPersonalizationData } from './lib/personalization'
+import useDocumentTitle from './lib/useDocumentTitle'
 
 const PRODUCTS_PER_PAGE = 8
 
@@ -68,6 +69,12 @@ function buildCategoryNavigationItems(products = [], catalogCategories = [], all
 
 export default function AllProductsPage() {
   const { language, t } = useLanguage()
+  useDocumentTitle(
+    language === 'en' ? 'Custom Jersey & Sportswear Catalog' : 'Katalog Jersey Custom & Seragam Printing',
+    language === 'en'
+      ? 'Browse AHR custom jerseys, sublimation apparel, and sportswear collections for teams, events, schools, and organizations.'
+      : 'Jelajahi katalog jersey custom, apparel sublimasi, dan seragam printing AHR untuk tim, event, sekolah, komunitas, dan instansi.',
+  )
   const { addCartItem, itemCount } = useCart()
   const rootRef = useRef(null)
   const gsapRef = useRef(null)

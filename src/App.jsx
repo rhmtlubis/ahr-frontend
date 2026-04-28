@@ -38,10 +38,11 @@ import ProductPrice from './components/catalog/ProductPrice'
 import CookieConsentBanner from './components/layout/CookieConsentBanner'
 import SiteFooter from './components/layout/SiteFooter'
 import SiteHeader from './components/layout/SiteHeader'
-import { getConsentPreferences, hasAnalyticsConsent, setConsentPreferences } from './lib/consent'
+import { getConsentPreferences, setConsentPreferences } from './lib/consent'
 import { useLanguage } from './lib/i18n.jsx'
 import { getLandingChromeContent } from './lib/landingContent'
 import { clearPersonalizationData, getPersonalizedProducts } from './lib/personalization'
+import useDocumentTitle from './lib/useDocumentTitle'
 
 const defaultLeadForm = {
   name: '',
@@ -224,6 +225,14 @@ function getHomepageContent(language, t) {
 
 function App() {
   const { language, t } = useLanguage()
+  useDocumentTitle(
+    language === 'en'
+      ? 'Custom Sublimation Jerseys & Sportswear Manufacturer'
+      : 'Jersey Custom Sublimasi, Seragam Printing & Konveksi',
+    language === 'en'
+      ? 'AHR produces custom sublimation jerseys, team uniforms, sportswear, and made-to-order apparel for clubs, schools, communities, and companies.'
+      : 'AHR melayani pembuatan jersey custom sublimasi, seragam printing, dan konveksi apparel custom untuk tim, sekolah, komunitas, dan perusahaan.',
+  )
   const { addCartItem, itemCount } = useCart()
   const rootRef = useRef(null)
   const faqContentRefs = useRef([])
@@ -284,15 +293,6 @@ function App() {
     return () => {
       cancelled = true
     }
-  }, [])
-
-  useEffect(() => {
-    if (!hasAnalyticsConsent()) {
-      return
-    }
-
-    initializeAnalytics()
-    trackPageView(window.location.pathname + window.location.search)
   }, [])
 
   useEffect(() => {
@@ -670,6 +670,7 @@ function App() {
 
     if (nextPreferences.analytics === 'accepted') {
       initializeAnalytics()
+      trackPageView(window.location.pathname + window.location.search)
     }
 
     if (nextPreferences.personalization === 'rejected') {
