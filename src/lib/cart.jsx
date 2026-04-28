@@ -2,6 +2,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 
 const CART_STORAGE_KEY = 'ahr-cart-v1'
+const DEFAULT_PRODUCT_SIZES = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL']
 
 function normalizeQuantity(value) {
   const parsedQuantity = Number.parseInt(value, 10)
@@ -41,6 +42,7 @@ function normalizeProductSnapshot(product = {}) {
     detail: product.detail || '',
     color: product.color || '',
     availability: product.availability || '',
+    sizeStock: product.sizeStock || product.size_stock || null,
   }
 }
 
@@ -151,6 +153,104 @@ export function CartProvider({ children }) {
     })
   }, [])
 
+  const updateCartItemSize = useCallback((itemId, size) => {
+    const nextSize = String(size || 'M').trim() || 'M'
+
+    setItems((currentItems) => {
+      const currentItem = currentItems.find((item) => item.id === itemId)
+
+      if (!currentItem) {
+        return currentItems
+      }
+
+      const nextItemId = getCartItemId(currentItem.product.slug, nextSize)
+
+      if (nextItemId === itemId) {
+        return currentItems
+      }
+
+      const targetItem = currentItems.find((item) => item.id === nextItemId)
+
+      if (!targetItem) {
+        return currentItems.map((item) =>
+          item.id === itemId
+            ? {
+                ...item,
+                id: nextItemId,
+                size: nextSize,
+              }
+            : item,
+        )
+      }
+
+      return currentItems
+        .filter((item) => item.id !== itemId)
+        .map((item) =>
+          item.id === nextItemId
+            ? {
+                ...item,
+                quantity: normalizeQuantity(item.quantity + currentItem.quantity),
+              }
+            : item,
+        )
+    })
+  }, [])
+
+  const distributeCartItemSizes = useCallback((itemId, sizes) => {
+    setItems((currentItems) => {
+      const currentItem = currentItems.find((item) => item.id === itemId)
+
+      if (!currentItem) {
+        return currentItems
+      }
+
+      const normalizedSizes = Array.isArray(sizes)
+        ? sizes
+            .map((size) => String(size || currentItem.size || 'M').trim() || currentItem.size || 'M')
+            .filter(Boolean)
+        : []
+
+      if (normalizedSizes.length === 0) {
+        return currentItems
+      }
+
+      const sizeCounts = normalizedSizes.reduce((counts, size) => {
+        counts[size] = (counts[size] || 0) + 1
+
+        return counts
+      }, {})
+      const remainingItems = currentItems.filter((item) => item.id !== itemId)
+      const nextItems = remainingItems.map((item) => {
+        const extraQuantity = item.product.slug === currentItem.product.slug ? sizeCounts[item.size] || 0 : 0
+
+        if (extraQuantity < 1) {
+          return item
+        }
+
+        delete sizeCounts[item.size]
+
+        return {
+          ...item,
+          product: currentItem.product,
+          quantity: normalizeQuantity(item.quantity + extraQuantity),
+          addedAt: new Date().toISOString(),
+        }
+      })
+
+      Object.entries(sizeCounts).forEach(([size, quantity]) => {
+        nextItems.unshift({
+          ...currentItem,
+          id: getCartItemId(currentItem.product.slug, size),
+          size,
+          quantity: normalizeQuantity(quantity),
+          addedAt: new Date().toISOString(),
+        })
+      })
+
+      return nextItems
+    })
+  }, [])
+
   const removeCartItem = useCallback((itemId) => {
     setItems((currentItems) => currentItems.filter((item) => item.id !== itemId))
   }, [])
@@ -166,10 +266,12 @@ export function CartProvider({ children }) {
       uniqueItemCount: items.length,
       addCartItem,
       updateCartItemQuantity,
+      updateCartItemSize,
+      distributeCartItemSizes,
       removeCartItem,
       clearCart,
     }),
-    [addCartItem, clearCart, items, removeCartItem, updateCartItemQuantity],
+    [addCartItem, clearCart, distributeCartItemSizes, items, removeCartItem, updateCartItemQuantity, updateCartItemSize],
   )
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>
@@ -183,4 +285,20 @@ export function useCart() {
   }
 
   return context
+}
+
+export function getProductSizeOptions(product) {
+  if (Array.isArray(product?.sizeOptions) && product.sizeOptions.length > 0) {
+    return [...new Set(product.sizeOptions.map((size) => String(size).trim()).filter(Boolean))]
+  }
+
+  if (product?.sizeStock && typeof product.sizeStock === 'object') {
+    const stockSizes = Object.keys(product.sizeStock).filter(Boolean)
+
+    if (stockSizes.length > 0) {
+      return stockSizes
+    }
+  }
+
+  return DEFAULT_PRODUCT_SIZES
 }

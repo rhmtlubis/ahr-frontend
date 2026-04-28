@@ -1,54 +1,61 @@
 # AHR Frontend
 
-Frontend ini adalah landing page React + Vite untuk funnel jersey AHR. Aplikasi ini berfungsi sebagai layer presentasi dan konversi yang mengonsumsi API Laravel di folder [backend](/opt/homebrew/var/www/ahr/backend), dengan struktur baru yang memisahkan audience path B2B/B2C dari listing produk customer-direct.
+Frontend ini adalah SPA React + Vite untuk website commerce AHR. Aplikasi menangani landing page hybrid, katalog produk, detail produk, cart, checkout WhatsApp, dan halaman kontak ringan seperti `linktree`.
+
+Referensi backend ada di [backend/README.md](../backend/README.md).
 
 ## Peran Frontend
 
-- merender landing page hybrid B2B/B2C
-- mengambil konten dinamis dari endpoint backend
-- mendukung switch bahasa `Indonesia` / `English`
-- menangkap UTM parameter dari URL
-- mengirim form lead ke backend
-- membuka WhatsApp dengan konteks CTA dan attribution
-- mengirim event analytics ke GA4 bila measurement ID diisi
+- merender homepage hybrid B2C/B2B
+- mengambil konten dinamis dari backend Laravel
+- menampilkan katalog produk multi-bahasa `id/en`
+- menangani detail produk dan validasi quote harga
+- menyimpan cart di browser
+- menyimpan draft checkout ke backend lalu mengarahkan user ke WhatsApp
+- mengirim analytics event bila consent dan measurement ID tersedia
+
+## Route Aplikasi
+
+- `/` homepage utama
+- `/all-products` listing produk
+- `/produk/:productSlug` detail produk
+- `/cart` cart dan checkout
+- `/profil` company profile
+- `/linktree` halaman kontak cepat
+- `/admin/*` redirect legacy ke backend `/cms`
 
 ## Integrasi Backend
 
-Secara default frontend akan memanggil route generik berikut:
+Frontend saat ini memakai endpoint:
 
-- `GET /api/catalog/landing-page`
-- `GET /api/catalog/products/{slug}`
-- `POST /api/catalog/leads`
+```http
+GET /api/catalog/landing-page
+GET /api/catalog/products/{productSlug}
+POST /api/catalog/pricing/quote
+POST /api/catalog/leads
+POST /api/catalog/orders
+GET /api/catalog/locations/provinces
+GET /api/catalog/locations/cities
+GET /api/catalog/locations/districts
+```
 
-Untuk konten locale-aware, frontend sekarang mengirim:
+Catatan:
 
-- `GET /api/catalog/landing-page?locale=id|en`
-- `GET /api/catalog/products/{slug}?locale=id|en`
+- request konten dan detail produk mengirim `?locale=id|en`
+- route `/api/b2b/*` masih didukung backend sebagai compatibility layer
+- checkout cart menyimpan order draft ke backend sebelum membuka WhatsApp
 
-Kompatibilitas route lama `/api/b2b/*` tetap dipertahankan di backend untuk migrasi bertahap.
+## Fitur Utama
 
-Saat development lokal, Vite sudah dipasang proxy `/api` ke backend Laravel sehingga frontend bisa dijalankan tanpa harus hardcode domain backend.
-
-## Multi-Language
-
-Frontend sekarang memiliki fondasi multi-language penuh untuk `id/en`.
-
-Yang aktif:
-
-- default bahasa `Indonesia`
-- switch bahasa di header desktop dan mobile
-- pilihan bahasa disimpan ke `localStorage`
-- atribut `<html lang>` ikut diperbarui
-- landing page dan detail produk meminta locale ke backend
-- fallback statis frontend juga ikut locale bila backend belum menyediakan translation lengkap
-
-Area fallback frontend yang sudah locale-aware:
-
-- company profile
-- audience path
-- showcase category labels
-- homepage fallback products
-- product listing/detail normalization fallback
+- switch bahasa `Indonesia / English`
+- fallback content lokal bila API gagal
+- cookie consent terpisah untuk `analytics` dan `personalization`
+- personalized product suggestion berbasis browser consent
+- cart persistence di browser
+- mixed-size editor untuk quantity > 1
+- checkout delivery dengan dropdown provinsi, kota, dan kecamatan
+- CTA, scroll, FAQ, cart, dan checkout event tracking
+- lazy-loaded routes untuk halaman utama
 
 ## Setup Lokal
 
@@ -58,13 +65,13 @@ Area fallback frontend yang sudah locale-aware:
 npm install
 ```
 
-2. Buat file environment:
+2. Buat environment:
 
 ```bash
-cp .env.example .env
+copy .env.example .env
 ```
 
-3. Jalankan frontend:
+3. Jalankan development server:
 
 ```bash
 npm run dev
@@ -82,13 +89,41 @@ VITE_GA_MEASUREMENT_ID=
 
 Catatan:
 
-- kosongkan `VITE_API_BASE_URL` saat development lokal agar request lewat proxy Vite
-- isi `VITE_API_BASE_URL` pada deploy production jika backend berada di domain berbeda
-- `VITE_GA_MEASUREMENT_ID` opsional dan hanya dipakai untuk event tracking
-- untuk admin React berbasis session, Vite juga mem-proxy `/sanctum` agar CSRF cookie Laravel bisa diambil saat login lokal
+- kosongkan `VITE_API_BASE_URL` saat local dev agar request lewat proxy Vite
+- isi `VITE_API_BASE_URL` di production bila backend beda domain
+- `VITE_API_PROXY_TARGET` dipakai oleh proxy `/api` dan `/sanctum`
+- `VITE_GA_MEASUREMENT_ID` opsional dan hanya aktif setelah consent analytics diberikan
 
 ## Build
 
 ```bash
 npm run build
 ```
+
+Output production akan dibuat ke folder `dist/`.
+
+## Arsitektur Singkat
+
+- `src/App.jsx`: homepage hybrid, CTA, lead form, content API
+- `src/AllProductsPage.jsx`: listing katalog
+- `src/ProductDetailPage.jsx`: detail produk + quote validation
+- `src/CartPage.jsx`: cart, mixed size, checkout form, order draft save
+- `src/LinktreePage.jsx`: quick contact page
+- `src/lib/api.js`: helper API publik, quote, order, dan location fetcher
+- `src/lib/cmsContent.js`: normalizer payload CMS/backend ke shape frontend
+
+## Verifikasi
+
+Sebelum publish production, jalankan minimal:
+
+```bash
+npm run build
+```
+
+Disarankan juga cek manual:
+
+- homepage locale `id` dan `en`
+- listing dan detail produk
+- add to cart, ubah quantity, dan mixed size
+- checkout pickup dan delivery
+- halaman `/linktree`

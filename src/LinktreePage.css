@@ -1,0 +1,345 @@
+.linktree-shell {
+  position: relative;
+  min-height: 100vh;
+  padding: 20px 16px 28px;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at top left, rgba(220, 177, 58, 0.22), transparent 28%),
+    radial-gradient(circle at top right, rgba(2, 37, 84, 0.16), transparent 32%),
+    linear-gradient(180deg, #fcfdff 0%, #f1f5fb 100%);
+}
+
+.linktree-background {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.linktree-orb {
+  position: absolute;
+  border-radius: 999px;
+  filter: blur(10px);
+}
+
+.linktree-orb-one {
+  top: 80px;
+  left: -80px;
+  width: 260px;
+  height: 260px;
+  background: rgba(220, 177, 58, 0.15);
+}
+
+.linktree-orb-two {
+  right: -70px;
+  bottom: 120px;
+  width: 300px;
+  height: 300px;
+  background: rgba(2, 37, 84, 0.12);
+}
+
+.linktree-grid {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(2, 37, 84, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(220, 177, 58, 0.06) 1px, transparent 1px);
+  background-size: 28px 28px;
+  mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.55), transparent 92%);
+}
+
+.linktree-card {
+  position: relative;
+  z-index: 1;
+  width: min(100%, 760px);
+  margin: 0 auto;
+  padding: 18px;
+  border: 1px solid rgba(2, 37, 84, 0.08);
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.88);
+  box-shadow: 0 20px 56px rgba(2, 37, 84, 0.12);
+  backdrop-filter: blur(14px);
+}
+
+.linktree-back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--navy-700);
+  text-decoration: none;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.linktree-brand {
+  padding-top: 10px;
+  text-align: center;
+}
+
+.linktree-logo-ring {
+  display: grid;
+  place-items: center;
+  width: 84px;
+  height: 84px;
+  margin: 0 auto 12px;
+  border-radius: 999px;
+  background:
+    linear-gradient(135deg, rgba(220, 177, 58, 0.22), rgba(2, 37, 84, 0.12)),
+    #fff;
+  box-shadow: 0 14px 30px rgba(2, 37, 84, 0.1);
+}
+
+.linktree-logo {
+  width: 58px;
+  height: 58px;
+  object-fit: contain;
+}
+
+.linktree-eyebrow {
+  display: inline-block;
+  margin-bottom: 8px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: rgba(2, 37, 84, 0.08);
+  color: var(--navy-700);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.linktree-brand h1 {
+  font-size: clamp(1.9rem, 5vw, 2.8rem);
+  line-height: 0.95;
+}
+
+.linktree-brand p {
+  width: min(100%, 420px);
+  margin: 10px auto 0;
+  color: var(--text-600);
+  font-size: 0.98rem;
+}
+
+.linktree-badges {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.linktree-badges span {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: #fff;
+  color: var(--text-700);
+  font-size: 0.84rem;
+  font-weight: 600;
+  box-shadow: 0 12px 28px rgba(2, 37, 84, 0.08);
+}
+
+.linktree-section {
+  margin-top: 20px;
+}
+
+.linktree-section-heading {
+  margin-bottom: 10px;
+}
+
+.linktree-section-heading h2 {
+  font-size: clamp(1.15rem, 2vw, 1.45rem);
+}
+
+.linktree-section-heading p {
+  margin-top: 4px;
+  color: var(--text-600);
+  font-size: 0.92rem;
+}
+
+.linktree-list {
+  display: grid;
+  gap: 10px;
+}
+
+.linktree-item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+  border: 1px solid rgba(2, 37, 84, 0.08);
+  border-radius: 18px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(246, 248, 252, 0.95));
+  text-decoration: none;
+  transition:
+    transform 180ms ease,
+    box-shadow 180ms ease,
+    border-color 180ms ease;
+}
+
+.linktree-item:hover {
+  transform: translateY(-3px);
+  border-color: rgba(2, 37, 84, 0.16);
+  box-shadow: 0 18px 40px rgba(2, 37, 84, 0.1);
+}
+
+.linktree-item-copy {
+  flex: 1;
+}
+
+.linktree-item-label {
+  display: inline-block;
+  margin-bottom: 4px;
+  color: var(--gold-700);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.linktree-item-copy strong {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 1rem;
+}
+
+.linktree-item-copy p {
+  color: var(--text-600);
+  font-size: 0.92rem;
+}
+
+.contact-item {
+  align-items: flex-start;
+}
+
+.linktree-item-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.linktree-item-actions a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 96px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  color: #fff;
+  font-size: 0.94rem;
+  font-weight: 600;
+  text-decoration: none;
+  background: var(--navy-700);
+}
+
+.linktree-item-actions a:first-child {
+  background: #fff;
+  color: var(--navy-700);
+  border: 1px solid rgba(2, 37, 84, 0.12);
+}
+
+.social-item {
+  color: inherit;
+}
+
+.linktree-social-icon {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 14px;
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.accent-instagram .linktree-social-icon {
+  background: linear-gradient(135deg, #fd5949, #d6249f 65%, #285aeb);
+}
+
+.accent-tiktok .linktree-social-icon {
+  background: linear-gradient(135deg, #111827, #00c2ff);
+}
+
+.accent-facebook .linktree-social-icon {
+  background: linear-gradient(135deg, #1877f2, #0f4aa6);
+}
+
+.linktree-quick-actions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.quick-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 12px 14px;
+  border: 1px solid rgba(2, 37, 84, 0.08);
+  border-radius: 14px;
+  color: var(--navy-700);
+  background: #fff;
+  text-decoration: none;
+  font-size: 0.92rem;
+  font-weight: 600;
+  box-shadow: 0 10px 24px rgba(2, 37, 84, 0.06);
+}
+
+.quick-action.primary {
+  background: var(--navy-700);
+  color: #fff;
+}
+
+@media (max-width: 720px) {
+  .linktree-shell {
+    padding: 10px 10px 18px;
+  }
+
+  .linktree-card {
+    padding: 14px;
+    border-radius: 20px;
+  }
+
+  .linktree-back-link {
+    font-size: 0.88rem;
+  }
+
+  .linktree-brand h1 {
+    font-size: clamp(1.45rem, 8vw, 2rem);
+  }
+
+  .linktree-brand p {
+    font-size: 0.9rem;
+  }
+
+  .linktree-item,
+  .contact-item {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .social-item {
+    flex-direction: row;
+    align-items: center;
+  }
+
+  .linktree-item-actions {
+    justify-content: stretch;
+  }
+
+  .linktree-item-actions a {
+    flex: 1;
+  }
+
+  .linktree-quick-actions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .quick-action:last-child {
+    grid-column: 1 / -1;
+  }
+}

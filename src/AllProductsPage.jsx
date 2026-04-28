@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { ArrowLeft, MessageSquareMore, ShoppingCart } from 'lucide-react'
-import gsap from 'gsap'
 import { Link, useSearchParams } from 'react-router-dom'
 import './App.css'
 import CategoryFilterHeader from './components/landing/CategoryFilterHeader'
@@ -9,11 +8,10 @@ import CookieConsentBanner from './components/layout/CookieConsentBanner'
 import SiteFooter from './components/layout/SiteFooter'
 import SiteHeader from './components/layout/SiteHeader'
 import {
-  getDefaultShowcaseCategories,
-  getHomepageProducts,
+  categoryPlaceholderImage,
+  normalizeCategoryCard,
   normalizeProducts,
-  slugifyCategoryLabel,
-} from './content/productCatalog'
+} from './lib/cmsContent.js'
 import { initializeAnalytics, trackEvent, trackPageView } from './lib/analytics'
 import { fetchCatalogPriceQuote, getApiUrl, getPreferredCurrency } from './lib/api'
 import { useCart } from './lib/cart.jsx'
@@ -39,22 +37,11 @@ function normalizeListingContent(payload = {}, language = 'id') {
   }
 }
 
-function buildCategoryNavigationItems(products = [], catalogCategories = [], allCollectionsLabel, language = 'id') {
+function buildCategoryNavigationItems(products = [], catalogCategories = [], allCollectionsLabel) {
   const showcaseCategories =
     catalogCategories.length > 0
-      ? catalogCategories.map((category, index) => ({
-          id: category.id,
-          label: category.label,
-          image: category.image || getDefaultShowcaseCategories(language)[index % getDefaultShowcaseCategories(language).length]?.image,
-          position:
-            getDefaultShowcaseCategories(language)[index % getDefaultShowcaseCategories(language).length]?.position ||
-            'center center',
-          audience: category.audience,
-        }))
-      : getDefaultShowcaseCategories(language).map((category) => ({
-          ...category,
-          id: slugifyCategoryLabel(category.label),
-        }))
+      ? catalogCategories.map((category) => normalizeCategoryCard(category, 0))
+      : []
 
   const categoryProductCountMap = products.reduce((accumulator, product) => {
     const categoryId = product.categoryId || 'all'
@@ -68,7 +55,7 @@ function buildCategoryNavigationItems(products = [], catalogCategories = [], all
     {
       id: 'all',
       label: allCollectionsLabel,
-      image: showcaseCategories[0]?.image || products[0]?.image,
+      image: showcaseCategories[0]?.image || products[0]?.image || categoryPlaceholderImage,
       position: showcaseCategories[0]?.position || products[0]?.imagePosition || 'center center',
       count: products.length,
     },
@@ -82,12 +69,12 @@ function buildCategoryNavigationItems(products = [], catalogCategories = [], all
 export default function AllProductsPage() {
   const { language, t } = useLanguage()
   const { addCartItem, itemCount } = useCart()
-  const localizedHomepageProducts = useMemo(() => getHomepageProducts(language), [language])
   const rootRef = useRef(null)
+  const gsapRef = useRef(null)
   const [searchParams, setSearchParams] = useSearchParams()
   const [listingContent, setListingContent] = useState({
     ...getLandingChromeContent({}, { hashPrefix: '/', locale: language }),
-    products: localizedHomepageProducts,
+    products: [],
     catalogCategories: [],
   })
   const [consentPreferences, setConsentPreferencesState] = useState({
@@ -95,9 +82,33 @@ export default function AllProductsPage() {
     personalization: 'unknown',
   })
   const [activeQuoteProduct, setActiveQuoteProduct] = useState('')
+  const [animationsReady, setAnimationsReady] = useState(false)
 
   useEffect(() => {
     setConsentPreferencesState(getConsentPreferences())
+  }, [])
+
+  useEffect(() => {
+    let cancelled = false
+
+    import('gsap')
+      .then((module) => {
+        if (cancelled) {
+          return
+        }
+
+        gsapRef.current = module.default
+        setAnimationsReady(true)
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setAnimationsReady(false)
+        }
+      })
+
+    return () => {
+      cancelled = true
+    }
   }, [])
 
   useEffect(() => {
@@ -130,11 +141,11 @@ export default function AllProductsPage() {
       .catch(() => {
         setListingContent({
           ...getLandingChromeContent({}, { hashPrefix: '/', locale: language }),
-          products: localizedHomepageProducts,
+          products: [],
           catalogCategories: [],
         })
       })
-  }, [language, localizedHomepageProducts])
+  }, [language])
 
   const categoryNavigationItems = useMemo(
     () =>
@@ -142,9 +153,8 @@ export default function AllProductsPage() {
         listingContent.products,
         listingContent.catalogCategories,
         t('common.allCollections'),
-        language,
       ),
-    [language, listingContent.catalogCategories, listingContent.products, t],
+    [listingContent.catalogCategories, listingContent.products, t],
   )
 
   const requestedCategory = searchParams.get('category') || 'all'
@@ -178,10 +188,11 @@ export default function AllProductsPage() {
   }, [activeCatalogFilter, activePage, requestedCategory, requestedPage, searchParams, setSearchParams])
 
   useEffect(() => {
-    if (!rootRef.current || window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    if (!rootRef.current || !animationsReady || !gsapRef.current || window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
       return undefined
     }
 
+    const gsap = gsapRef.current
     const context = gsap.context(() => {
       gsap.fromTo(
         '[data-products-hero]',
@@ -204,7 +215,7 @@ export default function AllProductsPage() {
     }, rootRef)
 
     return () => context.revert()
-  }, [activeCatalogFilter, activePage])
+  }, [activeCatalogFilter, activePage, animationsReady])
 
   const visibleProducts =
     activeCatalogFilter === 'all'
@@ -434,6 +445,8 @@ export default function AllProductsPage() {
                       className="product-image product-image-primary"
                       src={product.image}
                       alt={product.name}
+                      loading="lazy"
+                      decoding="async"
                       style={{ objectPosition: product.imagePosition || 'center center' }}
                     />
                     {product.gallery?.[1] ? (
@@ -441,6 +454,8 @@ export default function AllProductsPage() {
                         className="product-image product-image-hover"
                         src={product.gallery[1]}
                         alt={`${product.name} alternate`}
+                        loading="lazy"
+                        decoding="async"
                         style={{ objectPosition: product.imagePosition || 'center center' }}
                       />
                     ) : null}

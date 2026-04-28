@@ -1,12 +1,11 @@
 import { useEffect, useState } from 'react'
 import { ArrowRight, MapPin, MessageCircleMore } from 'lucide-react'
 import './App.css'
-import industrialSewingWorkshop from './assets/product-cards/industrial-sewing-workshop.jpg'
-import footballJerseysBerlin from './assets/product-cards/football-jerseys-berlin.webp'
 import SiteFooter from './components/layout/SiteFooter'
 import SiteHeader from './components/layout/SiteHeader'
 import { getApiUrl } from './lib/api'
 import { useCart } from './lib/cart.jsx'
+import { companyProfilePlaceholderImage } from './lib/cmsContent.js'
 import { useLanguage } from './lib/i18n.jsx'
 import { getLandingChromeContent } from './lib/landingContent'
 
@@ -58,9 +57,9 @@ function CompanyProfilePage() {
   } =
     pageContent
   const companyProfilePrimaryVisual =
-    decorativeMedia.company_profile_primary?.url || industrialSewingWorkshop
+    decorativeMedia.company_profile_primary?.url || companyProfilePlaceholderImage
   const companyProfileSecondaryVisual =
-    decorativeMedia.company_profile_secondary?.url || footballJerseysBerlin
+    decorativeMedia.company_profile_secondary?.url || companyProfilePlaceholderImage
 
   return (
     <div className="app-shell profile-page-shell">

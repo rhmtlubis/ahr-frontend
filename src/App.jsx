@@ -21,20 +21,18 @@ import {
   Shirt,
   Truck,
 } from 'lucide-react'
-import gsap from 'gsap'
-import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import './App.css'
 import { initializeAnalytics, trackEvent, trackPageView } from './lib/analytics'
 import { getApiUrl } from './lib/api'
 import { useCart } from './lib/cart.jsx'
 import {
-  getDefaultShowcaseCategories,
-  getHomepageProducts,
+  categoryPlaceholderImage,
+  faqPlaceholderImage,
+  findAudiencePathById,
+  getAudiencePaths,
+  normalizeCategoryCard,
   normalizeProducts,
-  productVisuals,
-  slugifyCategoryLabel,
-} from './content/productCatalog'
-import { findAudiencePathById, getAudiencePaths } from './content/marketAudience'
+} from './lib/cmsContent.js'
 import CategoryFilterHeader from './components/landing/CategoryFilterHeader'
 import ProductPrice from './components/catalog/ProductPrice'
 import CookieConsentBanner from './components/layout/CookieConsentBanner'
@@ -42,7 +40,7 @@ import SiteFooter from './components/layout/SiteFooter'
 import SiteHeader from './components/layout/SiteHeader'
 import { getConsentPreferences, hasAnalyticsConsent, setConsentPreferences } from './lib/consent'
 import { useLanguage } from './lib/i18n.jsx'
-import { defaultQualityHighlights, getLandingChromeContent } from './lib/landingContent'
+import { getLandingChromeContent } from './lib/landingContent'
 import { clearPersonalizationData, getPersonalizedProducts } from './lib/personalization'
 
 const defaultLeadForm = {
@@ -107,9 +105,6 @@ function normalizeLandingPageContent(payload = {}, homepageContent, language) {
   const pricingPackages = Array.isArray(payload.pricing_packages) ? payload.pricing_packages : []
   const clientBrands = Array.isArray(payload.client_brands) ? payload.client_brands : []
   const audiencePaths = getAudiencePaths(payload.audience_paths, language)
-  const categoryImageFallbacks = new Map(
-    getDefaultShowcaseCategories(language).map((category) => [slugifyCategoryLabel(category.label), category]),
-  )
   const chromeContent = getLandingChromeContent(payload, { locale: language })
   const qualityHighlights = chromeContent.qualityHighlights.map((item, index) => ({
     ...item,
@@ -186,15 +181,11 @@ function normalizeLandingPageContent(payload = {}, homepageContent, language) {
         : homepageContent.clientBrands.map((brand) =>
             typeof brand === 'string' ? { label: brand, image: null, url: null } : brand,
           ),
-    catalogCategories: catalogCategories.map((item, index) => {
-      const fallbackCategory =
-        categoryImageFallbacks.get(item.id) ||
-        getDefaultShowcaseCategories(language)[index % getDefaultShowcaseCategories(language).length]
-
+    catalogCategories: catalogCategories.map((item) => {
       return {
         ...item,
-        image: item.image || fallbackCategory?.image,
-        position: fallbackCategory?.position || 'center center',
+        image: item.image || item.cover_image?.url || categoryPlaceholderImage,
+        position: item.position || 'center center',
       }
     }),
     audiencePaths,
@@ -213,25 +204,15 @@ function getHomepageContent(language, t) {
       response_time: t('homepage.brand.responseTime'),
     },
     ...getLandingChromeContent({}, { locale: language }),
-    qualityHighlights: defaultQualityHighlights.map((item, index) => ({
-      ...item,
-      icon: [Shirt, ScanSearch, ShieldCheck, Palette, PackageCheck, MessageSquareMore][index % 6],
-    })),
+    qualityHighlights: [],
     hero: t('homepage.hero'),
     stats: t('homepage.stats'),
     capabilities: t('homepage.capabilities').map((item, index) => ({
       ...item,
       icon: [MessageCircleMore, ShoppingBag, ShieldCheck, Truck][index % 4],
     })),
-    products: getHomepageProducts(language),
-    clientBrands: [
-      'Komunitas Futsal Bandung',
-      'School League Series',
-      'Corporate Fun Run',
-      'Event Organizer Jawa Barat',
-      'Campus Sports Week',
-      'Brand Activation Team',
-    ],
+    products: [],
+    clientBrands: [],
     pricingPackages: t('homepage.pricingPackages'),
     processSteps: t('homepage.processSteps').map((item, index) => ({
       ...item,
@@ -246,6 +227,8 @@ function App() {
   const { addCartItem, itemCount } = useCart()
   const rootRef = useRef(null)
   const faqContentRefs = useRef([])
+  const gsapRef = useRef(null)
+  const scrollTriggerRef = useRef(null)
   const homepageContent = useMemo(() => getHomepageContent(language, t), [language, t])
   const [landingPageContent, setLandingPageContent] = useState(homepageContent)
   const [openFaqIndex, setOpenFaqIndex] = useState(0)
@@ -256,6 +239,7 @@ function App() {
     analytics: 'unknown',
     personalization: 'unknown',
   })
+  const [animationsReady, setAnimationsReady] = useState(false)
   const contactProfile = landingPageContent.brand
   const companyProfile = landingPageContent.companyProfile
   const decorativeMedia = landingPageContent.decorativeMedia
@@ -272,6 +256,34 @@ function App() {
 
   useEffect(() => {
     setConsentPreferencesState(getConsentPreferences())
+  }, [])
+
+  useEffect(() => {
+    let cancelled = false
+
+    Promise.all([import('gsap'), import('gsap/ScrollTrigger')])
+      .then(([gsapModule, scrollTriggerModule]) => {
+        if (cancelled) {
+          return
+        }
+
+        const gsapInstance = gsapModule.default
+        const scrollTrigger = scrollTriggerModule.ScrollTrigger
+
+        gsapInstance.registerPlugin(scrollTrigger)
+        gsapRef.current = gsapInstance
+        scrollTriggerRef.current = scrollTrigger
+        setAnimationsReady(true)
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setAnimationsReady(false)
+        }
+      })
+
+    return () => {
+      cancelled = true
+    }
   }, [])
 
   useEffect(() => {
@@ -347,13 +359,13 @@ function App() {
   }, [homepageContent, language])
 
   useEffect(() => {
-    if (!rootRef.current) {
+    if (!rootRef.current || !animationsReady || !gsapRef.current || !scrollTriggerRef.current) {
       return undefined
     }
 
-    gsap.registerPlugin(ScrollTrigger)
-
     const hoverCleanups = []
+    const gsap = gsapRef.current
+    const ScrollTrigger = scrollTriggerRef.current
     const context = gsap.context(() => {
       if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
         return
@@ -500,7 +512,7 @@ function App() {
       context.revert()
       ScrollTrigger.getAll().forEach((trigger) => trigger.kill())
     }
-  }, [])
+  }, [animationsReady])
 
   useEffect(() => {
     const availableLeadSegments = getAudiencePaths(landingPageContent.audiencePaths, language)
@@ -516,6 +528,28 @@ function App() {
   }, [language, leadForm.segment, landingPageContent.audiencePaths])
 
   useEffect(() => {
+    const gsap = gsapRef.current
+
+    if (!gsap) {
+      faqContentRefs.current.forEach((element, index) => {
+        if (!element) {
+          return
+        }
+
+        const inner = element.firstElementChild
+        const isOpen = openFaqIndex === index
+
+        element.style.height = isOpen ? 'auto' : '0px'
+
+        if (inner) {
+          inner.style.opacity = isOpen ? '1' : '0'
+          inner.style.transform = isOpen ? 'translateY(0)' : 'translateY(-8px)'
+        }
+      })
+
+      return
+    }
+
     faqContentRefs.current.forEach((element, index) => {
       if (!element) {
         return
@@ -583,23 +617,14 @@ function App() {
         ease: 'power2.inOut',
       })
     })
-  }, [openFaqIndex, landingPageContent.faqs])
+  }, [openFaqIndex, landingPageContent.faqs, animationsReady])
 
   const showcaseCategories =
     landingPageContent.catalogCategories?.length > 0
-      ? landingPageContent.catalogCategories.map((category, index) => ({
-          id: category.id,
-          label: category.label,
-          image: getDefaultShowcaseCategories(language)[index % getDefaultShowcaseCategories(language).length]?.image,
-          position:
-            getDefaultShowcaseCategories(language)[index % getDefaultShowcaseCategories(language).length]?.position ||
-            'center center',
-          audience: category.audience,
-        }))
-      : getDefaultShowcaseCategories(language).map((category) => ({
-          ...category,
-          id: slugifyCategoryLabel(category.label),
-        }))
+      ? landingPageContent.catalogCategories.map((category) =>
+          normalizeCategoryCard(category, 0),
+        )
+      : []
   const categoryProductCountMap = landingPageContent.products.reduce((accumulator, product) => {
     const categoryId = product.categoryId || 'all'
 
@@ -611,7 +636,7 @@ function App() {
     {
       id: 'all',
       label: t('common.allCollections'),
-      image: showcaseCategories[0]?.image || landingPageContent.products[0]?.image,
+      image: showcaseCategories[0]?.image || landingPageContent.products[0]?.image || categoryPlaceholderImage,
       position: showcaseCategories[0]?.position || landingPageContent.products[0]?.imagePosition,
       count: landingPageContent.products.length,
     },
@@ -787,7 +812,7 @@ function App() {
 
   const heroDesktopMediaUrl = landingPageContent.hero.desktopMedia?.url || null
   const heroMobileMediaUrl = landingPageContent.hero.mobileMedia?.url || heroDesktopMediaUrl
-  const faqVisualUrl = decorativeMedia.faq_visual?.url || productVisuals[3]
+  const faqVisualUrl = decorativeMedia.faq_visual?.url || faqPlaceholderImage
 
   return (
     <div className="app-shell" ref={rootRef}>
@@ -982,6 +1007,8 @@ function App() {
                           className="product-image product-image-primary"
                           src={product.image}
                           alt={product.name}
+                          loading="lazy"
+                          decoding="async"
                           style={{ objectPosition: product.imagePosition || 'center center' }}
                         />
                         {product.gallery?.[1] ? (
@@ -989,6 +1016,8 @@ function App() {
                             className="product-image product-image-hover"
                             src={product.gallery[1]}
                             alt={`${product.name} alternate`}
+                            loading="lazy"
+                            decoding="async"
                             style={{ objectPosition: product.imagePosition || 'center center' }}
                           />
                         ) : null}
@@ -1047,6 +1076,8 @@ function App() {
                           className="product-image product-image-primary"
                           src={product.image}
                           alt={product.name}
+                          loading="lazy"
+                          decoding="async"
                           style={{ objectPosition: product.imagePosition || 'center center' }}
                         />
                         {product.gallery?.[1] ? (
@@ -1054,6 +1085,8 @@ function App() {
                             className="product-image product-image-hover"
                             src={product.gallery[1]}
                             alt={`${product.name} alternate`}
+                            loading="lazy"
+                            decoding="async"
                             style={{ objectPosition: product.imagePosition || 'center center' }}
                           />
                         ) : null}
@@ -1102,7 +1135,7 @@ function App() {
                   rel="noreferrer"
                 >
                   {brand.image ? (
-                    <img className="client-brand-logo" src={brand.image} alt={brand.label} />
+                    <img className="client-brand-logo" src={brand.image} alt={brand.label} loading="lazy" decoding="async" />
                   ) : (
                     <span>{brand.label}</span>
                   )}
@@ -1110,7 +1143,7 @@ function App() {
               ) : (
                 <article className="client-brand-card" key={brandKey} data-reveal-item>
                   {brand.image ? (
-                    <img className="client-brand-logo" src={brand.image} alt={brand.label} />
+                    <img className="client-brand-logo" src={brand.image} alt={brand.label} loading="lazy" decoding="async" />
                   ) : (
                     <span>{brand.label}</span>
                   )}

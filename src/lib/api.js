@@ -64,3 +64,58 @@ export async function fetchCatalogPriceQuote({
 
   return payload?.data || null
 }
+
+export async function saveCatalogOrder(payload) {
+  const response = await fetch(getApiUrl('/api/catalog/orders'), {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+    },
+    body: JSON.stringify(payload),
+  })
+
+  const responsePayload = await response.json().catch(() => null)
+
+  if (!response.ok) {
+    const errorMessage =
+      responsePayload?.message ||
+      Object.values(responsePayload?.errors || {}).flat()[0] ||
+      'Gagal menyimpan order'
+
+    throw new Error(errorMessage)
+  }
+
+  return responsePayload?.data || null
+}
+
+async function fetchCatalogLocationOptions(path, params = {}) {
+  const searchParams = new URLSearchParams(
+    Object.entries(params).filter(([, value]) => value !== undefined && value !== null && value !== ''),
+  )
+  const response = await fetch(getApiUrl(`${path}${searchParams.size > 0 ? `?${searchParams.toString()}` : ''}`), {
+    headers: {
+      Accept: 'application/json',
+    },
+  })
+
+  const payload = await response.json().catch(() => null)
+
+  if (!response.ok) {
+    throw new Error(payload?.message || 'Gagal memuat data wilayah')
+  }
+
+  return payload?.data || []
+}
+
+export function fetchCatalogProvinces() {
+  return fetchCatalogLocationOptions('/api/catalog/locations/provinces')
+}
+
+export function fetchCatalogCities(provinceCode) {
+  return fetchCatalogLocationOptions('/api/catalog/locations/cities', { province_code: provinceCode })
+}
+
+export function fetchCatalogDistricts(cityCode) {
+  return fetchCatalogLocationOptions('/api/catalog/locations/districts', { city_code: cityCode })
+}

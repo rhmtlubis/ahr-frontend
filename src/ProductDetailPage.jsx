@@ -1,12 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { ChevronDown, ChevronLeft, ChevronRight, MessageCircleMore, Minus, MoveLeft, Plus, ShoppingCart, X } from 'lucide-react'
 import { Link, useLocation, useParams } from 'react-router-dom'
-import gsap from 'gsap'
 import './App.css'
-import { normalizeProductDetail } from './content/productCatalog'
+import { normalizeProductDetail } from './lib/cmsContent.js'
 import { initializeAnalytics, trackEvent, trackPageView } from './lib/analytics'
 import { fetchCatalogPriceQuote, getApiUrl, getPreferredCurrency } from './lib/api'
-import { useCart } from './lib/cart.jsx'
+import { getProductSizeOptions, useCart } from './lib/cart.jsx'
 import howToMeasureImage from './assets/size-guide/how-to-measure.png'
 import ProductPrice from './components/catalog/ProductPrice'
 import CookieConsentBanner from './components/layout/CookieConsentBanner'
@@ -71,6 +70,7 @@ export default function ProductDetailPage() {
     [language, location.state],
   )
   const rootRef = useRef(null)
+  const gsapRef = useRef(null)
   const [product, setProduct] = useState(initialProduct)
   const [chromeContent, setChromeContent] = useState(() =>
     getLandingChromeContent({}, { hashPrefix: '/', locale: language }),
@@ -88,14 +88,39 @@ export default function ProductDetailPage() {
   const [hasAnimatedEntry, setHasAnimatedEntry] = useState(false)
   const [quoteStatus, setQuoteStatus] = useState('idle')
   const [cartQuantity, setCartQuantity] = useState(1)
+  const [mixedSizeSelections, setMixedSizeSelections] = useState(['M'])
   const [cartNotice, setCartNotice] = useState('')
   const [consentPreferences, setConsentPreferencesState] = useState({
     analytics: 'unknown',
     personalization: 'unknown',
   })
+  const [animationsReady, setAnimationsReady] = useState(false)
 
   useEffect(() => {
     setConsentPreferencesState(getConsentPreferences())
+  }, [])
+
+  useEffect(() => {
+    let cancelled = false
+
+    import('gsap')
+      .then((module) => {
+        if (cancelled) {
+          return
+        }
+
+        gsapRef.current = module.default
+        setAnimationsReady(true)
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setAnimationsReady(false)
+        }
+      })
+
+    return () => {
+      cancelled = true
+    }
   }, [])
 
   useEffect(() => {
@@ -176,8 +201,19 @@ export default function ProductDetailPage() {
     setOpenAccordion('detail')
     setHasAnimatedEntry(false)
     setCartQuantity(1)
+    setMixedSizeSelections(['M'])
     setCartNotice('')
   }, [productSlug])
+
+  useEffect(() => {
+    setMixedSizeSelections((current) => {
+      if (cartQuantity <= 1) {
+        return [selectedSize]
+      }
+
+      return Array.from({ length: cartQuantity }, (_, index) => current[index] || selectedSize)
+    })
+  }, [cartQuantity, selectedSize])
 
   useEffect(() => {
     if (status !== 'ready' || !product || consentPreferences.personalization !== 'accepted') {
@@ -208,10 +244,11 @@ export default function ProductDetailPage() {
   }
 
   useEffect(() => {
-    if (!rootRef.current || status !== 'ready' || !product) {
+    if (!rootRef.current || status !== 'ready' || !product || !animationsReady || !gsapRef.current) {
       return undefined
     }
 
+    const gsap = gsapRef.current
     const context = gsap.context(() => {
       if (!hasAnimatedEntry) {
         gsap.fromTo(
@@ -249,7 +286,7 @@ export default function ProductDetailPage() {
     }, rootRef)
 
     return () => context.revert()
-  }, [product, status, hasAnimatedEntry])
+  }, [product, status, hasAnimatedEntry, animationsReady])
 
   useEffect(() => {
     if (status !== 'ready' || !product || hasAnimatedEntry) {
@@ -260,10 +297,11 @@ export default function ProductDetailPage() {
   }, [hasAnimatedEntry, product, status])
 
   useEffect(() => {
-    if (!rootRef.current || status !== 'ready') {
+    if (!rootRef.current || status !== 'ready' || !animationsReady || !gsapRef.current) {
       return
     }
 
+    const gsap = gsapRef.current
     const thumbs = rootRef.current.querySelectorAll('.product-detail-thumb')
 
     if (!thumbs.length) {
@@ -282,7 +320,7 @@ export default function ProductDetailPage() {
         clearProps: 'transform,opacity',
       },
     )
-  }, [showAllImages, status])
+  }, [showAllImages, status, animationsReady])
 
   if (status === 'loading') {
     return (
@@ -310,6 +348,7 @@ export default function ProductDetailPage() {
   }
 
   const availableStock = product.sizeStock?.[selectedSize] ?? 0
+  const sizeOptions = getProductSizeOptions(product)
   const visibleGallery = showAllImages ? product.gallery : product.gallery.slice(0, 4)
   const hasMoreImages = product.gallery.length > 4
 
@@ -362,12 +401,25 @@ export default function ProductDetailPage() {
   }
 
   const handleAddToCart = () => {
-    const addedItem = addCartItem(product, {
-      size: selectedSize,
-      quantity: cartQuantity,
-    })
+    const sizeSelections =
+      cartQuantity > 1
+        ? mixedSizeSelections.map((size) => String(size || selectedSize).trim() || selectedSize)
+        : [selectedSize]
+    const sizeBreakdown = sizeSelections.reduce((counts, size) => {
+      counts[size] = (counts[size] || 0) + 1
 
-    if (!addedItem) {
+      return counts
+    }, {})
+    const addedItems = Object.entries(sizeBreakdown)
+      .map(([size, quantity]) =>
+        addCartItem(product, {
+          size,
+          quantity,
+        }),
+      )
+      .filter(Boolean)
+
+    if (addedItems.length === 0) {
       return
     }
 
@@ -375,16 +427,20 @@ export default function ProductDetailPage() {
       source_page: `/produk/${product.slug}`,
       product_name: product.name,
       product_category: product.category,
-      product_size: selectedSize,
+      product_size: cartQuantity > 1 ? sizeSelections.join(',') : selectedSize,
       quantity: cartQuantity,
     })
 
     setCartNotice(
-      t('cart.addedNotice', {
-        quantity: cartQuantity,
-        name: product.name,
-        size: selectedSize,
-      }),
+      cartQuantity > 1
+        ? `${cartQuantity} pcs ${product.name} sudah masuk cart dengan size: ${Object.entries(sizeBreakdown)
+            .map(([size, quantity]) => `${size} (${quantity} pcs)`)
+            .join(', ')}.`
+        : t('cart.addedNotice', {
+            quantity: cartQuantity,
+            name: product.name,
+            size: selectedSize,
+          }),
     )
   }
 
@@ -485,6 +541,8 @@ export default function ProductDetailPage() {
                     <img
                       src={image}
                       alt={`${product.name} ${actualIndex + 1}`}
+                      loading={actualIndex === 0 ? 'eager' : 'lazy'}
+                      decoding="async"
                       style={{
                         objectPosition: product.imagePosition,
                         transformOrigin: zoomOrigins[actualIndex] || '50% 50%',
@@ -577,6 +635,43 @@ export default function ProductDetailPage() {
                   </button>
                 </div>
               </div>
+
+              {cartQuantity > 1 ? (
+                <div className="product-detail-mixed-size-block">
+                  <div className="product-detail-mixed-size-header">
+                    <span>{t('cart.mixedSizeTitle')}</span>
+                    <strong>{cartQuantity} pcs</strong>
+                  </div>
+                  <div className="product-detail-mixed-size-grid">
+                    {Array.from({ length: cartQuantity }, (_, index) => (
+                      <label className="product-detail-mixed-size-field" key={`${product.slug}-mixed-size-${index + 1}`}>
+                        <span>{t('cart.mixedSizePiece', { number: index + 1 })}</span>
+                        <select
+                          value={mixedSizeSelections[index] || selectedSize}
+                          onChange={(event) =>
+                            setMixedSizeSelections((current) => {
+                              const nextSelections = Array.from(
+                                { length: cartQuantity },
+                                (_, selectionIndex) => current[selectionIndex] || selectedSize,
+                              )
+
+                              nextSelections[index] = event.target.value
+
+                              return nextSelections
+                            })
+                          }
+                        >
+                          {sizeOptions.map((size) => (
+                            <option key={`${product.slug}-mixed-option-${index + 1}-${size}`} value={size}>
+                              {size}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
 
               <div className="product-detail-actions">
                 <button className="product-detail-primary" type="button" onClick={handleAddToCart}>
@@ -678,7 +773,7 @@ export default function ProductDetailPage() {
           <p>{t('productDetail.sizeGuide.howToMeasureBody')}</p>
 
           <div className="size-guide-measurement-card">
-            <img src={howToMeasureImage} alt={t('productDetail.sizeGuide.imageAlt')} />
+            <img src={howToMeasureImage} alt={t('productDetail.sizeGuide.imageAlt')} loading="lazy" decoding="async" />
             <div className="size-guide-measurement-copy">
               <p>{t('productDetail.sizeGuide.horizontalTitle')}</p>
               <ol>
@@ -764,6 +859,7 @@ export default function ProductDetailPage() {
                 className="product-lightbox-image"
                 src={product.gallery[lightboxIndex]}
                 alt={`${product.name} preview ${lightboxIndex + 1}`}
+                decoding="async"
                 style={{
                   transform: lightboxZoomed ? 'scale(2.25)' : 'scale(1)',
                   transformOrigin: lightboxZoomOrigin,
@@ -785,7 +881,7 @@ export default function ProductDetailPage() {
                     setLightboxIndex(index)
                   }}
                 >
-                  <img src={image} alt={`${product.name} thumbnail ${index + 1}`} />
+                  <img src={image} alt={`${product.name} thumbnail ${index + 1}`} loading="lazy" decoding="async" />
                 </button>
               ))}
             </div>
