@@ -21,6 +21,17 @@ function CompanyProfilePage() {
     language === 'en'
       ? 'Learn about AHR as a custom jersey, sublimation apparel, and sportswear manufacturer for brands, teams, and organizations.'
       : 'Kenali AHR sebagai perusahaan konveksi jersey custom, apparel sublimasi, dan seragam printing untuk brand, tim, dan instansi.',
+    {
+      canonicalPath: '/profil',
+      image: '/ahr-brand-logo.webp',
+      imageAlt: 'Profil perusahaan AHR',
+      keywords:
+        language === 'en'
+          ? 'company profile, custom jersey manufacturer, sublimation apparel company, sportswear supplier, AHR'
+          : 'profil perusahaan, konveksi jersey custom, perusahaan sublimasi, supplier apparel olahraga, AHR',
+      locale: language,
+      type: 'website',
+    },
   )
   const { itemCount } = useCart()
   const [pageContent, setPageContent] = useState(() =>

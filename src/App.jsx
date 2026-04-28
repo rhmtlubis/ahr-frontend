@@ -232,6 +232,17 @@ function App() {
     language === 'en'
       ? 'AHR produces custom sublimation jerseys, team uniforms, sportswear, and made-to-order apparel for clubs, schools, communities, and companies.'
       : 'AHR melayani pembuatan jersey custom sublimasi, seragam printing, dan konveksi apparel custom untuk tim, sekolah, komunitas, dan perusahaan.',
+    {
+      canonicalPath: '/',
+      image: '/ahr-brand-logo.webp',
+      imageAlt: 'AHR jersey custom sublimasi',
+      keywords:
+        language === 'en'
+          ? 'custom jerseys, sublimation jerseys, sportswear manufacturer, team uniforms, custom apparel, AHR'
+          : 'jersey custom, jersey sublimasi, seragam printing, konveksi apparel, apparel olahraga, AHR',
+      locale: language,
+      type: 'website',
+    },
   )
   const { addCartItem, itemCount } = useCart()
   const rootRef = useRef(null)

@@ -74,6 +74,17 @@ export default function AllProductsPage() {
     language === 'en'
       ? 'Browse AHR custom jerseys, sublimation apparel, and sportswear collections for teams, events, schools, and organizations.'
       : 'Jelajahi katalog jersey custom, apparel sublimasi, dan seragam printing AHR untuk tim, event, sekolah, komunitas, dan instansi.',
+    {
+      canonicalPath: '/all-products',
+      image: '/ahr-brand-logo.webp',
+      imageAlt: 'Katalog jersey custom AHR',
+      keywords:
+        language === 'en'
+          ? 'custom jersey catalog, sportswear catalog, sublimation apparel, team uniforms, AHR products'
+          : 'katalog jersey custom, katalog seragam printing, apparel sublimasi, jersey tim, produk AHR',
+      locale: language,
+      type: 'website',
+    },
   )
   const { addCartItem, itemCount } = useCart()
   const rootRef = useRef(null)

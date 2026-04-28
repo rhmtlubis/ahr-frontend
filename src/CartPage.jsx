@@ -356,6 +356,18 @@ export default function CartPage() {
     language === 'en'
       ? 'Review selected custom jerseys and sportswear before continuing your order with AHR.'
       : 'Tinjau pilihan jersey custom dan apparel sublimasi Anda sebelum melanjutkan pemesanan bersama AHR.',
+    {
+      canonicalPath: '/cart',
+      image: '/ahr-brand-logo.webp',
+      imageAlt: 'Keranjang belanja AHR',
+      keywords:
+        language === 'en'
+          ? 'custom jersey cart, sportswear order, AHR cart'
+          : 'keranjang jersey custom, checkout apparel, keranjang AHR',
+      locale: language,
+      robots: 'noindex, nofollow',
+      type: 'website',
+    },
   )
   const { items, itemCount, updateCartItemQuantity, updateCartItemSize, distributeCartItemSizes, removeCartItem, clearCart } = useCart()
   const [pageContent, setPageContent] = useState(() =>

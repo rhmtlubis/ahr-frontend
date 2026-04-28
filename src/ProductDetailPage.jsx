@@ -114,6 +114,26 @@ export default function ProductDetailPage() {
       : language === 'en'
         ? 'View custom jersey details, specifications, and ordering information from AHR.'
         : 'Lihat detail produk jersey custom, spesifikasi, dan informasi pemesanan dari AHR.',
+    {
+      canonicalPath: `/produk/${productSlug}`,
+      image: product?.image || product?.gallery?.[0] || '/ahr-brand-logo.webp',
+      imageAlt: product?.name || 'Detail produk AHR',
+      keywords: product
+        ? [
+            product.name,
+            product.category,
+            language === 'en' ? 'custom jersey' : 'jersey custom',
+            language === 'en' ? 'sublimation apparel' : 'apparel sublimasi',
+            'AHR',
+          ]
+            .filter(Boolean)
+            .join(', ')
+        : language === 'en'
+          ? 'custom jersey detail, sublimation apparel, team uniform, AHR'
+          : 'detail jersey custom, apparel sublimasi, seragam tim, AHR',
+      locale: language,
+      type: 'product',
+    },
   )
 
   useEffect(() => {

@@ -59,6 +59,15 @@ export default function LinktreePage() {
   useDocumentTitle(
     'Kontak Marketing Jersey Custom & Sublimasi',
     'Hubungi tim marketing AHR untuk order jersey custom, konsultasi desain sublimasi, dan informasi pemesanan apparel printing.',
+    {
+      canonicalPath: '/linktree',
+      image: '/ahr-brand-logo.webp',
+      imageAlt: 'Kontak marketing AHR',
+      keywords:
+        'kontak marketing jersey custom, kontak AHR, order jersey sublimasi, whatsapp AHR, apparel printing',
+      locale: 'id',
+      type: 'website',
+    },
   )
 
   return (
