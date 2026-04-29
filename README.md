@@ -56,6 +56,7 @@ Catatan:
 - checkout delivery dengan dropdown provinsi, kota, dan kecamatan
 - CTA, scroll, FAQ, cart, dan checkout event tracking
 - lazy-loaded routes untuk halaman utama
+- `frontend/Dockerfile` sekarang tracked untuk build production container
 
 ## Setup Lokal
 
@@ -93,6 +94,7 @@ Catatan:
 - isi `VITE_API_BASE_URL` di production bila backend beda domain
 - `VITE_API_PROXY_TARGET` dipakai oleh proxy `/api` dan `/sanctum`
 - `VITE_GA_MEASUREMENT_ID` opsional dan hanya aktif setelah consent analytics diberikan
+- `.env.production` sebaiknya tetap file lokal server/deploy dan tidak di-track Git
 
 ## Build
 
@@ -101,6 +103,12 @@ npm run build
 ```
 
 Output production akan dibuat ke folder `dist/`.
+
+Untuk build image production yang sekarang dipakai di VPS:
+
+```bash
+docker build -t deploy-frontend .
+```
 
 ## Arsitektur Singkat
 
