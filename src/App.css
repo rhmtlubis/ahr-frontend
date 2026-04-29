@@ -2073,6 +2073,18 @@
   cursor: pointer;
 }
 
+.product-detail-primary svg,
+.product-detail-secondary svg {
+  flex: 0 0 18px;
+  width: 18px;
+  height: 18px;
+}
+
+.product-detail-primary span,
+.product-detail-secondary span {
+  line-height: 1.25;
+}
+
 .product-detail-primary {
   background: var(--navy-900);
   color: var(--paper);
