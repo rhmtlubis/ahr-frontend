@@ -6,7 +6,7 @@ const DEFAULT_DESCRIPTION =
 const DEFAULT_KEYWORDS =
   'jersey custom, jersey sublimasi, seragam printing, konveksi jersey, apparel olahraga, AHR'
 const DEFAULT_SITE_URL = (import.meta.env.VITE_SITE_URL || 'https://ahrcorporation.id').replace(/\/+$/, '')
-const DEFAULT_OG_IMAGE = `${DEFAULT_SITE_URL}/ahr-brand-logo.webp`
+const DEFAULT_OG_IMAGE = `${DEFAULT_SITE_URL}/og-preview.png`
 
 export function buildPageTitle(pageTitle) {
   const trimmedTitle = String(pageTitle || '').trim()

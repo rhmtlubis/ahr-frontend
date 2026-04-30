@@ -1,32 +1,37 @@
 # AHR Frontend
 
-Frontend ini adalah SPA React + Vite untuk website commerce AHR. Aplikasi menangani landing page hybrid, katalog produk, detail produk, cart, checkout WhatsApp, dan halaman kontak ringan seperti `linktree`.
+Frontend ini adalah SPA React + Vite untuk website publik AHR.
 
-Referensi backend ada di [backend/README.md](../backend/README.md).
+Tanggung jawab utamanya:
 
-## Peran Frontend
+- menampilkan homepage hybrid
+- merender katalog dan detail produk
+- mengelola cart di browser
+- menjalankan checkout WhatsApp
+- mengirim event analytics jika consent diberikan
 
-- merender homepage hybrid B2C/B2B
-- mengambil konten dinamis dari backend Laravel
-- menampilkan katalog produk multi-bahasa `id/en`
-- menangani detail produk dan validasi quote harga
-- menyimpan cart di browser
-- menyimpan draft checkout ke backend lalu mengarahkan user ke WhatsApp
-- mengirim analytics event bila consent dan measurement ID tersedia
+## Stack
+
+- `React 19`
+- `Vite`
+- `React Router`
+- `GSAP`
+- `Axios`
+- `Lucide React`
 
 ## Route Aplikasi
 
-- `/` homepage utama
+- `/` homepage
 - `/all-products` listing produk
 - `/produk/:productSlug` detail produk
 - `/cart` cart dan checkout
 - `/profil` company profile
-- `/linktree` halaman kontak cepat
-- `/admin/*` redirect legacy ke backend `/cms`
+- `/linktree` halaman kontak singkat
+- `/admin/*` redirect ke backend `/cms`
 
-## Integrasi Backend
+## Data dan Integrasi Backend
 
-Frontend saat ini memakai endpoint:
+Frontend memakai endpoint berikut:
 
 ```http
 GET /api/catalog/landing-page
@@ -41,46 +46,167 @@ GET /api/catalog/locations/districts
 
 Catatan:
 
-- request konten dan detail produk mengirim `?locale=id|en`
-- route `/api/b2b/*` masih didukung backend sebagai compatibility layer
-- checkout cart menyimpan order draft ke backend sebelum membuka WhatsApp
+- konten dan detail produk meminta `?locale=id|en`
+- quote dan order dapat mengirim `currency`
+- backend lama `/api/b2b/*` masih tersedia sebagai compatibility layer
 
-## Fitur Utama
+## Struktur Halaman
 
-- switch bahasa `Indonesia / English`
-- fallback content lokal bila API gagal
-- cookie consent terpisah untuk `analytics` dan `personalization`
-- personalized product suggestion berbasis browser consent
-- cart persistence di browser
-- mixed-size editor untuk quantity > 1
-- checkout delivery dengan dropdown provinsi, kota, dan kecamatan
-- CTA, scroll, FAQ, cart, dan checkout event tracking
-- lazy-loaded routes untuk halaman utama
-- `frontend/Dockerfile` sekarang tracked untuk build production container
+### Homepage `/`
+
+File utama: `src/App.jsx`
+
+Perilaku:
+
+- memanggil landing page API
+- fallback ke konten lokal bila API gagal
+- menampilkan section hero, category showcase, product slider, process, pricing, FAQ, contact
+- lead form submit ke backend
+- CTA WhatsApp menyisipkan konteks dan UTM ke pesan
+- personalization section aktif jika consent personalization diberikan
+
+### Listing `/all-products`
+
+File utama: `src/AllProductsPage.jsx`
+
+Perilaku:
+
+- mengambil `catalog_categories` dan `catalog_items` dari payload landing page
+- filter kategori menggunakan query string `?category=...`
+- pagination menggunakan query string `?page=...`
+- add-to-cart langsung dari listing
+- inquiry tombol produk memvalidasi quote lebih dulu sebelum membuka WhatsApp
+
+### Detail produk `/produk/:productSlug`
+
+File utama: `src/ProductDetailPage.jsx`
+
+Perilaku:
+
+- mengambil detail produk dari API
+- menggunakan `location.state.product` sebagai initial state bila ada
+- mendukung gallery grid, show more, lightbox, dan zoom
+- mendukung size selector, quantity stepper, mixed size untuk qty > 1
+- add-to-cart langsung ke browser cart
+- inquiry WhatsApp memanggil quote API lebih dulu
+
+### Cart `/cart`
+
+File utama: `src/CartPage.jsx`
+
+Perilaku:
+
+- membaca cart dari context browser
+- mengubah size, quantity, dan mixed-size per item
+- menghitung estimasi total dari snapshot harga item
+- memuat provinsi, kota, kecamatan dari backend
+- menyimpan draft order ke backend
+- tetap membuka WhatsApp walaupun save order gagal
+- membersihkan cart setelah submit checkout
+
+### Company profile `/profil`
+
+File utama: `src/CompanyProfilePage.jsx`
+
+Perilaku:
+
+- menampilkan company profile berdasarkan chrome content / landing content
+- dipakai untuk informasi sejarah, visi misi, dan alamat
+
+### Linktree `/linktree`
+
+File utama: `src/LinktreePage.jsx`
+
+Perilaku:
+
+- halaman kontak ringkas untuk jalur traffic alternatif
+
+## State dan Browser Storage
+
+### Bahasa
+
+File: `src/lib/i18n.jsx`
+
+- locale disimpan di `localStorage` key `ahr-language`
+- language default `id`
+- supported locale: `id`, `en`
+
+### Cart
+
+File: `src/lib/cart.jsx`
+
+- cart disimpan di `localStorage` key `ahr-cart-v1`
+- item key dibentuk dari `productSlug + size`
+- duplicate item dengan slug dan size sama akan digabung
+- quantity dibatasi `1..999`
+
+### Personalization
+
+File: `src/lib/personalization.js`
+
+- view produk disimpan di `localStorage` key `ahr_product_views`
+- hanya aktif bila user memberi consent personalization
+- homepage dapat mengurutkan produk berdasarkan histori view browser
+
+## Consent dan Analytics
+
+### Consent
+
+File: `src/lib/consent.js`, `src/components/layout/CookieConsentBanner.jsx`
+
+Tipe consent yang dipisah:
+
+- `analytics`
+- `personalization`
+
+### Analytics
+
+File: `src/lib/analytics.js`
+
+Perilaku:
+
+- GA4 diinisialisasi hanya jika `VITE_GA_MEASUREMENT_ID` tersedia
+- page view dikirim manual setelah route berubah
+- event kustom dikirim untuk CTA, scroll depth, FAQ, cart, checkout, filter, pagination, dan product open
+
+## API Helper
+
+File: `src/lib/api.js`
+
+Fungsi utama:
+
+- `getApiUrl`
+- `getBackendUrl`
+- `fetchCatalogPriceQuote`
+- `saveCatalogOrder`
+- `fetchCatalogProvinces`
+- `fetchCatalogCities`
+- `fetchCatalogDistricts`
+
+## Routing dan Performance
+
+File: `src/main.jsx`
+
+Karakteristik:
+
+- route utama di-lazy load
+- `BrowserRouter` memakai future flags React Router v7
+- ada route tracker untuk analytics
+- `/admin/*` langsung redirect ke backend `/cms`
 
 ## Setup Lokal
 
-1. Install dependency:
-
 ```bash
 npm install
-```
-
-2. Buat environment:
-
-```bash
 copy .env.example .env
-```
-
-3. Jalankan development server:
-
-```bash
 npm run dev
 ```
 
-Frontend lokal default tersedia di `http://localhost:5173`.
+Default URL lokal:
 
-## Environment Variables
+- `http://localhost:5173`
+
+## Environment
 
 ```env
 VITE_API_BASE_URL=
@@ -90,11 +216,9 @@ VITE_GA_MEASUREMENT_ID=
 
 Catatan:
 
-- kosongkan `VITE_API_BASE_URL` saat local dev agar request lewat proxy Vite
-- isi `VITE_API_BASE_URL` di production bila backend beda domain
-- `VITE_API_PROXY_TARGET` dipakai oleh proxy `/api` dan `/sanctum`
-- `VITE_GA_MEASUREMENT_ID` opsional dan hanya aktif setelah consent analytics diberikan
-- `.env.production` sebaiknya tetap file lokal server/deploy dan tidak di-track Git
+- kosongkan `VITE_API_BASE_URL` saat local dev agar lewat proxy
+- isi `VITE_API_BASE_URL` di production bila domain frontend dan backend berbeda
+- `VITE_GA_MEASUREMENT_ID` opsional
 
 ## Build
 
@@ -102,36 +226,38 @@ Catatan:
 npm run build
 ```
 
-Output production akan dibuat ke folder `dist/`.
+Output build ada di `dist/`.
 
-Untuk build image production yang sekarang dipakai di VPS:
+Saat build production, frontend sekarang juga menjalankan prerender statis untuk:
+
+- `/`
+- `/all-products`
+- `/profil`
+- `/linktree`
+- `/produk/:productSlug`
+
+Tujuannya:
+
+- preview WhatsApp lebih stabil
+- crawler search/AI bisa membaca meta halaman tanpa menunggu React hydrate
+- sitemap produk ikut tergenerate saat build
+
+Untuk image production:
 
 ```bash
 docker build -t deploy-frontend .
 ```
 
-## Arsitektur Singkat
+## Verifikasi Manual
 
-- `src/App.jsx`: homepage hybrid, CTA, lead form, content API
-- `src/AllProductsPage.jsx`: listing katalog
-- `src/ProductDetailPage.jsx`: detail produk + quote validation
-- `src/CartPage.jsx`: cart, mixed size, checkout form, order draft save
-- `src/LinktreePage.jsx`: quick contact page
-- `src/lib/api.js`: helper API publik, quote, order, dan location fetcher
-- `src/lib/cmsContent.js`: normalizer payload CMS/backend ke shape frontend
-
-## Verifikasi
-
-Sebelum publish production, jalankan minimal:
-
-```bash
-npm run build
-```
-
-Disarankan juga cek manual:
+Minimal cek:
 
 - homepage locale `id` dan `en`
-- listing dan detail produk
-- add to cart, ubah quantity, dan mixed size
-- checkout pickup dan delivery
-- halaman `/linktree`
+- filter dan pagination `/all-products`
+- detail produk, gallery, size guide, dan mixed size
+- add-to-cart dari listing dan detail
+- checkout delivery dan pickup
+- redirect `/admin/*`
+- consent analytics dan personalization
+
+Referensi sistem keseluruhan ada di [README root](../README.md).
