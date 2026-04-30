@@ -86,7 +86,7 @@ export default function LinktreePage() {
 
         <div className="linktree-brand">
           <div className="linktree-logo-ring">
-            <img className="linktree-logo" src="/ahr-brand-logo.webp" alt="AHR logo" />
+            <img className="linktree-logo" src="/ahr-brand-logo.webp" alt="AHR logo" width="295" height="295" />
           </div>
           <span className="linktree-eyebrow">AHR Printing Sublimasi</span>
           <h1>Kontak AHR</h1>

@@ -246,7 +246,6 @@ function App() {
   )
   const { addCartItem, itemCount } = useCart()
   const rootRef = useRef(null)
-  const faqContentRefs = useRef([])
   const gsapRef = useRef(null)
   const scrollTriggerRef = useRef(null)
   const homepageContent = useMemo(() => getHomepageContent(language, t), [language, t])
@@ -260,6 +259,7 @@ function App() {
     personalization: 'unknown',
   })
   const [animationsReady, setAnimationsReady] = useState(false)
+  const [shouldPlayHeroVideo, setShouldPlayHeroVideo] = useState(false)
   const contactProfile = landingPageContent.brand
   const companyProfile = landingPageContent.companyProfile
   const decorativeMedia = landingPageContent.decorativeMedia
@@ -280,29 +280,109 @@ function App() {
 
   useEffect(() => {
     let cancelled = false
+    let idleCallbackId
+    let timeoutId
 
-    Promise.all([import('gsap'), import('gsap/ScrollTrigger')])
-      .then(([gsapModule, scrollTriggerModule]) => {
-        if (cancelled) {
-          return
-        }
+    const loadAnimations = () => {
+      Promise.all([import('gsap'), import('gsap/ScrollTrigger')])
+        .then(([gsapModule, scrollTriggerModule]) => {
+          if (cancelled) {
+            return
+          }
 
-        const gsapInstance = gsapModule.default
-        const scrollTrigger = scrollTriggerModule.ScrollTrigger
+          const gsapInstance = gsapModule.default
+          const scrollTrigger = scrollTriggerModule.ScrollTrigger
 
-        gsapInstance.registerPlugin(scrollTrigger)
-        gsapRef.current = gsapInstance
-        scrollTriggerRef.current = scrollTrigger
-        setAnimationsReady(true)
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setAnimationsReady(false)
-        }
-      })
+          gsapInstance.registerPlugin(scrollTrigger)
+          gsapRef.current = gsapInstance
+          scrollTriggerRef.current = scrollTrigger
+          setAnimationsReady(true)
+        })
+        .catch(() => {
+          if (!cancelled) {
+            setAnimationsReady(false)
+          }
+        })
+    }
+
+    if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+      idleCallbackId = window.requestIdleCallback(loadAnimations, { timeout: 1800 })
+    } else {
+      timeoutId = window.setTimeout(loadAnimations, 900)
+    }
 
     return () => {
       cancelled = true
+
+      if (typeof window !== 'undefined' && idleCallbackId && 'cancelIdleCallback' in window) {
+        window.cancelIdleCallback(idleCallbackId)
+      }
+
+      if (timeoutId) {
+        window.clearTimeout(timeoutId)
+      }
+    }
+  }, [])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return undefined
+    }
+
+    const connection = navigator.connection
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    const isDesktopViewport = window.matchMedia('(min-width: 768px)').matches
+    const isConstrainedConnection =
+      connection?.saveData === true || ['slow-2g', '2g', '3g'].includes(connection?.effectiveType)
+
+    if (prefersReducedMotion || isConstrainedConnection || !isDesktopViewport) {
+      setShouldPlayHeroVideo(false)
+      return undefined
+    }
+
+    let activated = false
+    let idleCallbackId
+    let timeoutId
+
+    const activateVideo = () => {
+      if (activated) {
+        return
+      }
+
+      activated = true
+      setShouldPlayHeroVideo(true)
+    }
+
+    const interactionEvents = ['pointerdown', 'keydown', 'touchstart']
+    const handleFirstInteraction = () => {
+      activateVideo()
+      interactionEvents.forEach((eventName) =>
+        window.removeEventListener(eventName, handleFirstInteraction),
+      )
+    }
+
+    interactionEvents.forEach((eventName) =>
+      window.addEventListener(eventName, handleFirstInteraction, { passive: true, once: true }),
+    )
+
+    if ('requestIdleCallback' in window) {
+      idleCallbackId = window.requestIdleCallback(activateVideo, { timeout: 2500 })
+    } else {
+      timeoutId = window.setTimeout(activateVideo, 1800)
+    }
+
+    return () => {
+      interactionEvents.forEach((eventName) =>
+        window.removeEventListener(eventName, handleFirstInteraction),
+      )
+
+      if (idleCallbackId && 'cancelIdleCallback' in window) {
+        window.cancelIdleCallback(idleCallbackId)
+      }
+
+      if (timeoutId) {
+        window.clearTimeout(timeoutId)
+      }
     }
   }, [])
 
@@ -374,7 +454,6 @@ function App() {
       return undefined
     }
 
-    const hoverCleanups = []
     const gsap = gsapRef.current
     const ScrollTrigger = scrollTriggerRef.current
     const context = gsap.context(() => {
@@ -445,56 +524,6 @@ function App() {
         })
       })
 
-      gsap.utils.toArray('.product-card, .capability-card, .process-card, .faq-item').forEach((card) => {
-        const media = card.querySelector('.product-media')
-
-        const enter = () => {
-          gsap.to(card, {
-            y: -10,
-            rotateX: 2,
-            rotateY: 0,
-            boxShadow: '0 24px 60px rgba(2, 37, 84, 0.16)',
-            duration: 0.35,
-            ease: 'power2.out',
-          })
-
-          if (media) {
-            gsap.to(media, {
-              scale: 1.04,
-              duration: 0.45,
-              ease: 'power2.out',
-            })
-          }
-        }
-
-        const leave = () => {
-          gsap.to(card, {
-            y: 0,
-            rotateX: 0,
-            rotateY: 0,
-            boxShadow: '0 12px 30px rgba(2, 37, 84, 0)',
-            duration: 0.35,
-            ease: 'power2.out',
-          })
-
-          if (media) {
-            gsap.to(media, {
-              scale: 1,
-              duration: 0.45,
-              ease: 'power2.out',
-            })
-          }
-        }
-
-        card.addEventListener('mouseenter', enter)
-        card.addEventListener('mouseleave', leave)
-
-        hoverCleanups.push(() => {
-          card.removeEventListener('mouseenter', enter)
-          card.removeEventListener('mouseleave', leave)
-        })
-      })
-
       gsap.to('.hero-orb-one', {
         yPercent: -18,
         xPercent: 10,
@@ -519,7 +548,6 @@ function App() {
     }, rootRef)
 
     return () => {
-      hoverCleanups.forEach((cleanup) => cleanup())
       context.revert()
       ScrollTrigger.getAll().forEach((trigger) => trigger.kill())
     }
@@ -537,98 +565,6 @@ function App() {
       segment: availableLeadSegments[0]?.id || defaultLeadForm.segment,
     }))
   }, [language, leadForm.segment, landingPageContent.audiencePaths])
-
-  useEffect(() => {
-    const gsap = gsapRef.current
-
-    if (!gsap) {
-      faqContentRefs.current.forEach((element, index) => {
-        if (!element) {
-          return
-        }
-
-        const inner = element.firstElementChild
-        const isOpen = openFaqIndex === index
-
-        element.style.height = isOpen ? 'auto' : '0px'
-
-        if (inner) {
-          inner.style.opacity = isOpen ? '1' : '0'
-          inner.style.transform = isOpen ? 'translateY(0)' : 'translateY(-8px)'
-        }
-      })
-
-      return
-    }
-
-    faqContentRefs.current.forEach((element, index) => {
-      if (!element) {
-        return
-      }
-
-      const inner = element.firstElementChild
-
-      if (!inner) {
-        return
-      }
-
-      const isOpen = openFaqIndex === index
-
-      gsap.killTweensOf(element)
-      gsap.killTweensOf(inner)
-
-      if (isOpen) {
-        gsap.set(element, {
-          height: 'auto',
-        })
-
-        const contentHeight = element.offsetHeight
-
-        gsap.fromTo(
-          element,
-          {
-            height: 0,
-          },
-          {
-            height: contentHeight,
-            duration: 0.42,
-            ease: 'power2.out',
-            onComplete: () => gsap.set(element, { height: 'auto' }),
-          },
-        )
-
-        gsap.fromTo(
-          inner,
-          {
-            y: -10,
-            opacity: 0,
-          },
-          {
-            y: 0,
-            opacity: 1,
-            duration: 0.32,
-            ease: 'power2.out',
-            delay: 0.08,
-          },
-        )
-
-        return
-      }
-
-      gsap.to(inner, {
-        y: -8,
-        opacity: 0,
-        duration: 0.18,
-        ease: 'power1.in',
-      })
-
-      gsap.to(element, {
-        height: 0,
-        duration: 0.32,
-        ease: 'power2.inOut',
-      })
-    })
-  }, [openFaqIndex, landingPageContent.faqs, animationsReady])
 
   const showcaseCategories =
     landingPageContent.catalogCategories?.length > 0
@@ -824,6 +760,8 @@ function App() {
 
   const heroDesktopMediaUrl = landingPageContent.hero.desktopMedia?.url || null
   const heroMobileMediaUrl = landingPageContent.hero.mobileMedia?.url || heroDesktopMediaUrl
+  const heroPosterDesktopUrl = heroDesktopMediaUrl || '/og-preview.png'
+  const heroPosterMobileUrl = heroMobileMediaUrl || heroPosterDesktopUrl
   const faqVisualUrl = decorativeMedia.faq_visual?.url || faqPlaceholderImage
 
   return (
@@ -850,44 +788,34 @@ function App() {
 
       <main>
         <section className="hero-video-section" id="hero">
-          {heroDesktopMediaUrl ? (
+          <picture className={shouldPlayHeroVideo ? 'hero-poster hero-poster-desktop-hidden' : 'hero-poster'}>
+            <source media="(max-width: 767px)" srcSet={heroPosterMobileUrl} />
             <img
-              className="hero-video hero-video-desktop"
-              src={heroDesktopMediaUrl}
+              className="hero-video hero-poster-media"
+              src={heroPosterDesktopUrl}
               alt={landingPageContent.hero.desktopMedia?.alt_text || landingPageContent.hero.title}
+              width="1440"
+              height="900"
+              loading="eager"
+              decoding="async"
+              fetchPriority="high"
+              sizes="100vw"
             />
-          ) : (
+          </picture>
+          {shouldPlayHeroVideo && !heroDesktopMediaUrl ? (
             <video
-              className="hero-video hero-video-desktop"
+              className="hero-video hero-video-desktop hero-motion-media"
               autoPlay
               loop
               muted
               playsInline
-              preload="auto"
-              poster="/ahr-logo.webp"
+              preload="metadata"
+              poster={heroPosterDesktopUrl}
+              aria-hidden="true"
             >
               <source src="/videos/ahr-hero-desktop.m4v" type="video/mp4" />
             </video>
-          )}
-          {heroMobileMediaUrl ? (
-            <img
-              className="hero-video hero-video-mobile"
-              src={heroMobileMediaUrl}
-              alt={landingPageContent.hero.mobileMedia?.alt_text || landingPageContent.hero.title}
-            />
-          ) : (
-            <video
-              className="hero-video hero-video-mobile"
-              autoPlay
-              loop
-              muted
-              playsInline
-              preload="auto"
-              poster="/ahr-logo.webp"
-            >
-              <source src="/videos/ahr-hero-mobile.mp4" type="video/mp4" />
-            </video>
-          )}
+          ) : null}
           <div className="hero-orb hero-orb-one" />
           <div className="hero-orb hero-orb-two" />
           <div className="hero-overlay" />
@@ -1019,6 +947,8 @@ function App() {
                           className="product-image product-image-primary"
                           src={product.image}
                           alt={product.name}
+                          width="800"
+                          height="1000"
                           loading="lazy"
                           decoding="async"
                           style={{ objectPosition: product.imagePosition || 'center center' }}
@@ -1028,6 +958,8 @@ function App() {
                             className="product-image product-image-hover"
                             src={product.gallery[1]}
                             alt={`${product.name} alternate`}
+                            width="800"
+                            height="1000"
                             loading="lazy"
                             decoding="async"
                             style={{ objectPosition: product.imagePosition || 'center center' }}
@@ -1088,6 +1020,8 @@ function App() {
                           className="product-image product-image-primary"
                           src={product.image}
                           alt={product.name}
+                          width="800"
+                          height="1000"
                           loading="lazy"
                           decoding="async"
                           style={{ objectPosition: product.imagePosition || 'center center' }}
@@ -1097,6 +1031,8 @@ function App() {
                             className="product-image product-image-hover"
                             src={product.gallery[1]}
                             alt={`${product.name} alternate`}
+                            width="800"
+                            height="1000"
                             loading="lazy"
                             decoding="async"
                             style={{ objectPosition: product.imagePosition || 'center center' }}
@@ -1147,7 +1083,7 @@ function App() {
                   rel="noreferrer"
                 >
                   {brand.image ? (
-                    <img className="client-brand-logo" src={brand.image} alt={brand.label} loading="lazy" decoding="async" />
+                    <img className="client-brand-logo" src={brand.image} alt={brand.label} width="132" height="44" loading="lazy" decoding="async" />
                   ) : (
                     <span>{brand.label}</span>
                   )}
@@ -1155,7 +1091,7 @@ function App() {
               ) : (
                 <article className="client-brand-card" key={brandKey} data-reveal-item>
                   {brand.image ? (
-                    <img className="client-brand-logo" src={brand.image} alt={brand.label} loading="lazy" decoding="async" />
+                    <img className="client-brand-logo" src={brand.image} alt={brand.label} width="132" height="44" loading="lazy" decoding="async" />
                   ) : (
                     <span>{brand.label}</span>
                   )}
@@ -1373,9 +1309,6 @@ function App() {
                     </button>
                     <div
                       className="faq-answer"
-                      ref={(element) => {
-                        faqContentRefs.current[index] = element
-                      }}
                     >
                       <div className="faq-answer-inner">
                         <p>{faq.answer}</p>

@@ -463,6 +463,8 @@ export default function AllProductsPage() {
                       className="product-image product-image-primary"
                       src={product.image}
                       alt={product.name}
+                      width="800"
+                      height="1000"
                       loading="lazy"
                       decoding="async"
                       style={{ objectPosition: product.imagePosition || 'center center' }}
@@ -472,6 +474,8 @@ export default function AllProductsPage() {
                         className="product-image product-image-hover"
                         src={product.gallery[1]}
                         alt={`${product.name} alternate`}
+                        width="800"
+                        height="1000"
                         loading="lazy"
                         decoding="async"
                         style={{ objectPosition: product.imagePosition || 'center center' }}

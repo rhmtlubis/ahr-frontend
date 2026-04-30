@@ -196,7 +196,7 @@ export default function SiteHeader({
         />
         <aside className={mobileMenuOpen ? 'mobile-sidebar open' : 'mobile-sidebar'} aria-label="Mobile navigation">
           <div className="mobile-sidebar-header">
-            <img className="mobile-sidebar-logo" src="/ahr-brand-logo.webp" alt="AHR logo" />
+            <img className="mobile-sidebar-logo" src="/ahr-brand-logo.webp" alt="AHR logo" width="295" height="295" />
             <div className="mobile-language-switcher" ref={mobileLanguageMenuRef}>
               <button
                 className={mobileLanguageMenuOpen ? 'language-switcher-trigger open' : 'language-switcher-trigger'}
@@ -320,7 +320,7 @@ export default function SiteHeader({
 
         <div className="main-header">
           <Link className="brand" to={brandHref} aria-label="AHR Home">
-            <img className="brand-mark" src="/ahr-brand-logo.webp" alt="AHR logo" />
+            <img className="brand-mark" src="/ahr-brand-logo.webp" alt="AHR logo" width="295" height="295" />
           </Link>
 
           <button

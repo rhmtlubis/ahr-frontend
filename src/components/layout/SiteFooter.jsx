@@ -19,7 +19,7 @@ export default function SiteFooter({
     <footer className="site-footer">
       <div className="footer-top">
         <div className="footer-brand">
-          <img className="footer-logo" src="/ahr-brand-logo.webp" alt="AHR logo" />
+          <img className="footer-logo" src="/ahr-brand-logo.webp" alt="AHR logo" width="295" height="295" />
           <p>{companyDescription}</p>
           <div className="footer-social">
             <a href={companyProfile.address.mapUrl} aria-label={defaultMapLabel} target="_blank" rel="noreferrer">

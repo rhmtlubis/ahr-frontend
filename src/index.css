@@ -1,5 +1,3 @@
-@import url('https://fonts.googleapis.com/css2?family=League+Spartan:wght@500;600;700;800&family=Poppins:wght@400;500;600;700&display=swap');
-
 :root {
   --paper: #ffffff;
   --paper-deep: #f6f8fc;
@@ -12,8 +10,8 @@
   --text-700: #23395d;
   --text-900: #022554;
   --soft-shadow: 0 24px 50px rgba(2, 37, 84, 0.08);
-  --font-body: 'Poppins', 'Segoe UI', sans-serif;
-  --font-heading: 'League Spartan', 'Avenir Next', sans-serif;
+  --font-body: 'Avenir Next', 'Segoe UI', Helvetica, Arial, sans-serif;
+  --font-heading: 'Franklin Gothic Medium', 'Arial Narrow', 'Avenir Next Condensed', sans-serif;
 
   color: var(--text-900);
   background:

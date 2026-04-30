@@ -583,6 +583,9 @@ export default function ProductDetailPage() {
                       alt={`${product.name} ${actualIndex + 1}`}
                       loading={actualIndex === 0 ? 'eager' : 'lazy'}
                       decoding="async"
+                      fetchPriority={actualIndex === 0 ? 'high' : 'auto'}
+                      width="800"
+                      height="1000"
                       style={{
                         objectPosition: product.imagePosition,
                         transformOrigin: zoomOrigins[actualIndex] || '50% 50%',
@@ -813,7 +816,7 @@ export default function ProductDetailPage() {
           <p>{t('productDetail.sizeGuide.howToMeasureBody')}</p>
 
           <div className="size-guide-measurement-card">
-            <img src={howToMeasureImage} alt={t('productDetail.sizeGuide.imageAlt')} loading="lazy" decoding="async" />
+            <img src={howToMeasureImage} alt={t('productDetail.sizeGuide.imageAlt')} loading="lazy" decoding="async" width="295" height="295" />
             <div className="size-guide-measurement-copy">
               <p>{t('productDetail.sizeGuide.horizontalTitle')}</p>
               <ol>
@@ -900,6 +903,8 @@ export default function ProductDetailPage() {
                 src={product.gallery[lightboxIndex]}
                 alt={`${product.name} preview ${lightboxIndex + 1}`}
                 decoding="async"
+                width="800"
+                height="1000"
                 style={{
                   transform: lightboxZoomed ? 'scale(2.25)' : 'scale(1)',
                   transformOrigin: lightboxZoomOrigin,
@@ -921,7 +926,7 @@ export default function ProductDetailPage() {
                     setLightboxIndex(index)
                   }}
                 >
-                  <img src={image} alt={`${product.name} thumbnail ${index + 1}`} loading="lazy" decoding="async" />
+                  <img src={image} alt={`${product.name} thumbnail ${index + 1}`} loading="lazy" decoding="async" width="160" height="200" />
                 </button>
               ))}
             </div>

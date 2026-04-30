@@ -769,6 +769,8 @@ export default function CartPage() {
                       <img
                         src={item.product.image}
                         alt={item.product.name}
+                        width="800"
+                        height="1000"
                         loading="lazy"
                         decoding="async"
                         style={{ objectPosition: item.product.imagePosition || 'center center' }}

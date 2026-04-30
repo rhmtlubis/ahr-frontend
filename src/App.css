@@ -557,6 +557,11 @@
   isolation: isolate;
 }
 
+.hero-poster {
+  position: absolute;
+  inset: 0;
+}
+
 .hero-video,
 .hero-overlay,
 .hero-orb {
@@ -571,8 +576,13 @@
   transform-origin: center center;
 }
 
-.hero-video-mobile {
-  display: none;
+.hero-poster-media,
+.hero-motion-media {
+  display: block;
+}
+
+.hero-poster-desktop-hidden {
+  display: block;
 }
 
 .hero-overlay {
@@ -978,6 +988,9 @@
   transform-origin: center top;
   will-change: transform, box-shadow;
   box-shadow: 0 18px 42px rgba(2, 37, 84, 0.08);
+  transition:
+    transform 220ms ease,
+    box-shadow 220ms ease;
 }
 
 .capability-card svg,
@@ -1016,6 +1029,20 @@
 .contact-card h3,
 .reason-card h3 {
   max-width: 14ch;
+}
+
+.capability-card:hover,
+.capability-card:focus-within,
+.process-card:hover,
+.process-card:focus-within,
+.faq-item:hover,
+.faq-item:focus-within,
+.product-card:hover,
+.product-card:focus-within,
+.footer-contact-card:hover,
+.footer-contact-card:focus-within {
+  transform: translateY(-8px);
+  box-shadow: 0 24px 60px rgba(2, 37, 84, 0.16);
 }
 
 .story-card span,
@@ -2773,12 +2800,20 @@
 }
 
 .faq-answer {
-  height: 0;
+  display: grid;
+  grid-template-rows: 0fr;
   overflow: hidden;
+  transition: grid-template-rows 240ms ease;
 }
 
 .faq-answer-inner {
   padding-top: 2px;
+  min-height: 0;
+  opacity: 0;
+  transform: translateY(-8px);
+  transition:
+    opacity 200ms ease,
+    transform 200ms ease;
 }
 
 .faq-button {
@@ -2799,6 +2834,15 @@
 
 .faq-item.open svg {
   transform: rotate(180deg);
+}
+
+.faq-item.open .faq-answer {
+  grid-template-rows: 1fr;
+}
+
+.faq-item.open .faq-answer-inner {
+  opacity: 1;
+  transform: translateY(0);
 }
 
 .vision-card:first-child {
@@ -3154,13 +3198,12 @@
     min-height: max(520px, calc(100svh - 124px));
   }
 
-  .hero-video-desktop {
-    display: none;
+  .hero-poster-media {
+    object-position: center top;
   }
 
-  .hero-video-mobile {
-    display: block;
-    object-position: center top;
+  .hero-motion-media {
+    display: none;
   }
 
   .mobile-drawer-backdrop {
@@ -3752,6 +3795,12 @@
 
 .cart-page {
   padding-bottom: 48px;
+}
+
+@media (min-width: 768px) {
+  .hero-poster-desktop-hidden {
+    display: none;
+  }
 }
 
 .cart-hero {
