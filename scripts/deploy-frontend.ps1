@@ -42,4 +42,5 @@ git stash pop --index >/dev/null 2>&1 || true
 '@
 
 $remoteScript = $remoteScript.Replace('__REMOTE_REPO__', $RemoteRepo).Replace('__DEPLOY_DIR__', $DeployDir).Replace('__BRANCH__', $Branch)
+$remoteScript = $remoteScript -replace "`r`n", "`n"
 $remoteScript | ssh -i $KeyPath $Server 'bash -s'
