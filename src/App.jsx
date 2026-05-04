@@ -60,22 +60,6 @@ function isVideoUrl(url) {
   return typeof url === 'string' && /\.(mp4|m4v|webm|ogg|ogv)(?:$|\?)/i.test(url)
 }
 
-function getVideoMimeType(url) {
-  if (!isVideoUrl(url)) {
-    return 'video/mp4'
-  }
-
-  if (/\.webm(?:$|\?)/i.test(url)) {
-    return 'video/webm'
-  }
-
-  if (/\.(ogg|ogv)(?:$|\?)/i.test(url)) {
-    return 'video/ogg'
-  }
-
-  return 'video/mp4'
-}
-
 function buildWhatsAppUrl(phoneNumber, message, ctaContext) {
   const utm = getAttributionParams()
   const encodedMessage = encodeURIComponent(
@@ -754,14 +738,20 @@ function App() {
 
   const heroDesktopMediaUrl = landingPageContent.hero.desktopMedia?.url || null
   const heroMobileMediaUrl = landingPageContent.hero.mobileMedia?.url || heroDesktopMediaUrl
+  const isIosDevice =
+    typeof navigator !== 'undefined' && /iP(hone|od|ad)/i.test(navigator.userAgent || '')
+  const isMobileViewport =
+    typeof window !== 'undefined' && window.matchMedia('(max-width: 767px)').matches
   const heroDesktopVideoUrl = isVideoUrl(heroDesktopMediaUrl)
     ? heroDesktopMediaUrl
     : heroDesktopFallbackVideoUrl
-  const heroMobileVideoUrl = isVideoUrl(heroMobileMediaUrl)
-    ? heroMobileMediaUrl
-    : isVideoUrl(heroDesktopMediaUrl)
-      ? heroDesktopMediaUrl
-      : heroMobileFallbackVideoUrl
+  const heroMobileVideoUrl = isIosDevice || isMobileViewport
+    ? heroMobileFallbackVideoUrl
+    : isVideoUrl(heroMobileMediaUrl)
+      ? heroMobileMediaUrl
+      : isVideoUrl(heroDesktopMediaUrl)
+        ? heroDesktopMediaUrl
+        : heroMobileFallbackVideoUrl
   const heroPosterDesktopUrl =
     heroDesktopMediaUrl && !isVideoUrl(heroDesktopMediaUrl) ? heroDesktopMediaUrl : '/og-preview.png'
   const heroPosterMobileUrl =
@@ -819,6 +809,7 @@ function App() {
             loop
             muted
             playsInline
+            webkit-playsinline="true"
             preload="auto"
             poster={heroPosterMobileUrl}
             aria-hidden="true"
@@ -826,13 +817,8 @@ function App() {
             onPlay={() => setShowHeroVideoHint(false)}
             onCanPlay={() => heroVideoRef.current?.play()?.catch(() => {})}
             onLoadedData={() => heroVideoRef.current?.play()?.catch(() => {})}
+            src={isMobileViewport ? heroMobileVideoUrl : heroDesktopVideoUrl}
           >
-            <source
-              media="(max-width: 767px)"
-              src={heroMobileVideoUrl}
-              type={getVideoMimeType(heroMobileVideoUrl)}
-            />
-            <source src={heroDesktopVideoUrl} type={getVideoMimeType(heroDesktopVideoUrl)} />
           </video>
           {!shouldPlayHeroVideo && showHeroVideoHint ? (
             <button
