@@ -53,6 +53,28 @@ const defaultLeadForm = {
   segment: 'b2c-direct',
 }
 const capabilityIcons = [MessageCircleMore, LayoutGrid, ShieldCheck, Truck]
+const heroDesktopFallbackVideoUrl = '/videos/ahr-hero-desktop.m4v'
+const heroMobileFallbackVideoUrl = '/videos/ahr-hero-mobile.mp4'
+
+function isVideoUrl(url) {
+  return typeof url === 'string' && /\.(mp4|m4v|webm|ogg|ogv)(?:$|\?)/i.test(url)
+}
+
+function getVideoMimeType(url) {
+  if (!isVideoUrl(url)) {
+    return 'video/mp4'
+  }
+
+  if (/\.webm(?:$|\?)/i.test(url)) {
+    return 'video/webm'
+  }
+
+  if (/\.(ogg|ogv)(?:$|\?)/i.test(url)) {
+    return 'video/ogg'
+  }
+
+  return 'video/mp4'
+}
 
 function buildWhatsAppUrl(phoneNumber, message, ctaContext) {
   const utm = getAttributionParams()
@@ -320,11 +342,10 @@ function App() {
 
     const connection = navigator.connection
     const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-    const isDesktopViewport = window.matchMedia('(min-width: 768px)').matches
     const isConstrainedConnection =
       connection?.saveData === true || ['slow-2g', '2g', '3g'].includes(connection?.effectiveType)
 
-    if (prefersReducedMotion || isConstrainedConnection || !isDesktopViewport) {
+    if (prefersReducedMotion || isConstrainedConnection) {
       setShouldPlayHeroVideo(false)
       return undefined
     }
@@ -749,8 +770,24 @@ function App() {
 
   const heroDesktopMediaUrl = landingPageContent.hero.desktopMedia?.url || null
   const heroMobileMediaUrl = landingPageContent.hero.mobileMedia?.url || heroDesktopMediaUrl
-  const heroPosterDesktopUrl = heroDesktopMediaUrl || '/og-preview.png'
-  const heroPosterMobileUrl = heroMobileMediaUrl || heroPosterDesktopUrl
+  const heroDesktopVideoUrl = isVideoUrl(heroDesktopMediaUrl)
+    ? heroDesktopMediaUrl
+    : heroDesktopFallbackVideoUrl
+  const heroMobileVideoUrl = isVideoUrl(heroMobileMediaUrl)
+    ? heroMobileMediaUrl
+    : isVideoUrl(heroDesktopMediaUrl)
+      ? heroDesktopMediaUrl
+      : heroMobileFallbackVideoUrl
+  const heroPosterDesktopUrl =
+    heroDesktopMediaUrl && !isVideoUrl(heroDesktopMediaUrl) ? heroDesktopMediaUrl : '/og-preview.png'
+  const heroPosterMobileUrl =
+    heroMobileMediaUrl && !isVideoUrl(heroMobileMediaUrl)
+      ? heroMobileMediaUrl
+      : heroPosterDesktopUrl
+  const heroAltText =
+    landingPageContent.hero.mobileMedia?.alt_text ||
+    landingPageContent.hero.desktopMedia?.alt_text ||
+    landingPageContent.hero.title
   const faqVisualUrl = decorativeMedia.faq_visual?.url || faqPlaceholderImage
 
   return (
@@ -782,7 +819,7 @@ function App() {
             <img
               className="hero-video hero-poster-media"
               src={heroPosterDesktopUrl}
-              alt={landingPageContent.hero.desktopMedia?.alt_text || landingPageContent.hero.title}
+              alt={heroAltText}
               width="1440"
               height="900"
               loading="eager"
@@ -791,18 +828,23 @@ function App() {
               sizes="100vw"
             />
           </picture>
-          {shouldPlayHeroVideo && !heroDesktopMediaUrl ? (
+          {shouldPlayHeroVideo ? (
             <video
-              className="hero-video hero-video-desktop hero-motion-media"
+              className="hero-video hero-motion-media"
               autoPlay
               loop
               muted
               playsInline
               preload="metadata"
-              poster={heroPosterDesktopUrl}
+              poster={heroPosterMobileUrl}
               aria-hidden="true"
             >
-              <source src="/videos/ahr-hero-desktop.m4v" type="video/mp4" />
+              <source
+                media="(max-width: 767px)"
+                src={heroMobileVideoUrl}
+                type={getVideoMimeType(heroMobileVideoUrl)}
+              />
+              <source src={heroDesktopVideoUrl} type={getVideoMimeType(heroDesktopVideoUrl)} />
             </video>
           ) : null}
           <div className="hero-orb hero-orb-one" />

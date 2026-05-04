@@ -242,6 +242,15 @@ Tujuannya:
 - crawler search/AI bisa membaca meta halaman tanpa menunggu React hydrate
 - sitemap produk ikut tergenerate saat build
 
+## Quality Score dan SEO Readiness
+
+Untuk mendukung relevansi landing page pada kampanye iklan dan kesiapan indexing, frontend saat ini sudah meng-cover:
+
+- metadata `title` dan `meta description` yang dirender dinamis per halaman dan per produk
+- `JSON-LD`, `Open Graph`, `Twitter Card`, dan `canonical` untuk membantu mesin pencari serta preview sosial memahami konteks konten
+- prerender statis untuk homepage, listing, company profile, linktree, dan detail produk agar bot tidak perlu menunggu SPA hydrate
+- deep linking melalui URL spesifik seperti `/all-products?category=football` untuk mengarahkan traffic ads ke kategori yang paling relevan
+
 Untuk image production:
 
 ```bash

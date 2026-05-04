@@ -582,7 +582,7 @@
 }
 
 .hero-poster-desktop-hidden {
-  display: block;
+  display: none;
 }
 
 .hero-overlay {
@@ -3203,7 +3203,7 @@
   }
 
   .hero-motion-media {
-    display: none;
+    object-position: center top;
   }
 
   .mobile-drawer-backdrop {
@@ -3795,12 +3795,6 @@
 
 .cart-page {
   padding-bottom: 48px;
-}
-
-@media (min-width: 768px) {
-  .hero-poster-desktop-hidden {
-    display: none;
-  }
 }
 
 .cart-hero {
