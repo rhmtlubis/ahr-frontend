@@ -7,6 +7,7 @@ import { CartProvider } from './lib/cart.jsx'
 import { LanguageProvider } from './lib/i18n.jsx'
 import { initializeAnalytics, trackPageView } from './lib/analytics'
 import { getBackendUrl } from './lib/api'
+import { captureMarketingAttribution } from './lib/attribution'
 import { hasAnalyticsConsent } from './lib/consent'
 
 const App = lazy(() => import('./App.jsx'))
@@ -46,6 +47,8 @@ function AnalyticsRouteTracker() {
   const location = useLocation()
 
   useEffect(() => {
+    captureMarketingAttribution()
+
     if (!hasAnalyticsConsent()) {
       return
     }

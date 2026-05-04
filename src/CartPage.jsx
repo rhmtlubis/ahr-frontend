@@ -14,6 +14,7 @@ import {
   getApiUrl,
   saveCatalogOrder,
 } from './lib/api'
+import { getAttributionParams } from './lib/attribution'
 import { getProductSizeOptions, useCart } from './lib/cart.jsx'
 import { getConsentPreferences, hasAnalyticsConsent, setConsentPreferences } from './lib/consent'
 import { useLanguage } from './lib/i18n.jsx'
@@ -55,18 +56,6 @@ function buildStructuredAddress(checkoutForm, locationOptions) {
 
 function buildWhatsAppUrl(phoneNumber, message) {
   return `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`
-}
-
-function getUtmParams() {
-  const searchParams = new URLSearchParams(window.location.search)
-
-  return {
-    utm_source: searchParams.get('utm_source') || '',
-    utm_medium: searchParams.get('utm_medium') || '',
-    utm_campaign: searchParams.get('utm_campaign') || '',
-    utm_content: searchParams.get('utm_content') || '',
-    utm_term: searchParams.get('utm_term') || '',
-  }
 }
 
 function getItemCurrency(item, language) {
@@ -332,7 +321,7 @@ function buildCheckoutPayload(items, checkoutForm, language, cartTotals, locatio
     currency: cartTotals?.currency || firstItemCurrency,
     source_page: window.location.pathname,
     referrer_url: document.referrer || undefined,
-    ...getUtmParams(),
+    ...getAttributionParams(),
     items: items.map((item) => {
       const priceAmounts = getItemPriceAmounts(item, language)
 

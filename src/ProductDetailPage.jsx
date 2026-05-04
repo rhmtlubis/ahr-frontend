@@ -6,6 +6,7 @@ import { normalizeProductDetail } from './lib/cmsContent.js'
 import { initializeAnalytics, trackEvent, trackPageView } from './lib/analytics'
 import { fetchCatalogPriceQuote, getApiUrl, getPreferredCurrency } from './lib/api'
 import { getProductSizeOptions, useCart } from './lib/cart.jsx'
+import { buildProductStructuredData } from './lib/structuredData'
 import howToMeasureImage from './assets/size-guide/how-to-measure.png'
 import ProductPrice from './components/catalog/ProductPrice'
 import CookieConsentBanner from './components/layout/CookieConsentBanner'
@@ -132,6 +133,12 @@ export default function ProductDetailPage() {
           ? 'custom jersey detail, sublimation apparel, team uniform, AHR'
           : 'detail jersey custom, apparel sublimasi, seragam tim, AHR',
       locale: language,
+      structuredData: product
+        ? buildProductStructuredData(product, {
+            locale: language,
+            siteUrl: import.meta.env.VITE_SITE_URL || 'https://ahrcorporation.id',
+          })
+        : [],
       type: 'product',
     },
   )

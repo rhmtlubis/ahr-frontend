@@ -42,6 +42,12 @@ function ensureLinkTag(selector, attributes) {
   return linkTag
 }
 
+function clearManagedStructuredData() {
+  document.querySelectorAll('script[data-managed-structured-data="true"]').forEach((element) => {
+    element.remove()
+  })
+}
+
 function buildCanonicalUrl(canonicalPath) {
   if (!canonicalPath) {
     return window.location.href
@@ -65,6 +71,7 @@ export default function useDocumentTitle(pageTitle, pageDescription = DEFAULT_DE
       keywords = DEFAULT_KEYWORDS,
       locale = 'id',
       robots = 'index, follow',
+      structuredData = [],
       type = 'website',
     } = options
     const title = buildPageTitle(pageTitle)
@@ -97,5 +104,21 @@ export default function useDocumentTitle(pageTitle, pageDescription = DEFAULT_DE
     ensureMetaTag('meta[name="twitter:description"]', { name: 'twitter:description' }).setAttribute('content', description)
     ensureMetaTag('meta[name="twitter:image"]', { name: 'twitter:image' }).setAttribute('content', resolvedImage)
     ensureLinkTag('link[rel="canonical"]', { rel: 'canonical' }).setAttribute('href', canonicalUrl)
+
+    clearManagedStructuredData()
+
+    ;(Array.isArray(structuredData) ? structuredData : [structuredData])
+      .filter(Boolean)
+      .forEach((payload) => {
+        const scriptTag = document.createElement('script')
+        scriptTag.type = 'application/ld+json'
+        scriptTag.dataset.managedStructuredData = 'true'
+        scriptTag.text = JSON.stringify(payload)
+        document.head.appendChild(scriptTag)
+      })
+
+    return () => {
+      clearManagedStructuredData()
+    }
   }, [options, pageDescription, pageTitle])
 }

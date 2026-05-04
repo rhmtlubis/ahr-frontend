@@ -24,6 +24,7 @@ import {
 import './App.css'
 import { initializeAnalytics, trackEvent, trackPageView } from './lib/analytics'
 import { getApiUrl } from './lib/api'
+import { getAttributionParams } from './lib/attribution'
 import { useCart } from './lib/cart.jsx'
 import {
   categoryPlaceholderImage,
@@ -53,20 +54,8 @@ const defaultLeadForm = {
 }
 const capabilityIcons = [MessageCircleMore, LayoutGrid, ShieldCheck, Truck]
 
-function getUtmParams() {
-  const searchParams = new URLSearchParams(window.location.search)
-
-  return {
-    utm_source: searchParams.get('utm_source') || '',
-    utm_medium: searchParams.get('utm_medium') || '',
-    utm_campaign: searchParams.get('utm_campaign') || '',
-    utm_content: searchParams.get('utm_content') || '',
-    utm_term: searchParams.get('utm_term') || '',
-  }
-}
-
 function buildWhatsAppUrl(phoneNumber, message, ctaContext) {
-  const utm = getUtmParams()
+  const utm = getAttributionParams()
   const encodedMessage = encodeURIComponent(
     `${message}\n\nSumber: ${utm.utm_source || 'direct'} / ${utm.utm_medium || 'none'}\nKonteks CTA: ${ctaContext}`,
   )
@@ -656,7 +645,7 @@ function App() {
       source_page: window.location.pathname,
       cta_context: 'unified-homepage-form',
       referrer_url: document.referrer || undefined,
-      ...getUtmParams(),
+      ...getAttributionParams(),
     }
 
     try {
