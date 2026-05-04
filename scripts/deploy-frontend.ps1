@@ -33,19 +33,12 @@ $remoteScript = @'
 set -euo pipefail
 cd __REMOTE_REPO__
 
-stash_created=false
-if [ -n "$(git status --porcelain)" ]; then
-  git stash push -m "auto-deploy backup $(date -u +%Y%m%dT%H%M%SZ)" >/dev/null
-  stash_created=true
-fi
+git stash push -m "auto-deploy backup $(date -u +%Y%m%dT%H%M%SZ)" >/dev/null || true
 
 git pull --ff-only origin __BRANCH__
 cd __DEPLOY_DIR__
 docker compose up -d --build frontend
-
-if [ "$stash_created" = true ]; then
-  git stash pop --index
-fi
+git stash pop --index >/dev/null 2>&1 || true
 '@
 
 $remoteScript = $remoteScript.Replace('__REMOTE_REPO__', $RemoteRepo).Replace('__DEPLOY_DIR__', $DeployDir).Replace('__BRANCH__', $Branch)
