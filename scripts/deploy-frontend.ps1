@@ -43,4 +43,14 @@ git stash pop --index >/dev/null 2>&1 || true
 
 $remoteScript = $remoteScript.Replace('__REMOTE_REPO__', $RemoteRepo).Replace('__DEPLOY_DIR__', $DeployDir).Replace('__BRANCH__', $Branch)
 $remoteScript = $remoteScript -replace "`r`n", "`n"
-$remoteScript | ssh -i $KeyPath $Server 'bash -s'
+
+$tempScriptPath = Join-Path ([System.IO.Path]::GetTempPath()) ("ahr-frontend-deploy-{0}.sh" -f ([guid]::NewGuid().ToString('N')))
+[System.IO.File]::WriteAllText($tempScriptPath, $remoteScript, [System.Text.UTF8Encoding]::new($false))
+
+try {
+    scp -i $KeyPath $tempScriptPath "${Server}:/tmp/ahr-frontend-deploy.sh" | Out-Null
+    ssh -i $KeyPath $Server "bash /tmp/ahr-frontend-deploy.sh"
+}
+finally {
+    Remove-Item -LiteralPath $tempScriptPath -ErrorAction SilentlyContinue
+}
