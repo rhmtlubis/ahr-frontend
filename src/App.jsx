@@ -742,16 +742,13 @@ function App() {
     typeof navigator !== 'undefined' && /iP(hone|od|ad)/i.test(navigator.userAgent || '')
   const isMobileViewport =
     typeof window !== 'undefined' && window.matchMedia('(max-width: 767px)').matches
+  const useMobileHeroVideo = isIosDevice || isMobileViewport
   const heroDesktopVideoUrl = isVideoUrl(heroDesktopMediaUrl)
     ? heroDesktopMediaUrl
     : heroDesktopFallbackVideoUrl
-  const heroMobileVideoUrl = isIosDevice || isMobileViewport
-    ? heroMobileFallbackVideoUrl
-    : isVideoUrl(heroMobileMediaUrl)
-      ? heroMobileMediaUrl
-      : isVideoUrl(heroDesktopMediaUrl)
-        ? heroDesktopMediaUrl
-        : heroMobileFallbackVideoUrl
+  const heroMobileVideoUrl = isVideoUrl(heroMobileMediaUrl)
+    ? heroMobileMediaUrl
+    : heroMobileFallbackVideoUrl
   const heroPosterDesktopUrl =
     heroDesktopMediaUrl && !isVideoUrl(heroDesktopMediaUrl) ? heroDesktopMediaUrl : '/og-preview.png'
   const heroPosterMobileUrl =
@@ -788,20 +785,22 @@ function App() {
 
       <main>
         <section className="hero-video-section" id="hero">
-          <picture className={shouldPlayHeroVideo ? 'hero-poster hero-poster-hidden' : 'hero-poster'}>
-            <source media="(max-width: 767px)" srcSet={heroPosterMobileUrl} />
-            <img
-              className="hero-video hero-poster-media"
-              src={heroPosterDesktopUrl}
-              alt={heroAltText}
-              width="1440"
-              height="900"
-              loading="eager"
-              decoding="async"
-              fetchPriority="high"
-              sizes="100vw"
-            />
-          </picture>
+          {useMobileHeroVideo ? null : (
+            <picture className={shouldPlayHeroVideo ? 'hero-poster hero-poster-hidden' : 'hero-poster'}>
+              <source media="(max-width: 767px)" srcSet={heroPosterMobileUrl} />
+              <img
+                className="hero-video hero-poster-media"
+                src={heroPosterDesktopUrl}
+                alt={heroAltText}
+                width="1440"
+                height="900"
+                loading="eager"
+                decoding="async"
+                fetchPriority="high"
+                sizes="100vw"
+              />
+            </picture>
+          )}
           <video
             ref={heroVideoRef}
             className="hero-video hero-motion-media"
@@ -811,13 +810,13 @@ function App() {
             playsInline
             webkit-playsinline="true"
             preload="auto"
-            poster={heroPosterMobileUrl}
+            poster={useMobileHeroVideo ? '' : heroPosterMobileUrl}
             aria-hidden="true"
             onPlaying={() => setShouldPlayHeroVideo(true)}
             onPlay={() => setShowHeroVideoHint(false)}
             onCanPlay={() => heroVideoRef.current?.play()?.catch(() => {})}
             onLoadedData={() => heroVideoRef.current?.play()?.catch(() => {})}
-            src={isMobileViewport ? heroMobileVideoUrl : heroDesktopVideoUrl}
+            src={useMobileHeroVideo ? heroMobileVideoUrl : heroDesktopVideoUrl}
           >
           </video>
           {!shouldPlayHeroVideo && showHeroVideoHint ? (
