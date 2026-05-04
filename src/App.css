@@ -3195,7 +3195,7 @@
   }
 
   .hero-video-section {
-    min-height: max(520px, calc(100svh - 124px));
+    min-height: clamp(360px, 62svh, 500px);
   }
 
   .hero-poster-media {
@@ -3424,7 +3424,7 @@
   }
 
   .hero-content {
-    padding: 20px 16px;
+    padding: 18px 16px 22px;
   }
 
   .about-visual-stack {

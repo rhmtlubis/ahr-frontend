@@ -271,6 +271,7 @@ function App() {
   })
   const [animationsReady, setAnimationsReady] = useState(false)
   const [shouldPlayHeroVideo, setShouldPlayHeroVideo] = useState(false)
+  const heroVideoRef = useRef(null)
   const contactProfile = landingPageContent.brand
   const companyProfile = landingPageContent.companyProfile
   const decorativeMedia = landingPageContent.decorativeMedia
@@ -395,6 +396,29 @@ function App() {
       }
     }
   }, [])
+
+  useEffect(() => {
+    if (!shouldPlayHeroVideo || typeof window === 'undefined') {
+      return undefined
+    }
+
+    const video = heroVideoRef.current
+
+    if (!video) {
+      return undefined
+    }
+
+    const attemptPlay = () => {
+      video.muted = true
+      video.play()?.catch(() => {})
+    }
+
+    const rafId = window.requestAnimationFrame(attemptPlay)
+
+    return () => {
+      window.cancelAnimationFrame(rafId)
+    }
+  }, [shouldPlayHeroVideo, heroMobileMediaUrl, heroDesktopMediaUrl])
 
   useEffect(() => {
     const start = Date.now()
@@ -830,14 +854,17 @@ function App() {
           </picture>
           {shouldPlayHeroVideo ? (
             <video
+              ref={heroVideoRef}
               className="hero-video hero-motion-media"
               autoPlay
               loop
               muted
               playsInline
-              preload="metadata"
+              preload="auto"
               poster={heroPosterMobileUrl}
               aria-hidden="true"
+              onCanPlay={() => heroVideoRef.current?.play()?.catch(() => {})}
+              onLoadedData={() => heroVideoRef.current?.play()?.catch(() => {})}
             >
               <source
                 media="(max-width: 767px)"
