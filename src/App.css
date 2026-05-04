@@ -3204,16 +3204,24 @@ main {
   }
 
   .hero-video-section {
-    min-height: clamp(320px, 52svh, 460px);
+    min-height: calc(100svh - clamp(156px, 18svh, 204px));
   }
 
   .hero-poster-media {
     object-position: center top;
   }
 
-.hero-motion-media {
-  object-position: center top;
-}
+  .hero-motion-media {
+    object-position: center top;
+  }
+
+  .hero-content {
+    padding: 32px 16px 22px;
+  }
+
+  .hero-content h1 {
+    max-width: 12ch;
+  }
 
 .hero-video-hint {
   position: absolute;

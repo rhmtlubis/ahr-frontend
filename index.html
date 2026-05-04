@@ -4,7 +4,6 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/x-icon" href="/favicon.ico" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="google-site-verification" content="%VITE_GOOGLE_SITE_VERIFICATION%" />
     <meta name="robots" content="index, follow" />
     <meta name="theme-color" content="#0f4c81" />
     <meta
@@ -40,38 +39,6 @@
     <title>AHR | Jersey Custom Sublimasi, Seragam Printing & Konveksi</title>
   </head>
   <body>
-    <script>
-      (() => {
-        const isMobile = window.matchMedia('(max-width: 767px)').matches
-        const link = document.createElement('link')
-
-        if (isMobile) {
-          link.rel = 'preload'
-          link.as = 'video'
-          link.href = '/videos/ahr-hero-mobile.mp4'
-          link.type = 'video/mp4'
-        } else {
-          link.rel = 'preload'
-          link.as = 'image'
-          link.href = '/og-preview.png'
-          link.fetchPriority = 'high'
-
-          const img = document.createElement('img')
-          img.src = '/og-preview.png'
-          img.alt = ''
-          img.width = 1200
-          img.height = 630
-          img.decoding = 'async'
-          img.ariaHidden = 'true'
-          img.fetchPriority = 'high'
-          img.style.cssText =
-            'position:absolute;width:0;height:0;opacity:0;pointer-events:none'
-          document.body.appendChild(img)
-        }
-
-        document.head.appendChild(link)
-      })()
-    </script>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>

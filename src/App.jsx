@@ -266,6 +266,28 @@ function App() {
   const finalMessageFallback = t('homepage.finalMessage')
   const footerMessageFallback = t('homepage.footerMessage')
   const defaultMapLabel = t('common.mapLabel')
+  const heroDesktopMediaUrl = landingPageContent.hero.desktopMedia?.url || null
+  const isIosDevice =
+    typeof navigator !== 'undefined' && /iP(hone|od|ad)/i.test(navigator.userAgent || '')
+  const isMobileViewport =
+    typeof window !== 'undefined' && window.matchMedia('(max-width: 767px)').matches
+  const useMobileHeroVideo = isIosDevice || isMobileViewport
+  const heroDesktopVideoUrl = isVideoUrl(heroDesktopMediaUrl)
+    ? heroDesktopMediaUrl
+    : heroDesktopFallbackVideoUrl
+  const heroMobileVideoUrl = heroMobileFallbackVideoUrl
+  const heroPosterDesktopUrl =
+    heroDesktopMediaUrl && !isVideoUrl(heroDesktopMediaUrl) ? heroDesktopMediaUrl : '/og-preview.png'
+  const heroPosterMobileUrl =
+    landingPageContent.hero.mobileMedia?.url &&
+    !isVideoUrl(landingPageContent.hero.mobileMedia.url)
+      ? landingPageContent.hero.mobileMedia.url
+      : heroPosterDesktopUrl
+  const heroAltText =
+    landingPageContent.hero.mobileMedia?.alt_text ||
+    landingPageContent.hero.desktopMedia?.alt_text ||
+    landingPageContent.hero.title
+  const faqVisualUrl = decorativeMedia.faq_visual?.url || faqPlaceholderImage
 
   useEffect(() => {
     setLandingPageContent(homepageContent)
@@ -735,31 +757,6 @@ function App() {
       `Halo AHR, saya ingin konsultasi paket ${pricingPackage.name} untuk kebutuhan jersey custom. Mohon info detail harga dan prosesnya.`,
     )
   }
-
-  const heroDesktopMediaUrl = landingPageContent.hero.desktopMedia?.url || null
-  const heroMobileMediaUrl = landingPageContent.hero.mobileMedia?.url || heroDesktopMediaUrl
-  const isIosDevice =
-    typeof navigator !== 'undefined' && /iP(hone|od|ad)/i.test(navigator.userAgent || '')
-  const isMobileViewport =
-    typeof window !== 'undefined' && window.matchMedia('(max-width: 767px)').matches
-  const useMobileHeroVideo = isIosDevice || isMobileViewport
-  const heroDesktopVideoUrl = isVideoUrl(heroDesktopMediaUrl)
-    ? heroDesktopMediaUrl
-    : heroDesktopFallbackVideoUrl
-  const heroMobileVideoUrl = isVideoUrl(heroMobileMediaUrl)
-    ? heroMobileMediaUrl
-    : heroMobileFallbackVideoUrl
-  const heroPosterDesktopUrl =
-    heroDesktopMediaUrl && !isVideoUrl(heroDesktopMediaUrl) ? heroDesktopMediaUrl : '/og-preview.png'
-  const heroPosterMobileUrl =
-    heroMobileMediaUrl && !isVideoUrl(heroMobileMediaUrl)
-      ? heroMobileMediaUrl
-      : heroPosterDesktopUrl
-  const heroAltText =
-    landingPageContent.hero.mobileMedia?.alt_text ||
-    landingPageContent.hero.desktopMedia?.alt_text ||
-    landingPageContent.hero.title
-  const faqVisualUrl = decorativeMedia.faq_visual?.url || faqPlaceholderImage
 
   return (
     <div className="app-shell" ref={rootRef}>
