@@ -3,6 +3,10 @@
   color: var(--text-900);
 }
 
+main {
+  padding-bottom: calc(20px + env(safe-area-inset-bottom));
+}
+
 .site-header {
   position: sticky;
   top: 0;
@@ -583,6 +587,11 @@
 
 .hero-poster-desktop-hidden {
   display: none;
+}
+
+.hero-poster-hidden {
+  opacity: 0;
+  visibility: hidden;
 }
 
 .hero-overlay {
@@ -3195,16 +3204,34 @@
   }
 
   .hero-video-section {
-    min-height: clamp(360px, 62svh, 500px);
+    min-height: clamp(320px, 52svh, 460px);
   }
 
   .hero-poster-media {
     object-position: center top;
   }
 
-  .hero-motion-media {
-    object-position: center top;
-  }
+.hero-motion-media {
+  object-position: center top;
+}
+
+.hero-video-hint {
+  position: absolute;
+  left: 50%;
+  bottom: 92px;
+  z-index: 2;
+  transform: translateX(-50%);
+  min-height: 42px;
+  padding: 0 18px;
+  border: 1px solid rgba(220, 177, 58, 0.75);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.9);
+  color: var(--navy-900);
+  font: inherit;
+  font-weight: 700;
+  box-shadow: 0 12px 28px rgba(2, 37, 84, 0.18);
+  cursor: pointer;
+}
 
   .mobile-drawer-backdrop {
     position: fixed;
@@ -3424,7 +3451,7 @@
   }
 
   .hero-content {
-    padding: 18px 16px 22px;
+    padding: 16px 16px 20px;
   }
 
   .about-visual-stack {

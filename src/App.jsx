@@ -271,6 +271,7 @@ function App() {
   })
   const [animationsReady, setAnimationsReady] = useState(false)
   const [shouldPlayHeroVideo, setShouldPlayHeroVideo] = useState(false)
+  const [showHeroVideoHint, setShowHeroVideoHint] = useState(false)
   const heroVideoRef = useRef(null)
   const contactProfile = landingPageContent.brand
   const companyProfile = landingPageContent.companyProfile
@@ -341,84 +342,43 @@ function App() {
       return undefined
     }
 
-    const connection = navigator.connection
-    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-    const isConstrainedConnection =
-      connection?.saveData === true || ['slow-2g', '2g', '3g'].includes(connection?.effectiveType)
+    const tryPlay = () => {
+      const video = heroVideoRef.current
 
-    if (prefersReducedMotion || isConstrainedConnection) {
-      setShouldPlayHeroVideo(false)
-      return undefined
-    }
-
-    let activated = false
-    let idleCallbackId
-    let timeoutId
-
-    const activateVideo = () => {
-      if (activated) {
+      if (!video) {
         return
       }
 
-      activated = true
-      setShouldPlayHeroVideo(true)
-    }
-
-    const interactionEvents = ['pointerdown', 'keydown', 'touchstart']
-    const handleFirstInteraction = () => {
-      activateVideo()
-      interactionEvents.forEach((eventName) =>
-        window.removeEventListener(eventName, handleFirstInteraction),
-      )
-    }
-
-    interactionEvents.forEach((eventName) =>
-      window.addEventListener(eventName, handleFirstInteraction, { passive: true, once: true }),
-    )
-
-    if ('requestIdleCallback' in window) {
-      idleCallbackId = window.requestIdleCallback(activateVideo, { timeout: 2500 })
-    } else {
-      timeoutId = window.setTimeout(activateVideo, 1800)
-    }
-
-    return () => {
-      interactionEvents.forEach((eventName) =>
-        window.removeEventListener(eventName, handleFirstInteraction),
-      )
-
-      if (idleCallbackId && 'cancelIdleCallback' in window) {
-        window.cancelIdleCallback(idleCallbackId)
-      }
-
-      if (timeoutId) {
-        window.clearTimeout(timeoutId)
-      }
-    }
-  }, [])
-
-  useEffect(() => {
-    if (!shouldPlayHeroVideo || typeof window === 'undefined') {
-      return undefined
-    }
-
-    const video = heroVideoRef.current
-
-    if (!video) {
-      return undefined
-    }
-
-    const attemptPlay = () => {
       video.muted = true
+      video.playsInline = true
+      video.load()
       video.play()?.catch(() => {})
     }
 
-    const rafId = window.requestAnimationFrame(attemptPlay)
+    const interactionEvents = ['pointerdown', 'keydown', 'touchstart']
+    const handleUserGesture = () => {
+      tryPlay()
+    }
+
+    interactionEvents.forEach((eventName) =>
+      window.addEventListener(eventName, handleUserGesture, { passive: true }),
+    )
+    window.addEventListener('focus', tryPlay)
+
+    const autoplayHintId = window.setTimeout(() => {
+      setShowHeroVideoHint((current) => (shouldPlayHeroVideo ? false : current || true))
+    }, 1800)
+    const timeoutId = window.setTimeout(tryPlay, 200)
 
     return () => {
-      window.cancelAnimationFrame(rafId)
+      interactionEvents.forEach((eventName) =>
+        window.removeEventListener(eventName, handleUserGesture),
+      )
+      window.removeEventListener('focus', tryPlay)
+      window.clearTimeout(autoplayHintId)
+      window.clearTimeout(timeoutId)
     }
-  }, [shouldPlayHeroVideo, heroMobileMediaUrl, heroDesktopMediaUrl])
+  }, [heroDesktopVideoUrl, heroMobileVideoUrl, shouldPlayHeroVideo])
 
   useEffect(() => {
     const start = Date.now()
@@ -838,7 +798,7 @@ function App() {
 
       <main>
         <section className="hero-video-section" id="hero">
-          <picture className={shouldPlayHeroVideo ? 'hero-poster hero-poster-desktop-hidden' : 'hero-poster'}>
+          <picture className={shouldPlayHeroVideo ? 'hero-poster hero-poster-hidden' : 'hero-poster'}>
             <source media="(max-width: 767px)" srcSet={heroPosterMobileUrl} />
             <img
               className="hero-video hero-poster-media"
@@ -852,27 +812,36 @@ function App() {
               sizes="100vw"
             />
           </picture>
-          {shouldPlayHeroVideo ? (
-            <video
-              ref={heroVideoRef}
-              className="hero-video hero-motion-media"
-              autoPlay
-              loop
-              muted
-              playsInline
-              preload="auto"
-              poster={heroPosterMobileUrl}
-              aria-hidden="true"
-              onCanPlay={() => heroVideoRef.current?.play()?.catch(() => {})}
-              onLoadedData={() => heroVideoRef.current?.play()?.catch(() => {})}
+          <video
+            ref={heroVideoRef}
+            className="hero-video hero-motion-media"
+            autoPlay
+            loop
+            muted
+            playsInline
+            preload="auto"
+            poster={heroPosterMobileUrl}
+            aria-hidden="true"
+            onPlaying={() => setShouldPlayHeroVideo(true)}
+            onPlay={() => setShowHeroVideoHint(false)}
+            onCanPlay={() => heroVideoRef.current?.play()?.catch(() => {})}
+            onLoadedData={() => heroVideoRef.current?.play()?.catch(() => {})}
+          >
+            <source
+              media="(max-width: 767px)"
+              src={heroMobileVideoUrl}
+              type={getVideoMimeType(heroMobileVideoUrl)}
+            />
+            <source src={heroDesktopVideoUrl} type={getVideoMimeType(heroDesktopVideoUrl)} />
+          </video>
+          {!shouldPlayHeroVideo && showHeroVideoHint ? (
+            <button
+              className="hero-video-hint"
+              type="button"
+              onClick={() => heroVideoRef.current?.play()?.catch(() => {})}
             >
-              <source
-                media="(max-width: 767px)"
-                src={heroMobileVideoUrl}
-                type={getVideoMimeType(heroMobileVideoUrl)}
-              />
-              <source src={heroDesktopVideoUrl} type={getVideoMimeType(heroDesktopVideoUrl)} />
-            </video>
+              Putar video
+            </button>
           ) : null}
           <div className="hero-orb hero-orb-one" />
           <div className="hero-orb hero-orb-two" />
