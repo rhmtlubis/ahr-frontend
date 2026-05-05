@@ -36,6 +36,11 @@ cd __REMOTE_REPO__
 git stash push -m "auto-deploy backup $(date -u +%Y%m%dT%H%M%SZ)" >/dev/null || true
 
 git pull --ff-only origin __BRANCH__
+cat > .env.production <<'EOF'
+VITE_API_BASE_URL=https://api.ahrcorporation.id
+VITE_PRERENDER_API_BASE_URL=https://api.ahrcorporation.id
+VITE_SITE_URL=https://ahrcorporation.id
+EOF
 cd __DEPLOY_DIR__
 docker compose up -d --build frontend
 git stash pop --index >/dev/null 2>&1 || true

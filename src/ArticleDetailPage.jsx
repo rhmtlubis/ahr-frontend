@@ -54,7 +54,7 @@ function ArticleDetailPage() {
 
     fetchArticles(language).then((items) => {
       if (!cancelled) {
-        setRelatedArticles(items.filter((item) => item.slug !== articleSlug).slice(0, 2))
+        setRelatedArticles(items.filter((item) => item.slug !== articleSlug))
       }
     })
 
@@ -98,6 +98,8 @@ function ArticleDetailPage() {
     return <Navigate to="/artikel" replace />
   }
 
+  const visibleRelatedArticles = relatedArticles.slice(0, 6)
+
   const {
     brand,
     companyProfile,
@@ -133,115 +135,113 @@ function ArticleDetailPage() {
           </Link>
         </section>
 
-        <article className="article-detail-layout">
-          <header className="article-detail-header">
-            <span className="article-category">{article.category}</span>
-            <h1>{article.title}</h1>
-            <p>{article.description}</p>
-            <div className="article-meta-row">
-              <span>
-                <CalendarDays size={16} />
-                {formatArticleDate(article.publishedAt, language)}
-              </span>
-              <span>
-                <Clock3 size={16} />
-                {article.readingTime}
-              </span>
-              <span>Oleh {article.author}</span>
-            </div>
-          </header>
-
-          <div className="article-detail-cover">
-            <img src={article.coverImage} alt={article.coverImageAlt} width="1200" height="800" />
-          </div>
-
-          <div className="article-detail-body">
-            {article.sections.map((section) => (
-              <section className="article-copy-block" key={section.heading}>
-                <h2>{section.heading}</h2>
-                {section.paragraphs.map((paragraph) => (
-                  <p key={paragraph}>{paragraph}</p>
-                ))}
-                {Array.isArray(section.bullets) && section.bullets.length > 0 ? (
-                  <ul>
-                    {section.bullets.map((bullet) => (
-                      <li key={bullet}>{bullet}</li>
-                    ))}
-                  </ul>
-                ) : null}
-              </section>
-            ))}
-
-            {article.faqs.length > 0 ? (
-              <section className="article-copy-block article-faq-block">
-                <h2>Pertanyaan yang sering muncul</h2>
-                <div className="article-faq-list">
-                  {article.faqs.map((faq) => (
-                    <article className="article-faq-item" key={faq.question}>
-                      <h3>{faq.question}</h3>
-                      <p>{faq.answer}</p>
-                    </article>
-                  ))}
-                </div>
-              </section>
-            ) : null}
-
-            <section className="article-cta-card">
-              <h2>Butuh konsultasi order jersey custom?</h2>
-              <p>
-                Tim AHR bisa bantu dari pilihan bahan, penyesuaian desain, sampai alur produksi untuk
-                komunitas, sekolah, event, dan perusahaan.
-              </p>
-              <div className="article-cta-actions">
-                <a
-                  className="article-link-button"
-                  href={`https://wa.me/${brand.whatsapp_number}?text=${encodeURIComponent('Halo AHR, saya ingin konsultasi order jersey custom.')}`}
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  Konsultasi via WhatsApp
-                  <ArrowRight size={16} />
-                </a>
-                <Link className="article-link-inline" to="/all-products">
-                  Lihat katalog produk
-                  <ArrowRight size={16} />
-                </Link>
+        <section className="article-detail-layout">
+          <div className="article-detail-content">
+            <header className="article-detail-lead">
+              <span className="article-category">{article.category}</span>
+              <h1>{article.title}</h1>
+              <p>{article.description}</p>
+              <div className="article-detail-meta">
+                <span>
+                  <CalendarDays size={16} />
+                  {formatArticleDate(article.publishedAt, language)}
+                </span>
+                <span>
+                  <Clock3 size={16} />
+                  {article.readingTime}
+                </span>
+                <span>Oleh {article.author}</span>
               </div>
-            </section>
-          </div>
-        </article>
+            </header>
 
-        {relatedArticles.length > 0 ? (
-          <section className="article-list-section">
-            <div className="section-heading">
-              <span>Artikel Terkait</span>
-              <h2>Baca juga topik lainnya</h2>
-            </div>
+            <article className="article-detail-main-card">
+              <div className="article-detail-cover">
+                <img src={article.coverImage} alt={article.coverImageAlt} width="1200" height="800" />
+              </div>
 
-            <div className="article-grid">
-              {relatedArticles.map((relatedArticle) => (
-                <article className="article-card" key={relatedArticle.slug}>
-                  <img
-                    className="article-card-image"
-                    src={relatedArticle.coverImage}
-                    alt={relatedArticle.coverImageAlt}
-                    width="1200"
-                    height="800"
-                  />
-                  <div className="article-card-body">
-                    <span className="article-category">{relatedArticle.category}</span>
-                    <h3>{relatedArticle.title}</h3>
-                    <p>{relatedArticle.excerpt}</p>
-                    <Link className="article-link-inline" to={`/artikel/${relatedArticle.slug}`}>
-                      Baca selengkapnya
+              <div className="article-detail-body">
+                {article.sections.map((section) => (
+                  <section className="article-copy-block" key={section.heading}>
+                    <h2>{section.heading}</h2>
+                    {section.paragraphs.map((paragraph) => (
+                      <p key={paragraph}>{paragraph}</p>
+                    ))}
+                    {Array.isArray(section.bullets) && section.bullets.length > 0 ? (
+                      <ul>
+                        {section.bullets.map((bullet) => (
+                          <li key={bullet}>{bullet}</li>
+                        ))}
+                      </ul>
+                    ) : null}
+                  </section>
+                ))}
+
+                {article.faqs.length > 0 ? (
+                  <section className="article-copy-block article-faq-block">
+                    <h2>Pertanyaan yang sering muncul</h2>
+                    <div className="article-faq-list">
+                      {article.faqs.map((faq) => (
+                        <article className="article-faq-item" key={faq.question}>
+                          <h3>{faq.question}</h3>
+                          <p>{faq.answer}</p>
+                        </article>
+                      ))}
+                    </div>
+                  </section>
+                ) : null}
+
+                <section className="article-cta-card">
+                  <h2>Butuh konsultasi order jersey custom?</h2>
+                  <p>
+                    Tim AHR bisa bantu dari pilihan bahan, penyesuaian desain, sampai alur produksi untuk
+                    komunitas, sekolah, event, dan perusahaan.
+                  </p>
+                  <div className="article-cta-actions">
+                    <a
+                      className="article-link-button"
+                      href={`https://wa.me/${brand.whatsapp_number}?text=${encodeURIComponent('Halo AHR, saya ingin konsultasi order jersey custom.')}`}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      Konsultasi via WhatsApp
+                      <ArrowRight size={16} />
+                    </a>
+                    <Link className="article-link-inline" to="/all-products">
+                      Lihat katalog produk
                       <ArrowRight size={16} />
                     </Link>
                   </div>
-                </article>
-              ))}
+                </section>
+              </div>
+            </article>
+          </div>
+
+          <aside className="article-sidebar">
+            <div className="article-sidebar-card">
+              <div className="article-detail-related-header">
+                <h2>Related news</h2>
+                <p>{language === 'en' ? 'More articles you can open next.' : 'Artikel lain yang bisa dibuka berikutnya.'}</p>
+              </div>
+              <div className="article-sidebar-list">
+                {visibleRelatedArticles.map((relatedArticle) => (
+                  <Link className="article-sidebar-item" to={`/artikel/${relatedArticle.slug}`} key={relatedArticle.slug}>
+                    <img
+                      className="article-sidebar-thumb"
+                      src={relatedArticle.coverImage}
+                      alt={relatedArticle.coverImageAlt}
+                      width="120"
+                      height="90"
+                    />
+                    <div>
+                      <span>{relatedArticle.category}</span>
+                      <strong>{relatedArticle.title}</strong>
+                    </div>
+                  </Link>
+                ))}
+              </div>
             </div>
-          </section>
-        ) : null}
+          </aside>
+        </section>
       </main>
 
       <SiteFooter

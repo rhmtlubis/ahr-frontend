@@ -9,7 +9,11 @@ const projectRoot = path.resolve(__dirname, '..')
 const distRoot = path.join(projectRoot, 'dist')
 const indexPath = path.join(distRoot, 'index.html')
 const siteUrl = normalizeBaseUrl(process.env.VITE_SITE_URL || fallbackSiteData.siteUrl)
-const fileEnv = await loadEnvFile(path.join(projectRoot, '.env'))
+const fileEnv = {
+  ...(await loadEnvFile(path.join(projectRoot, '.env'))),
+  ...(await loadEnvFile(path.join(projectRoot, '.env.production'))),
+  ...(await loadEnvFile(path.join(projectRoot, '.env.production.local'))),
+}
 const apiCandidates = [
   process.env.VITE_PRERENDER_API_BASE_URL,
   process.env.VITE_API_BASE_URL,

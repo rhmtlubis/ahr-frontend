@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { ArrowRight, BookOpen, CalendarDays, Clock3 } from 'lucide-react'
+import { ArrowRight, CalendarDays, Clock3 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import './App.css'
 import './ArticlePage.css'
@@ -95,9 +95,9 @@ function ArticlesPage() {
     utilityLinks,
     utilityMessage,
   } = pageContent
-  const featuredArticle = articles[0]
-  const remainingArticles = articles.slice(1)
 
+  const featuredArticle = articles[0]
+  const visibleArticles = articles.slice(0)
   return (
     <div className="app-shell article-page-shell">
       <SiteHeader
@@ -116,70 +116,44 @@ function ArticlesPage() {
 
       <main className="article-main">
         <section className="article-hero">
+          <div className="article-hero-media" aria-hidden="true">
+            <img
+              src={featuredArticle?.coverImage || '/og-preview.png'}
+              alt=""
+            />
+          </div>
           <div className="article-hero-copy">
-            <span className="article-eyebrow">SEO Content Hub</span>
-            <h1>
-              {language === 'en'
-                ? 'Articles that support search visibility and buyer education'
-                : 'Artikel yang membantu SEO sekaligus mengedukasi calon pembeli'}
-            </h1>
+            <span className="article-hero-kicker">News hub</span>
+            <h1>{language === 'en' ? 'Latest articles' : 'Artikel terbaru'}</h1>
             <p>
               {language === 'en'
-                ? 'Explore practical guides about custom jerseys, sublimation design, materials, and ordering workflows.'
-                : 'Kumpulan artikel praktis seputar jersey custom, desain sublimasi, pemilihan bahan, dan alur pemesanan yang paling sering dicari calon buyer.'}
+                ? 'Editorial notes, production insights, and practical guides for custom jersey buyers.'
+                : 'Catatan editorial, insight produksi, dan panduan praktis untuk buyer jersey custom.'}
             </p>
-          </div>
-          <div className="article-hero-card">
-            <BookOpen size={28} />
-            <strong>{articles.length} artikel awal siap diindeks</strong>
-            <p>
-              Halaman ini dibuat untuk memperluas keyword informasional dan menguatkan halaman produk
-              utama lewat internal link.
-            </p>
-          </div>
-        </section>
-
-        <section className="article-featured">
-          <article className="featured-article-card">
-            <div className="featured-article-media">
-              <img
-                src={featuredArticle.coverImage}
-                alt={featuredArticle.coverImageAlt}
-                width="1200"
-                height="800"
-              />
-            </div>
-            <div className="featured-article-body">
-              <span className="article-category">{featuredArticle.category}</span>
-              <h2>{featuredArticle.title}</h2>
-              <p>{featuredArticle.description}</p>
-              <div className="article-meta-row">
-                <span>
-                  <CalendarDays size={16} />
-                  {formatArticleDate(featuredArticle.publishedAt, language)}
-                </span>
-                <span>
-                  <Clock3 size={16} />
-                  {featuredArticle.readingTime}
-                </span>
-              </div>
-              <Link className="article-link-button" to={`/artikel/${featuredArticle.slug}`}>
-                Baca artikel
+            <div className="article-hero-actions">
+              <Link className="article-pill-link" to="/all-products">
+                {language === 'en' ? 'See products' : 'Lihat produk'}
+                <ArrowRight size={16} />
+              </Link>
+              <Link className="article-pill-link" to="/#contact">
+                {language === 'en' ? 'Talk to team' : 'Konsultasi tim'}
                 <ArrowRight size={16} />
               </Link>
             </div>
-          </article>
+          </div>
         </section>
 
         <section className="article-list-section">
-          <div className="section-heading">
-            <span>Topik Artikel</span>
-            <h2>{language === 'en' ? 'Latest guidance from AHR' : 'Panduan terbaru dari AHR'}</h2>
+          <div className="article-section-title">
+            <h2>{language === 'en' ? 'Latest news' : 'Berita terbaru'}</h2>
+            <div className="article-filter-note">
+              {language === 'en' ? 'Filter by: All topics' : 'Filter: semua topik'}
+            </div>
           </div>
 
           <div className="article-grid">
-            {remainingArticles.map((article) => (
-              <article className="article-card" key={article.slug}>
+            {visibleArticles.map((article) => (
+              <Link className="article-card" key={article.slug} to={`/artikel/${article.slug}`}>
                 <img
                   className="article-card-image"
                   src={article.coverImage}
@@ -191,7 +165,7 @@ function ArticlesPage() {
                   <span className="article-category">{article.category}</span>
                   <h3>{article.title}</h3>
                   <p>{article.excerpt}</p>
-                  <div className="article-meta-row">
+                  <div className="article-card-meta">
                     <span>
                       <CalendarDays size={16} />
                       {formatArticleDate(article.publishedAt, language)}
@@ -201,12 +175,12 @@ function ArticlesPage() {
                       {article.readingTime}
                     </span>
                   </div>
-                  <Link className="article-link-inline" to={`/artikel/${article.slug}`}>
+                  <span className="article-card-link">
                     Baca selengkapnya
                     <ArrowRight size={16} />
-                  </Link>
+                  </span>
                 </div>
-              </article>
+              </Link>
             ))}
           </div>
         </section>
