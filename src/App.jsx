@@ -41,7 +41,7 @@ import SiteFooter from './components/layout/SiteFooter'
 import SiteHeader from './components/layout/SiteHeader'
 import { getConsentPreferences, setConsentPreferences } from './lib/consent'
 import { useLanguage } from './lib/i18n.jsx'
-import { getLandingChromeContent } from './lib/landingContent'
+import { getLandingChromeContent, normalizeCompanyProfile } from './lib/landingContent'
 import { clearPersonalizationData, getPersonalizedProducts } from './lib/personalization'
 import useDocumentTitle from './lib/useDocumentTitle'
 
