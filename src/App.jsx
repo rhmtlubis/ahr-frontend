@@ -909,7 +909,7 @@ function App() {
         </section>
 
         <section className="content-block section-soft" data-reveal>
-          <div className="section-heading" data-reveal-item>
+          <div className="section-heading">
             <span>{sectionContent.unified_direction_eyebrow}</span>
             <h2>{sectionContent.unified_direction_title}</h2>
             <p>{sectionContent.unified_direction_body}</p>
@@ -920,7 +920,7 @@ function App() {
               const Icon = item.icon
 
               return (
-                <article className="capability-card" key={item.title} data-reveal-item>
+                <article className="capability-card" key={item.title}>
                   <Icon size={18} />
                   <h3>{item.title}</h3>
                   <p>{item.detail}</p>
@@ -942,7 +942,7 @@ function App() {
             }
           />
 
-          <div className="discover-grid" data-reveal-item>
+          <div className="discover-grid">
             <div className="quality-panel">
               <div className="quality-panel-heading">
                 <h3>{sectionContent.quality_panel_title}</h3>
@@ -966,7 +966,7 @@ function App() {
           </div>
 
           {consentPreferences.personalization === 'accepted' && personalizedProducts.length > 0 ? (
-            <div className="personalized-products-panel" data-reveal-item>
+            <div className="personalized-products-panel">
               <div className="personalized-products-heading">
                 <div>
                   <span>{t('homepage.personalized.eyebrow')}</span>
@@ -1028,7 +1028,7 @@ function App() {
             </div>
           ) : null}
 
-          <div className="product-slider" data-reveal-item>
+          <div className="product-slider">
             <div className="product-slider-toolbar">
               <p className="product-slider-meta">
                 {t('homepage.slider.meta', { count: visibleProducts.length })}
@@ -1103,7 +1103,7 @@ function App() {
         </section>
 
         <section className="content-block section-soft client-brand-section" data-reveal>
-          <div className="section-heading heading-inline" data-reveal-item>
+          <div className="section-heading heading-inline">
             <div>
               <span>{sectionContent.client_brands_eyebrow}</span>
               <h2>{sectionContent.client_brands_title}</h2>
@@ -1120,7 +1120,7 @@ function App() {
                 <a
                   className="client-brand-card"
                   key={brandKey}
-                  data-reveal-item
+                 
                   href={brand.url}
                   target="_blank"
                   rel="noreferrer"
@@ -1132,7 +1132,7 @@ function App() {
                   )}
                 </a>
               ) : (
-                <article className="client-brand-card" key={brandKey} data-reveal-item>
+                <article className="client-brand-card" key={brandKey}>
                   {brand.image ? (
                     <img className="client-brand-logo" src={brand.image} alt={brand.label} width="132" height="44" loading="lazy" decoding="async" />
                   ) : (
@@ -1146,7 +1146,7 @@ function App() {
         </section>
 
         <section className="content-block section-soft process-layout" id="process" data-reveal>
-          <div className="section-heading" data-reveal-item>
+          <div className="section-heading">
             <span>{sectionContent.process_eyebrow}</span>
             <h2>{sectionContent.process_title}</h2>
           </div>
@@ -1156,7 +1156,7 @@ function App() {
               const Icon = item.icon
 
               return (
-                <article className="process-card" key={item.title} data-reveal-item>
+                <article className="process-card" key={item.title}>
                   <div className="process-index">
                     <strong>0{index + 1}</strong>
                     <Icon size={18} />
@@ -1170,7 +1170,7 @@ function App() {
         </section>
 
         <section className="content-block section-soft pricing-layout" id="pricing" data-reveal>
-          <div className="section-heading heading-inline" data-reveal-item>
+          <div className="section-heading heading-inline">
             <div>
               <span>{sectionContent.pricing_eyebrow}</span>
               <h2>{sectionContent.pricing_title}</h2>
@@ -1186,7 +1186,7 @@ function App() {
               <article
                 className={pricingPackage.featured ? 'pricing-card featured' : 'pricing-card'}
                 key={pricingPackage.id}
-                data-reveal-item
+               
               >
                 <span className="pricing-quantity">{pricingPackage.quantity}</span>
                 <h3>{pricingPackage.name}</h3>
@@ -1209,7 +1209,7 @@ function App() {
         </section>
 
         <section className="final-panel section-accent" id="final-cta" data-reveal>
-          <div className="final-panel-copy" data-reveal-item>
+          <div className="final-panel-copy">
             <span>{sectionContent.final_cta_eyebrow}</span>
             <h2>{sectionContent.final_cta_title}</h2>
             <div className="final-actions">
@@ -1303,7 +1303,7 @@ function App() {
         </section>
 
         <section className="content-block section-plain faq-layout" id="faq" data-reveal>
-          <div className="section-heading heading-inline" data-reveal-item>
+          <div className="section-heading heading-inline">
             <div>
               <span>{sectionContent.faq_eyebrow}</span>
               <h2>{sectionContent.faq_title}</h2>
@@ -1315,7 +1315,7 @@ function App() {
           </div>
 
           <div className="faq-layout-grid">
-            <article className="faq-visual-card" data-reveal-item>
+            <article className="faq-visual-card">
               <div
                 className="faq-visual-media"
                 style={{ backgroundImage: `url(${faqVisualUrl})` }}
@@ -1334,7 +1334,7 @@ function App() {
                   <article
                     className={isOpen ? 'faq-item open' : 'faq-item'}
                     key={faq.question}
-                    data-reveal-item
+                   
                   >
                     <button
                       className="faq-button"
