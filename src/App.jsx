@@ -1246,7 +1246,7 @@ function App() {
             </div>
           </div>
 
-          <form className="lead-form" onSubmit={submitLead} data-reveal-item>
+          <form className="lead-form" onSubmit={submitLead}>
             <input
               aria-label={t('homepage.leadForm.name')}
               placeholder={t('homepage.leadForm.name')}
