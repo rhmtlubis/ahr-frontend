@@ -298,6 +298,7 @@ function App() {
   const [shouldPlayHeroVideo, setShouldPlayHeroVideo] = useState(false)
   const [showHeroVideoHint, setShowHeroVideoHint] = useState(false)
   const heroVideoRef = useRef(null)
+  const landingPageContent = landingPageContentState ?? getEmptyLandingPageContent()
   const contactProfile = landingPageContent.brand
   const companyProfile = landingPageContent.companyProfile
   const decorativeMedia = landingPageContent.decorativeMedia
@@ -307,7 +308,6 @@ function App() {
   const finalMessageFallback = t('homepage.finalMessage')
   const footerMessageFallback = t('homepage.footerMessage')
   const defaultMapLabel = t('common.mapLabel')
-  const landingPageContent = landingPageContentState ?? getEmptyLandingPageContent()
   const heroDesktopMediaUrl = landingPageContent.hero.desktopMedia?.url || null
   const isIosDevice =
     typeof navigator !== 'undefined' && /iP(hone|od|ad)/i.test(navigator.userAgent || '')
