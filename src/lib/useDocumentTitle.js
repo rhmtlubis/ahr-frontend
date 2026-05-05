@@ -1,10 +1,10 @@
 import { useEffect } from 'react'
 
-const DEFAULT_TITLE = 'AHR'
+const DEFAULT_TITLE = 'AHR Corporation'
 const DEFAULT_DESCRIPTION =
-  'AHR melayani jersey custom sublimasi, seragam printing, apparel olahraga, dan kebutuhan konveksi custom untuk tim, komunitas, sekolah, dan perusahaan.'
+  'AHR Corporation melayani jersey custom sublimasi, seragam printing, apparel olahraga, dan kebutuhan konveksi custom untuk tim, komunitas, sekolah, dan perusahaan.'
 const DEFAULT_KEYWORDS =
-  'jersey custom, jersey sublimasi, seragam printing, konveksi jersey, apparel olahraga, AHR'
+  'ahr corporation, jersey custom, jersey sublimasi, seragam printing, konveksi jersey, apparel olahraga, AHR Corporation'
 const DEFAULT_SITE_URL = (import.meta.env.VITE_SITE_URL || 'https://ahrcorporation.id').replace(/\/+$/, '')
 const DEFAULT_OG_IMAGE = `${DEFAULT_SITE_URL}/og-preview.png`
 

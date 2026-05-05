@@ -140,13 +140,13 @@ export default function B2BLandingPage() {
   const [status, setStatus] = useState({ state: 'idle', message: '' })
 
   useDocumentTitle(
-    'Kontak & Kerja Sama',
-    'Landing B2B untuk kerja sama vendor, procurement, reseller, sekolah, EO, dan corporate yang butuh respon cepat via WhatsApp.',
+    'AHR Corporation Kontak & Kerja Sama',
+    'Landing B2B AHR Corporation untuk kerja sama vendor, procurement, reseller, sekolah, EO, dan corporate yang butuh respon cepat via WhatsApp.',
     {
       canonicalPath: '/kontak-kerja-sama',
       image: '/og-preview.png',
-      imageAlt: 'Kontak dan kerja sama AHR',
-      keywords: 'kontak kerja sama, b2b jersey, vendor apparel, procurement, wholesale, WhatsApp AHR',
+      imageAlt: 'Kontak dan kerja sama AHR Corporation',
+      keywords: 'ahr corporation, kontak kerja sama, b2b jersey, vendor apparel, procurement, wholesale, WhatsApp AHR Corporation',
       locale: language,
       type: 'website',
     },

@@ -29,6 +29,44 @@ function normalizePrice(value, currency = 'IDR') {
   return Number.isFinite(amount) ? String(amount) : null
 }
 
+export function buildOrganizationStructuredData(options = {}) {
+  const {
+    siteUrl = 'https://ahrcorporation.id',
+    logoUrl = '/ahr-brand-logo.webp',
+    organizationName = 'AHR Corporation',
+    sameAs = [],
+    description = 'AHR Corporation melayani jersey custom sublimasi, seragam printing, apparel olahraga, dan kebutuhan konveksi custom untuk tim, komunitas, sekolah, dan perusahaan.',
+  } = options
+  const normalizedSiteUrl = siteUrl.replace(/\/+$/, '')
+  const normalizedLogoUrl = /^https?:\/\//i.test(logoUrl)
+    ? logoUrl
+    : `${normalizedSiteUrl}${logoUrl.startsWith('/') ? logoUrl : `/${logoUrl}`}`
+
+  return [
+    {
+      '@context': 'https://schema.org',
+      '@type': 'Organization',
+      name: organizationName,
+      alternateName: 'AHR',
+      url: normalizedSiteUrl,
+      logo: normalizedLogoUrl,
+      description,
+      sameAs,
+    },
+    {
+      '@context': 'https://schema.org',
+      '@type': 'WebSite',
+      name: organizationName,
+      alternateName: 'AHR',
+      url: normalizedSiteUrl,
+      potentialAction: {
+        '@type': 'SearchAction',
+        target: `${normalizedSiteUrl}/all-products`,
+      },
+    },
+  ]
+}
+
 export function buildProductStructuredData(product, options = {}) {
   if (!product) {
     return []
@@ -95,7 +133,7 @@ export function buildProductStructuredData(product, options = {}) {
       description: Array.isArray(product.description) ? product.description.join(' ') : undefined,
       brand: {
         '@type': 'Brand',
-        name: 'AHR',
+        name: 'AHR Corporation',
       },
       sku: product.slug,
       url: canonicalUrl,
@@ -155,11 +193,11 @@ export function buildArticleStructuredData(article, options = {}) {
       dateModified: article.updatedAt || article.publishedAt,
       author: {
         '@type': 'Organization',
-        name: article.author || 'AHR',
+        name: article.author || 'AHR Corporation',
       },
       publisher: {
         '@type': 'Organization',
-        name: 'AHR',
+        name: 'AHR Corporation',
         logo: {
           '@type': 'ImageObject',
           url: `${normalizedSiteUrl}/ahr-brand-logo.webp`,

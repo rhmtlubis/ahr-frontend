@@ -17,18 +17,18 @@ function buildWhatsAppUrl(phoneNumber, message) {
 function CompanyProfilePage() {
   const { language, t } = useLanguage()
   useDocumentTitle(
-    language === 'en' ? 'Company Profile of Custom Jersey Manufacturer' : 'Profil Perusahaan Konveksi & Sublimasi',
+    language === 'en' ? 'AHR Corporation Company Profile and Custom Jersey Manufacturer' : 'Profil Perusahaan AHR Corporation Konveksi & Sublimasi',
     language === 'en'
-      ? 'Learn about AHR as a custom jersey, sublimation apparel, and sportswear manufacturer for brands, teams, and organizations.'
-      : 'Kenali AHR sebagai perusahaan konveksi jersey custom, apparel sublimasi, dan seragam printing untuk brand, tim, dan instansi.',
+      ? 'Learn about AHR Corporation as a custom jersey, sublimation apparel, and sportswear manufacturer for brands, teams, and organizations.'
+      : 'Kenali AHR Corporation sebagai perusahaan konveksi jersey custom, apparel sublimasi, dan seragam printing untuk brand, tim, dan instansi.',
     {
       canonicalPath: '/profil',
       image: '/ahr-brand-logo.webp',
-      imageAlt: 'Profil perusahaan AHR',
+      imageAlt: 'Profil perusahaan AHR Corporation',
       keywords:
         language === 'en'
-          ? 'company profile, custom jersey manufacturer, sublimation apparel company, sportswear supplier, AHR'
-          : 'profil perusahaan, konveksi jersey custom, perusahaan sublimasi, supplier apparel olahraga, AHR',
+          ? 'ahr corporation, company profile, custom jersey manufacturer, sublimation apparel company, sportswear supplier, AHR Corporation'
+          : 'ahr corporation, profil perusahaan, konveksi jersey custom, perusahaan sublimasi, supplier apparel olahraga, AHR Corporation',
       locale: language,
       type: 'website',
     },

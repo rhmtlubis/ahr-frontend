@@ -43,6 +43,7 @@ import { getConsentPreferences, setConsentPreferences } from './lib/consent'
 import { useLanguage } from './lib/i18n.jsx'
 import { getLandingChromeContent, normalizeCompanyProfile } from './lib/landingContent'
 import { clearPersonalizationData, getPersonalizedProducts } from './lib/personalization'
+import { buildOrganizationStructuredData } from './lib/structuredData'
 import useDocumentTitle from './lib/useDocumentTitle'
 
 const defaultLeadForm = {
@@ -236,20 +237,23 @@ function App() {
   const { language, t } = useLanguage()
   useDocumentTitle(
     language === 'en'
-      ? 'Custom Sublimation Jerseys & Sportswear Manufacturer'
-      : 'Jersey Custom Sublimasi, Seragam Printing & Konveksi',
+      ? 'AHR Corporation Custom Sublimation Jerseys & Sportswear Manufacturer'
+      : 'AHR Corporation Jersey Custom Sublimasi, Seragam Printing & Konveksi',
     language === 'en'
-      ? 'AHR produces custom sublimation jerseys, team uniforms, sportswear, and made-to-order apparel for clubs, schools, communities, and companies.'
-      : 'AHR melayani pembuatan jersey custom sublimasi, seragam printing, dan konveksi apparel custom untuk tim, sekolah, komunitas, dan perusahaan.',
+      ? 'AHR Corporation produces custom sublimation jerseys, team uniforms, sportswear, and made-to-order apparel for clubs, schools, communities, and companies.'
+      : 'AHR Corporation melayani pembuatan jersey custom sublimasi, seragam printing, dan konveksi apparel custom untuk tim, sekolah, komunitas, dan perusahaan.',
     {
       canonicalPath: '/',
       image: '/ahr-brand-logo.webp',
-      imageAlt: 'AHR jersey custom sublimasi',
+      imageAlt: 'AHR Corporation jersey custom sublimasi',
       keywords:
         language === 'en'
-          ? 'custom jerseys, sublimation jerseys, sportswear manufacturer, team uniforms, custom apparel, AHR'
-          : 'jersey custom, jersey sublimasi, seragam printing, konveksi apparel, apparel olahraga, AHR',
+          ? 'ahr corporation, custom jerseys, sublimation jerseys, sportswear manufacturer, team uniforms, custom apparel, AHR Corporation'
+          : 'ahr corporation, jersey custom, jersey sublimasi, seragam printing, konveksi apparel, apparel olahraga, AHR Corporation',
       locale: language,
+      structuredData: buildOrganizationStructuredData({
+        siteUrl: import.meta.env.VITE_SITE_URL || 'https://ahrcorporation.id',
+      }),
       type: 'website',
     },
   )
