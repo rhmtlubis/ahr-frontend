@@ -1364,8 +1364,8 @@ function App() {
           </div>
         </section>
 
-        <section className="content-block section-soft contact-layout" id="contact" data-reveal>
-          <div className="section-heading heading-inline" data-reveal-item>
+        <section className="content-block section-soft contact-layout" id="contact">
+          <div className="section-heading heading-inline">
             <div>
               <span>{sectionContent.contact_eyebrow}</span>
               <h2>{sectionContent.contact_title}</h2>
@@ -1377,14 +1377,14 @@ function App() {
           </div>
 
           <div className="contact-grid">
-            <article className="contact-card" data-reveal-item>
+            <article className="contact-card">
               <MapPin size={20} />
               <div>
                 <h3>{companyProfile.address.label}</h3>
                 <p>{companyProfile.address.line}</p>
               </div>
             </article>
-            <article className="contact-card" data-reveal-item>
+            <article className="contact-card">
               <Phone size={20} />
               <div>
                 <h3>{t('homepage.contact.teamTitle')}</h3>
@@ -1393,7 +1393,7 @@ function App() {
             </article>
           </div>
 
-          <div className="contact-actions" data-reveal-item>
+          <div className="contact-actions">
             <a
               className="cta-button cta-button-dark"
               href={companyProfile.address.mapUrl}
