@@ -232,34 +232,6 @@ function getEmptyLandingPageContent() {
   }
 }
 
-function getHomepageContent(language, t) {
-  return {
-    brand: {
-      name: 'AHR',
-      lockup: 'CV AHR Printing',
-      tagline: t('homepage.brand.tagline'),
-      whatsapp_number: '6281234567890',
-      response_time: t('homepage.brand.responseTime'),
-    },
-    ...getLandingChromeContent({}, { locale: language }),
-    qualityHighlights: [],
-    hero: t('homepage.hero'),
-    stats: t('homepage.stats'),
-    capabilities: t('homepage.capabilities').map((item, index) => ({
-      ...item,
-      icon: [MessageCircleMore, ShoppingBag, ShieldCheck, Truck][index % 4],
-    })),
-    products: [],
-    clientBrands: [],
-    pricingPackages: t('homepage.pricingPackages'),
-    processSteps: t('homepage.processSteps').map((item, index) => ({
-      ...item,
-      icon: [MessageCircleMore, FileCheck2, PackageCheck, ArrowRight][index % 4],
-    })),
-    faqs: t('homepage.faqs'),
-  }
-}
-
 function App() {
   const { language, t } = useLanguage()
   useDocumentTitle(

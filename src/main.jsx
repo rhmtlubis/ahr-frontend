@@ -14,6 +14,7 @@ const App = lazy(() => import('./App.jsx'))
 const AllProductsPage = lazy(() => import('./AllProductsPage.jsx'))
 const CartPage = lazy(() => import('./CartPage.jsx'))
 const CompanyProfilePage = lazy(() => import('./CompanyProfilePage.jsx'))
+const B2BLandingPage = lazy(() => import('./B2BLandingPage.jsx'))
 const ArticlesPage = lazy(() => import('./ArticlesPage.jsx'))
 const ArticleDetailPage = lazy(() => import('./ArticleDetailPage.jsx'))
 const LinktreePage = lazy(() => import('./LinktreePage.jsx'))
@@ -76,6 +77,8 @@ createRoot(document.getElementById('root')).render(
               <Route path="/cart" element={<CartPage />} />
               <Route path="/artikel" element={<ArticlesPage />} />
               <Route path="/artikel/:articleSlug" element={<ArticleDetailPage />} />
+              <Route path="/b2b" element={<B2BLandingPage />} />
+              <Route path="/kontak-kerja-sama" element={<B2BLandingPage />} />
               <Route path="/linktree" element={<LinktreePage />} />
               <Route path="/profil" element={<CompanyProfilePage />} />
               <Route path="/produk/:productSlug" element={<ProductDetailPage />} />

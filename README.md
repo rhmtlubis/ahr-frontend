@@ -168,6 +168,7 @@ Perilaku:
 - GA4 diinisialisasi hanya jika `VITE_GA_MEASUREMENT_ID` tersedia
 - page view dikirim manual setelah route berubah
 - event kustom dikirim untuk CTA, scroll depth, FAQ, cart, checkout, filter, pagination, dan product open
+- Google Ads conversion bisa dipetakan via env khusus, termasuk submit form landing B2B
 
 ## API Helper
 
@@ -212,6 +213,7 @@ Default URL lokal:
 VITE_API_BASE_URL=
 VITE_API_PROXY_TARGET=http://127.0.0.1:8000
 VITE_GA_MEASUREMENT_ID=
+VITE_GOOGLE_ADS_ID=
 ```
 
 Catatan:
@@ -219,6 +221,7 @@ Catatan:
 - kosongkan `VITE_API_BASE_URL` saat local dev agar lewat proxy
 - isi `VITE_API_BASE_URL` di production bila domain frontend dan backend berbeda
 - `VITE_GA_MEASUREMENT_ID` opsional
+- `VITE_GOOGLE_ADS_ID` dan conversion label opsional jika ingin tracking Ads
 
 ## Build
 

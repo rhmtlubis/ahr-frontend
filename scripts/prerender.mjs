@@ -175,6 +175,54 @@ async function main() {
       ],
     },
     {
+      routePath: '/kontak-kerja-sama',
+      filePath: path.join(distRoot, 'kontak-kerja-sama', 'index.html'),
+      title: 'Kontak & Kerja Sama',
+      description:
+        'Landing B2B AHR untuk kerja sama vendor, procurement, reseller, sekolah, EO, dan corporate yang butuh respon cepat ke WhatsApp.',
+      image: resolveAbsoluteUrl(siteData.defaultImage),
+      imageAlt: 'Kontak dan kerja sama AHR',
+      type: 'website',
+      bodyContent: buildSimplePageBodyContent(
+        'Kontak & Kerja Sama',
+        'Layanan B2B & Kerja Sama Vendor.',
+        [
+          'Respon cepat langsung ke WhatsApp untuk kebutuhan procurement, reseller, corporate, sekolah, dan event organizer.',
+          'Gunakan landing ini sebagai tujuan iklan Google Ads agar lead masuk ke jalur yang lebih fokus.',
+        ],
+      ),
+      jsonLd: [
+        buildBreadcrumbSchema([
+          { name: 'Home', url: siteUrl },
+          { name: 'Kontak & Kerja Sama', url: `${siteUrl}/kontak-kerja-sama` },
+        ]),
+      ],
+    },
+    {
+      routePath: '/b2b',
+      filePath: path.join(distRoot, 'b2b', 'index.html'),
+      title: 'Kontak & Kerja Sama',
+      description:
+        'Landing B2B AHR untuk kerja sama vendor, procurement, reseller, sekolah, EO, dan corporate yang butuh respon cepat ke WhatsApp.',
+      image: resolveAbsoluteUrl(siteData.defaultImage),
+      imageAlt: 'Kontak dan kerja sama AHR',
+      type: 'website',
+      bodyContent: buildSimplePageBodyContent(
+        'Kontak & Kerja Sama',
+        'Layanan B2B & Kerja Sama Vendor.',
+        [
+          'Respon cepat langsung ke WhatsApp untuk kebutuhan procurement, reseller, corporate, sekolah, dan event organizer.',
+          'Gunakan landing ini sebagai tujuan iklan Google Ads agar lead masuk ke jalur yang lebih fokus.',
+        ],
+      ),
+      jsonLd: [
+        buildBreadcrumbSchema([
+          { name: 'Home', url: siteUrl },
+          { name: 'Kontak & Kerja Sama', url: `${siteUrl}/b2b` },
+        ]),
+      ],
+    },
+    {
       routePath: '/all-products',
       filePath: path.join(distRoot, 'all-products', 'index.html'),
       title: 'Katalog Jersey Custom & Seragam Printing',
