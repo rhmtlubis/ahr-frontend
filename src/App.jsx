@@ -89,7 +89,7 @@ function resolvePageSectionByDepth(depth) {
   return 'hero'
 }
 
-function normalizeLandingPageContent(payload = {}, homepageContent, language) {
+function normalizeLandingPageContent(payload = {}, _homepageContent, language) {
   const catalogCategories = Array.isArray(payload.catalog_categories) ? payload.catalog_categories : []
   const catalogItems = Array.isArray(payload.catalog_items) ? payload.catalog_items : []
   const heroStats = Array.isArray(payload.hero?.stats) ? payload.hero.stats : []
@@ -108,28 +108,34 @@ function normalizeLandingPageContent(payload = {}, homepageContent, language) {
   }))
 
   return {
-    ...homepageContent,
     ...chromeContent,
     qualityHighlights,
     hero: payload.hero
       ? {
-          ...homepageContent.hero,
-          eyebrow: payload.hero.eyebrow || homepageContent.hero.eyebrow,
-          title: payload.hero.headline || homepageContent.hero.title,
-          body: payload.hero.subheadline || homepageContent.hero.body,
-          primaryCta: payload.hero.primary_cta || homepageContent.hero.primaryCta,
-          secondaryCta: payload.hero.secondary_cta || homepageContent.hero.secondaryCta,
+          eyebrow: payload.hero.eyebrow || '',
+          title: payload.hero.headline || '',
+          body: payload.hero.subheadline || '',
+          primaryCta: payload.hero.primary_cta || '',
+          secondaryCta: payload.hero.secondary_cta || '',
           desktopMedia: payload.hero.desktop_media || null,
           mobileMedia: payload.hero.mobile_media || null,
         }
-      : homepageContent.hero,
+      : {
+          eyebrow: '',
+          title: '',
+          body: '',
+          primaryCta: '',
+          secondaryCta: '',
+          desktopMedia: null,
+          mobileMedia: null,
+        },
     stats:
       heroStats.length > 0
         ? heroStats.map((item) => ({
             value: item.value,
             label: item.label,
           }))
-        : homepageContent.stats,
+        : [],
     products: normalizeProducts(catalogItems, language),
     processSteps:
       processSteps.length > 0
@@ -138,11 +144,8 @@ function normalizeLandingPageContent(payload = {}, homepageContent, language) {
             detail: item.detail,
             icon: capabilityIcons[index % capabilityIcons.length],
           }))
-        : homepageContent.processSteps,
-    faqs:
-      faqs.length > 0
-        ? faqs
-        : homepageContent.faqs,
+        : [],
+    faqs: faqs.length > 0 ? faqs : [],
     capabilities:
       guarantees.length > 0
         ? guarantees.map((item, index) => ({
@@ -150,7 +153,7 @@ function normalizeLandingPageContent(payload = {}, homepageContent, language) {
             detail: item,
             icon: capabilityIcons[index % capabilityIcons.length],
           }))
-        : homepageContent.capabilities,
+        : [],
     pricingPackages:
       pricingPackages.length > 0
         ? pricingPackages.map((item) => ({
@@ -161,7 +164,7 @@ function normalizeLandingPageContent(payload = {}, homepageContent, language) {
             featured: item.featured,
             features: item.features,
           }))
-        : homepageContent.pricingPackages,
+        : [],
     testimonials,
     clientBrands:
       clientBrands.length > 0
@@ -174,19 +177,58 @@ function normalizeLandingPageContent(payload = {}, homepageContent, language) {
                   url: item.url || null,
                 },
           )
-        : homepageContent.clientBrands.map((brand) =>
-            typeof brand === 'string' ? { label: brand, image: null, url: null } : brand,
-          ),
-    catalogCategories: catalogCategories.map((item) => {
-      return {
-        ...item,
-        image: item.image || item.cover_image?.url || categoryPlaceholderImage,
-        position: item.position || 'center center',
-      }
-    }),
+        : [],
+    catalogCategories: catalogCategories.map((item) => ({
+      ...item,
+      image: item.image || item.cover_image?.url || categoryPlaceholderImage,
+      position: item.position || 'center center',
+    })),
     audiencePaths,
     leadForm: payload.lead_form || {},
     marketPositioning: payload.market_positioning || {},
+  }
+}
+
+function getEmptyLandingPageContent() {
+  return {
+    brand: {
+      name: '',
+      lockup: '',
+      tagline: '',
+      whatsapp_number: '',
+      response_time: '',
+    },
+    utilityLinks: [],
+    footerGroups: [],
+    navGroups: [],
+    utilityMessage: '',
+    ticker: '',
+    companyProfile: normalizeCompanyProfile({}),
+    decorativeMedia: {},
+    sectionContent: {},
+    qualityHighlights: [],
+    footerBottomText: '',
+    hero: {
+      eyebrow: '',
+      title: '',
+      body: '',
+      primaryCta: '',
+      secondaryCta: '',
+      desktopMedia: null,
+      mobileMedia: null,
+    },
+    stats: [],
+    capabilities: [],
+    products: [],
+    processSteps: [],
+    faqs: [],
+    pricingPackages: [],
+    testimonials: [],
+    clientBrands: [],
+    catalogCategories: [],
+    audiencePaths: [],
+    leadForm: {},
+    marketPositioning: {},
   }
 }
 
@@ -243,8 +285,7 @@ function App() {
   const rootRef = useRef(null)
   const gsapRef = useRef(null)
   const scrollTriggerRef = useRef(null)
-  const homepageContent = useMemo(() => getHomepageContent(language, t), [language, t])
-  const [landingPageContent, setLandingPageContent] = useState(homepageContent)
+  const [landingPageContentState, setLandingPageContent] = useState(null)
   const [openFaqIndex, setOpenFaqIndex] = useState(0)
   const [activeCatalogFilter, setActiveCatalogFilter] = useState('all')
   const [leadForm, setLeadForm] = useState(defaultLeadForm)
@@ -266,6 +307,7 @@ function App() {
   const finalMessageFallback = t('homepage.finalMessage')
   const footerMessageFallback = t('homepage.footerMessage')
   const defaultMapLabel = t('common.mapLabel')
+  const landingPageContent = landingPageContentState ?? getEmptyLandingPageContent()
   const heroDesktopMediaUrl = landingPageContent.hero.desktopMedia?.url || null
   const isIosDevice =
     typeof navigator !== 'undefined' && /iP(hone|od|ad)/i.test(navigator.userAgent || '')
@@ -288,10 +330,6 @@ function App() {
     landingPageContent.hero.desktopMedia?.alt_text ||
     landingPageContent.hero.title
   const faqVisualUrl = decorativeMedia.faq_visual?.url || faqPlaceholderImage
-
-  useEffect(() => {
-    setLandingPageContent(homepageContent)
-  }, [homepageContent])
 
   useEffect(() => {
     setConsentPreferencesState(getConsentPreferences())
@@ -432,22 +470,18 @@ function App() {
 
           return response.json()
         })
-        .then((payload) => {
-          if (payload?.data) {
-            setLandingPageContent({
-              ...normalizeLandingPageContent(payload.data, homepageContent, language),
-            })
-          }
-        })
-        .catch(() => {
-          setLandingPageContent(homepageContent)
-        })
+      .then((payload) => {
+        if (payload?.data) {
+          setLandingPageContent(normalizeLandingPageContent(payload.data, {}, language))
+        }
+      })
+      .catch(() => {})
 
     return () => {
       window.removeEventListener('scroll', handleScroll)
       window.removeEventListener('beforeunload', handleUnload)
     }
-  }, [homepageContent, language])
+  }, [language])
 
   useEffect(() => {
     if (!rootRef.current || !animationsReady || !gsapRef.current || !scrollTriggerRef.current) {
