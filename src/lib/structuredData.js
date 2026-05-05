@@ -106,3 +106,136 @@ export function buildProductStructuredData(product, options = {}) {
     },
   ]
 }
+
+export function buildArticleStructuredData(article, options = {}) {
+  if (!article) {
+    return []
+  }
+
+  const { siteUrl = 'https://ahrcorporation.id' } = options
+  const normalizedSiteUrl = siteUrl.replace(/\/+$/, '')
+  const canonicalUrl = `${normalizedSiteUrl}/artikel/${article.slug}`
+  const rawImage = String(article.coverImage || '/og-preview.png').trim()
+  const imageUrl = /^https?:\/\//i.test(rawImage)
+    ? rawImage
+    : `${normalizedSiteUrl}${rawImage.startsWith('/') ? rawImage : `/${rawImage}`}`
+
+  return [
+    {
+      '@context': 'https://schema.org',
+      '@type': 'BreadcrumbList',
+      itemListElement: [
+        {
+          '@type': 'ListItem',
+          position: 1,
+          name: 'Home',
+          item: normalizedSiteUrl,
+        },
+        {
+          '@type': 'ListItem',
+          position: 2,
+          name: 'Artikel',
+          item: `${normalizedSiteUrl}/artikel`,
+        },
+        {
+          '@type': 'ListItem',
+          position: 3,
+          name: article.title,
+          item: canonicalUrl,
+        },
+      ],
+    },
+    {
+      '@context': 'https://schema.org',
+      '@type': 'Article',
+      headline: article.title,
+      description: article.description || article.excerpt,
+      image: [imageUrl],
+      datePublished: article.publishedAt,
+      dateModified: article.updatedAt || article.publishedAt,
+      author: {
+        '@type': 'Organization',
+        name: article.author || 'AHR',
+      },
+      publisher: {
+        '@type': 'Organization',
+        name: 'AHR',
+        logo: {
+          '@type': 'ImageObject',
+          url: `${normalizedSiteUrl}/ahr-brand-logo.webp`,
+        },
+      },
+      mainEntityOfPage: canonicalUrl,
+      articleSection: article.category,
+      keywords: article.keywords,
+    },
+    Array.isArray(article.faqs) && article.faqs.length > 0
+      ? {
+          '@context': 'https://schema.org',
+          '@type': 'FAQPage',
+          mainEntity: article.faqs.map((faq) => ({
+            '@type': 'Question',
+            name: faq.question,
+            acceptedAnswer: {
+              '@type': 'Answer',
+              text: faq.answer,
+            },
+          })),
+        }
+      : null,
+    {
+      '@context': 'https://schema.org',
+      '@type': 'ItemList',
+      name: 'Artikel AHR',
+      itemListElement: [
+        {
+          '@type': 'ListItem',
+          position: 1,
+          url: canonicalUrl,
+          name: article.title,
+        },
+      ],
+    },
+  ].filter(Boolean)
+}
+
+export function buildArticleListingStructuredData(articleList = [], options = {}) {
+  const { siteUrl = 'https://ahrcorporation.id' } = options
+  const normalizedSiteUrl = siteUrl.replace(/\/+$/, '')
+
+  return [
+    {
+      '@context': 'https://schema.org',
+      '@type': 'BreadcrumbList',
+      itemListElement: [
+        {
+          '@type': 'ListItem',
+          position: 1,
+          name: 'Home',
+          item: normalizedSiteUrl,
+        },
+        {
+          '@type': 'ListItem',
+          position: 2,
+          name: 'Artikel',
+          item: `${normalizedSiteUrl}/artikel`,
+        },
+      ],
+    },
+    {
+      '@context': 'https://schema.org',
+      '@type': 'Blog',
+      name: 'Artikel AHR',
+      description:
+        'Kumpulan artikel seputar jersey custom, sublimasi, desain, bahan, dan tips pemesanan untuk tim, komunitas, sekolah, dan perusahaan.',
+      url: `${normalizedSiteUrl}/artikel`,
+      blogPost: articleList.map((article) => ({
+        '@type': 'BlogPosting',
+        headline: article.title,
+        url: `${normalizedSiteUrl}/artikel/${article.slug}`,
+        datePublished: article.publishedAt,
+        dateModified: article.updatedAt || article.publishedAt,
+      })),
+    },
+  ]
+}

@@ -14,6 +14,8 @@ const App = lazy(() => import('./App.jsx'))
 const AllProductsPage = lazy(() => import('./AllProductsPage.jsx'))
 const CartPage = lazy(() => import('./CartPage.jsx'))
 const CompanyProfilePage = lazy(() => import('./CompanyProfilePage.jsx'))
+const ArticlesPage = lazy(() => import('./ArticlesPage.jsx'))
+const ArticleDetailPage = lazy(() => import('./ArticleDetailPage.jsx'))
 const LinktreePage = lazy(() => import('./LinktreePage.jsx'))
 const ProductDetailPage = lazy(() => import('./ProductDetailPage.jsx'))
 
@@ -72,6 +74,8 @@ createRoot(document.getElementById('root')).render(
               <Route path="/admin/*" element={<LegacyAdminRedirect />} />
               <Route path="/all-products" element={<AllProductsPage />} />
               <Route path="/cart" element={<CartPage />} />
+              <Route path="/artikel" element={<ArticlesPage />} />
+              <Route path="/artikel/:articleSlug" element={<ArticleDetailPage />} />
               <Route path="/linktree" element={<LinktreePage />} />
               <Route path="/profil" element={<CompanyProfilePage />} />
               <Route path="/produk/:productSlug" element={<ProductDetailPage />} />

@@ -1,0 +1,263 @@
+.article-page-shell .article-main {
+  width: min(1180px, calc(100% - 32px));
+  margin: 0 auto;
+  padding: 28px 0 72px;
+}
+
+.article-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.45fr) minmax(280px, 0.8fr);
+  gap: 24px;
+  align-items: stretch;
+  margin-bottom: 28px;
+}
+
+.article-hero-copy,
+.article-hero-card,
+.featured-article-card,
+.article-card,
+.article-cta-card {
+  background: rgba(255, 255, 255, 0.88);
+  border: 1px solid rgba(2, 37, 84, 0.08);
+  box-shadow: var(--soft-shadow);
+  backdrop-filter: blur(14px);
+}
+
+.article-hero-copy {
+  border-radius: 28px;
+  padding: 36px;
+}
+
+.article-eyebrow,
+.article-category {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  border-radius: 999px;
+  background: rgba(220, 177, 58, 0.12);
+  color: var(--gold-700);
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 8px 12px;
+}
+
+.article-hero-copy h1,
+.featured-article-body h2,
+.article-detail-header h1 {
+  margin-top: 14px;
+}
+
+.article-hero-copy p,
+.article-hero-card p,
+.featured-article-body p,
+.article-card p,
+.article-detail-header p,
+.article-copy-block p,
+.article-copy-block li {
+  color: var(--text-600);
+}
+
+.article-hero-card {
+  border-radius: 28px;
+  padding: 32px;
+  display: grid;
+  gap: 14px;
+  align-content: start;
+}
+
+.article-featured,
+.article-list-section,
+.article-detail-layout {
+  margin-top: 24px;
+}
+
+.featured-article-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 0.9fr);
+  gap: 0;
+  border-radius: 32px;
+  overflow: hidden;
+}
+
+.featured-article-media img,
+.article-card-image,
+.article-detail-cover img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.featured-article-media {
+  min-height: 360px;
+}
+
+.featured-article-body {
+  padding: 32px;
+  display: grid;
+  gap: 16px;
+  align-content: center;
+}
+
+.article-meta-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  color: var(--text-500);
+  font-size: 0.95rem;
+}
+
+.article-meta-row span {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.article-link-button,
+.article-link-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  width: fit-content;
+  color: var(--navy-700);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.article-link-button {
+  border-radius: 999px;
+  background: var(--gold-500);
+  padding: 13px 18px;
+  color: var(--navy-900);
+}
+
+.article-link-inline {
+  padding: 0;
+}
+
+.article-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+}
+
+.article-card {
+  border-radius: 24px;
+  overflow: hidden;
+}
+
+.article-card-body {
+  padding: 24px;
+  display: grid;
+  gap: 14px;
+}
+
+.article-card-image {
+  aspect-ratio: 3 / 2;
+}
+
+.article-detail-main {
+  max-width: 960px;
+}
+
+.article-breadcrumbs {
+  margin-bottom: 18px;
+}
+
+.article-breadcrumbs a {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--navy-700);
+  text-decoration: none;
+  font-weight: 700;
+}
+
+.article-detail-layout {
+  display: grid;
+  gap: 24px;
+}
+
+.article-detail-header,
+.article-copy-block,
+.article-cta-card {
+  border-radius: 28px;
+  padding: 32px;
+}
+
+.article-detail-cover {
+  border-radius: 28px;
+  overflow: hidden;
+  aspect-ratio: 16 / 9;
+}
+
+.article-copy-block {
+  background: rgba(255, 255, 255, 0.75);
+  border: 1px solid rgba(2, 37, 84, 0.06);
+  margin-bottom: 18px;
+}
+
+.article-copy-block h2 {
+  margin-bottom: 12px;
+}
+
+.article-copy-block ul {
+  margin: 14px 0 0;
+  padding-left: 18px;
+  color: var(--text-600);
+}
+
+.article-faq-list {
+  display: grid;
+  gap: 14px;
+}
+
+.article-faq-item {
+  border-radius: 18px;
+  padding: 18px;
+  background: rgba(2, 37, 84, 0.03);
+}
+
+.article-faq-item h3 {
+  margin-bottom: 8px;
+}
+
+.article-cta-card {
+  display: grid;
+  gap: 14px;
+}
+
+.article-cta-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+}
+
+@media (max-width: 980px) {
+  .article-hero,
+  .featured-article-card,
+  .article-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .article-page-shell .article-main {
+    width: min(100% - 24px, 1180px);
+  }
+}
+
+@media (max-width: 640px) {
+  .article-hero-copy,
+  .article-hero-card,
+  .featured-article-body,
+  .article-detail-header,
+  .article-copy-block,
+  .article-cta-card {
+    padding: 22px;
+  }
+
+  .article-meta-row {
+    gap: 10px;
+  }
+}

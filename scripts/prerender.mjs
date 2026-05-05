@@ -2,16 +2,21 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { fallbackSiteData } from './prerender-fallback-data.mjs'
+import { articles as fallbackArticles } from '../src/content/articles.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const projectRoot = path.resolve(__dirname, '..')
 const distRoot = path.join(projectRoot, 'dist')
 const indexPath = path.join(distRoot, 'index.html')
 const siteUrl = normalizeBaseUrl(process.env.VITE_SITE_URL || fallbackSiteData.siteUrl)
+const fileEnv = await loadEnvFile(path.join(projectRoot, '.env'))
 const apiCandidates = [
   process.env.VITE_PRERENDER_API_BASE_URL,
   process.env.VITE_API_BASE_URL,
   process.env.VITE_API_PROXY_TARGET,
+  fileEnv.VITE_PRERENDER_API_BASE_URL,
+  fileEnv.VITE_API_BASE_URL,
+  fileEnv.VITE_API_PROXY_TARGET,
 ]
   .map((value) => normalizeApiBaseUrl(value))
   .filter(Boolean)
@@ -19,7 +24,9 @@ const apiCandidates = [
 async function main() {
   const template = await readFile(indexPath, 'utf8')
   const remotePayload = await loadLandingPayload()
+  const remoteArticles = await loadArticles()
   const siteData = buildSiteData(remotePayload)
+  const articles = remoteArticles.length > 0 ? remoteArticles : fallbackArticles
   const productPages = siteData.products.map((product) => ({
     routePath: `/produk/${product.slug}`,
     filePath: path.join(distRoot, 'produk', product.slug, 'index.html'),
@@ -54,6 +61,77 @@ async function main() {
       ]),
     ],
   }))
+
+  const articlePages = articles.map((article) => ({
+    routePath: `/artikel/${article.slug}`,
+    filePath: path.join(distRoot, 'artikel', article.slug, 'index.html'),
+    title: article.title,
+    description: truncateText(article.description || article.excerpt, 200),
+    image: resolveAbsoluteUrl(article.coverImage || siteData.defaultImage),
+    imageAlt: article.coverImageAlt || article.title,
+    type: 'article',
+    bodyContent: buildArticleBodyContent(article),
+    jsonLd: [
+      {
+        '@context': 'https://schema.org',
+        '@type': 'Article',
+        headline: article.title,
+        description: truncateText(article.description || article.excerpt, 400),
+        image: [resolveAbsoluteUrl(article.coverImage || siteData.defaultImage)],
+        datePublished: article.publishedAt,
+        dateModified: article.updatedAt || article.publishedAt,
+        author: {
+          '@type': 'Organization',
+          name: article.author || siteData.siteName,
+        },
+        publisher: {
+          '@type': 'Organization',
+          name: siteData.siteName,
+          logo: {
+            '@type': 'ImageObject',
+            url: resolveAbsoluteUrl('/ahr-brand-logo.webp'),
+          },
+        },
+        mainEntityOfPage: `${siteUrl}/artikel/${article.slug}`,
+      },
+      buildBreadcrumbSchema([
+        { name: 'Home', url: siteUrl },
+        { name: 'Artikel', url: `${siteUrl}/artikel` },
+        { name: article.title, url: `${siteUrl}/artikel/${article.slug}` },
+      ]),
+    ],
+  }))
+
+  const articleListingPage = {
+    routePath: '/artikel',
+    filePath: path.join(distRoot, 'artikel', 'index.html'),
+    title: 'Artikel Jersey Custom, Sublimasi & Tips Order',
+    description:
+      'Kumpulan artikel seputar jersey custom, desain sublimasi, pemilihan bahan, dan tips SEO untuk membantu traffic organik AHR.',
+    image: resolveAbsoluteUrl(siteData.defaultImage),
+    imageAlt: 'Artikel AHR',
+    type: 'website',
+    bodyContent: buildArticlesListingBodyContent(articles),
+    jsonLd: [
+      buildBreadcrumbSchema([
+        { name: 'Home', url: siteUrl },
+        { name: 'Artikel', url: `${siteUrl}/artikel` },
+      ]),
+      {
+        '@context': 'https://schema.org',
+        '@type': 'Blog',
+        name: 'Artikel AHR',
+        url: `${siteUrl}/artikel`,
+        blogPost: articles.map((article) => ({
+          '@type': 'BlogPosting',
+          headline: article.title,
+          url: `${siteUrl}/artikel/${article.slug}`,
+          datePublished: article.publishedAt,
+          dateModified: article.updatedAt || article.publishedAt,
+        })),
+      },
+    ],
+  }
 
   const staticPages = [
     {
@@ -109,6 +187,7 @@ async function main() {
         ]),
       ],
     },
+    articleListingPage,
     {
       routePath: '/profil',
       filePath: path.join(distRoot, 'profil', 'index.html'),
@@ -156,14 +235,14 @@ async function main() {
     },
   ]
 
-  for (const page of [...staticPages, ...productPages]) {
+  for (const page of [...staticPages, ...productPages, ...articlePages]) {
     await ensureDirectory(path.dirname(page.filePath))
     await writeFile(page.filePath, injectMetadata(template, page), 'utf8')
   }
 
   await writeFile(
     path.join(distRoot, 'sitemap.xml'),
-    buildSitemap([...staticPages, ...productPages]),
+    buildSitemap([...staticPages, ...productPages, ...articlePages]),
     'utf8',
   )
 }
@@ -188,6 +267,30 @@ function normalizeApiBaseUrl(value) {
   return raw.replace(/\/+$/, '')
 }
 
+async function loadEnvFile(filePath) {
+  try {
+    const raw = await readFile(filePath, 'utf8')
+
+    return raw
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter((line) => line !== '' && !line.startsWith('#') && line.includes('='))
+      .reduce((accumulator, line) => {
+        const index = line.indexOf('=')
+        const key = line.slice(0, index).trim()
+        const value = line.slice(index + 1).trim().replace(/^"(.*)"$/, '$1')
+
+        if (key) {
+          accumulator[key] = value
+        }
+
+        return accumulator
+      }, {})
+  } catch {
+    return {}
+  }
+}
+
 async function loadLandingPayload() {
   for (const candidate of apiCandidates) {
     try {
@@ -208,6 +311,28 @@ async function loadLandingPayload() {
   }
 
   return null
+}
+
+async function loadArticles() {
+  for (const candidate of apiCandidates) {
+    try {
+      const response = await fetchWithTimeout(`${candidate}/api/articles?locale=id`)
+
+      if (!response.ok) {
+        continue
+      }
+
+      const payload = await response.json()
+
+      if (Array.isArray(payload?.data)) {
+        return payload.data
+      }
+    } catch {
+      // Fallback handled below.
+    }
+  }
+
+  return fallbackArticles
 }
 
 function fetchWithTimeout(url, timeoutMs = 8000) {
@@ -397,6 +522,38 @@ function buildListingBodyContent(siteData) {
     ),
     '  </ul>',
     '</section>',
+  ].join('\n')
+}
+
+function buildArticlesListingBodyContent(articleList) {
+  return [
+    '<section data-prerendered-seo hidden aria-hidden="true">',
+    '  <h1>Artikel AHR</h1>',
+    '  <p>Kumpulan artikel seputar jersey custom, desain sublimasi, pemilihan bahan, dan tips pemesanan untuk membantu strategi SEO.</p>',
+    '  <ul>',
+    ...articleList.map(
+      (article) =>
+        `    <li><a href="/artikel/${escapeAttribute(article.slug)}">${escapeHtml(article.title)}</a> - ${escapeHtml(article.category || '')}</li>`,
+    ),
+    '  </ul>',
+    '</section>',
+  ].join('\n')
+}
+
+function buildArticleBodyContent(article) {
+  return [
+    '<article data-prerendered-seo hidden aria-hidden="true">',
+    `  <h1>${escapeHtml(article.title)}</h1>`,
+    `  <p>${escapeHtml(article.description || article.excerpt)}</p>`,
+    '  <h2>Poin Utama</h2>',
+    '  <ul>',
+    ...article.sections.flatMap((section) => [
+      `    <li><strong>${escapeHtml(section.heading)}</strong></li>`,
+      ...section.paragraphs.slice(0, 1).map((paragraph) => `    <li>${escapeHtml(paragraph)}</li>`),
+    ]),
+    '  </ul>',
+    '  <p><a href="/artikel">Kembali ke daftar artikel</a></p>',
+    '</article>',
   ].join('\n')
 }
 

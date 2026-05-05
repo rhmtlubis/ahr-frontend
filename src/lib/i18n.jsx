@@ -260,15 +260,15 @@ const translations = {
         askThisPackage: 'Tanya Paket Ini',
       },
       finalCta: {
-        wholesaleConsultation: 'Wholesale Consultation',
-        shopCollection: 'Shop Collection',
+        wholesaleConsultation: 'Wholesale Inquiry',
+        shopCollection: 'Explore Collection',
       },
       leadForm: {
-        name: 'Nama PIC',
-        phone: 'Nomor WhatsApp',
-        organization: 'Nama tim atau instansi',
+        name: 'Nama Lengkap',
+        phone: 'Kontak WhatsApp',
+        organization: 'Nama Brand / Perusahaan',
         organizationPlaceholder: 'Tim / instansi / brand',
-        quantity: 'Estimasi jumlah pcs',
+        quantity: 'Estimasi Volume',
         quantityPlaceholder: 'Estimasi pcs',
         segment: 'Segmen',
       },
@@ -594,8 +594,8 @@ const translations = {
         askThisPackage: 'Ask About This Package',
       },
       finalCta: {
-        wholesaleConsultation: 'Wholesale Consultation',
-        shopCollection: 'Shop Collection',
+        wholesaleConsultation: 'Wholesale Inquiry',
+        shopCollection: 'Explore Collection',
       },
       leadForm: {
         name: 'PIC name',

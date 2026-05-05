@@ -63,7 +63,7 @@ export default function SiteFooter({
         <span>{bottomText}</span>
         <div className="footer-bottom-links">
           <a href="/profil">{t('common.aboutUs')}</a>
-          <a href="/profil">{t('common.visionMission')}</a>
+          <a href="/artikel">Blog</a>
           <a href="#hero">{t('common.backToTop')}</a>
         </div>
       </div>

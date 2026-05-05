@@ -19,6 +19,10 @@ const localeDefaults = {
   },
 }
 
+function getArticleLinkLabel(locale) {
+  return locale === 'en' ? 'Articles' : 'Artikel'
+}
+
 function prefixHashHref(href, hashPrefix) {
   if (!href || !hashPrefix || !href.startsWith('#')) {
     return href
@@ -44,6 +48,34 @@ function normalizeFooterGroups(groups = [], hashPrefix = '') {
       ...group,
       links: normalizeLinks(group.links, hashPrefix),
     }))
+}
+
+function appendArticleShortcut(links = [], locale = 'id') {
+  const hasArticleLink = links.some((link) => String(link?.href || '').includes('/artikel'))
+
+  if (hasArticleLink) {
+    return links
+  }
+
+  return [...links, { label: getArticleLinkLabel(locale), href: '/artikel' }]
+}
+
+function appendArticleFooterGroup(groups = [], locale = 'id') {
+  const alreadyHasArticleGroup = groups.some((group) =>
+    String(group?.title || '').toLowerCase().includes(locale === 'en' ? 'article' : 'artikel'),
+  )
+
+  if (alreadyHasArticleGroup) {
+    return groups
+  }
+
+  return [
+    ...groups,
+    {
+      title: getArticleLinkLabel(locale),
+      links: [{ label: getArticleLinkLabel(locale), href: '/artikel' }],
+    },
+  ]
 }
 
 function normalizeNavGroups(groups = [], hashPrefix = '') {
@@ -82,20 +114,22 @@ export function normalizeCompanyProfile(profile = {}) {
 export function getLandingChromeContent(payload = {}, options = {}) {
   const { hashPrefix = '', locale = 'id' } = options
   const defaults = localeDefaults[locale] || localeDefaults.id
+  const normalizedUtilityLinks = normalizeLinks(
+    Array.isArray(payload.utility_links) && payload.utility_links.length > 0 ? payload.utility_links : [],
+    hashPrefix,
+  )
+  const normalizedFooterGroups =
+    Array.isArray(payload.footer_groups) && payload.footer_groups.length > 0
+      ? normalizeFooterGroups(payload.footer_groups, hashPrefix)
+      : []
 
   return {
     brand: {
       ...defaults.brand,
       ...(payload.brand || {}),
     },
-    utilityLinks:
-      Array.isArray(payload.utility_links) && payload.utility_links.length > 0
-        ? normalizeLinks(payload.utility_links, hashPrefix)
-        : [],
-    footerGroups:
-      Array.isArray(payload.footer_groups) && payload.footer_groups.length > 0
-        ? normalizeFooterGroups(payload.footer_groups, hashPrefix)
-        : [],
+    utilityLinks: appendArticleShortcut(normalizedUtilityLinks, locale),
+    footerGroups: appendArticleFooterGroup(normalizedFooterGroups, locale),
     navGroups:
       Array.isArray(payload.nav_groups) && payload.nav_groups.length > 0
         ? normalizeNavGroups(payload.nav_groups, hashPrefix)
