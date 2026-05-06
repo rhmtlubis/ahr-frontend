@@ -5,6 +5,7 @@ import {
   ExternalLink,
   MessageCircle,
   PhoneCall,
+  Store,
 } from 'lucide-react'
 import { FaFacebookF, FaInstagram, FaTiktok } from 'react-icons/fa6'
 import { Link } from 'react-router-dom'
@@ -47,6 +48,13 @@ const socialLinks = [
     accent: 'facebook',
     description: 'Info promosi',
     icon: FaFacebookF,
+  },
+  {
+    label: 'Shopee AHR',
+    href: 'https://id.shp.ee/BktgVKw1',
+    accent: 'shopee',
+    description: 'Belanja di marketplace',
+    icon: Store,
   },
 ]
 

@@ -266,6 +266,10 @@
   background: linear-gradient(135deg, #1877f2, #0f4aa6);
 }
 
+.accent-shopee .linktree-social-icon {
+  background: linear-gradient(135deg, #ff7a00, #ee4d2d);
+}
+
 .linktree-quick-actions {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
