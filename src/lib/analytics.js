@@ -2,6 +2,8 @@ const measurementId = import.meta.env.VITE_GA_MEASUREMENT_ID
 const googleAdsId = import.meta.env.VITE_GOOGLE_ADS_ID
 const googleAdsConversions = {
   cart_checkout_order_saved: import.meta.env.VITE_GOOGLE_ADS_CONVERSION_CART_CHECKOUT_ORDER_SAVED,
+  generate_lead: import.meta.env.VITE_GOOGLE_ADS_CONVERSION_CART_CHECKOUT_ORDER_SAVED,
+  begin_checkout: import.meta.env.VITE_GOOGLE_ADS_CONVERSION_BEGIN_CHECKOUT,
   product_detail_whatsapp_click: import.meta.env.VITE_GOOGLE_ADS_CONVERSION_PRODUCT_DETAIL_WHATSAPP_CLICK,
   b2b_landing_lead_submitted: import.meta.env.VITE_GOOGLE_ADS_CONVERSION_B2B_LANDING_LEAD_SUBMITTED,
 }

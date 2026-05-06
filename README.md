@@ -168,6 +168,10 @@ Perilaku:
 - GA4 diinisialisasi hanya jika `VITE_GA_MEASUREMENT_ID` tersedia
 - page view dikirim manual setelah route berubah
 - event kustom dikirim untuk CTA, scroll depth, FAQ, cart, checkout, filter, pagination, dan product open
+- checkout WhatsApp cart mengirim `begin_checkout` saat submit dimulai
+- setelah order berhasil tersimpan ke backend dengan status `pending_whatsapp`, frontend mengirim `cart_checkout_order_saved` dan `generate_lead`
+- event sukses checkout juga membawa `transaction_id`, `currency`, dan `value` agar conversion value Google Ads bisa dipakai untuk bidding seperti Target ROAS
+- jika total order belum bisa dihitung, value fallback memakai `VITE_GOOGLE_ADS_CONVERSION_DEFAULT_VALUE_IDR`
 - Google Ads conversion bisa dipetakan via env khusus, termasuk submit form landing B2B
 
 ## API Helper
@@ -214,6 +218,11 @@ VITE_API_BASE_URL=
 VITE_API_PROXY_TARGET=http://127.0.0.1:8000
 VITE_GA_MEASUREMENT_ID=
 VITE_GOOGLE_ADS_ID=
+VITE_GOOGLE_ADS_CONVERSION_CART_CHECKOUT_ORDER_SAVED=
+VITE_GOOGLE_ADS_CONVERSION_BEGIN_CHECKOUT=
+VITE_GOOGLE_ADS_CONVERSION_PRODUCT_DETAIL_WHATSAPP_CLICK=
+VITE_GOOGLE_ADS_CONVERSION_B2B_LANDING_LEAD_SUBMITTED=
+VITE_GOOGLE_ADS_CONVERSION_DEFAULT_VALUE_IDR=1000000
 ```
 
 Catatan:
@@ -222,6 +231,9 @@ Catatan:
 - isi `VITE_API_BASE_URL` di production bila domain frontend dan backend berbeda
 - `VITE_GA_MEASUREMENT_ID` opsional
 - `VITE_GOOGLE_ADS_ID` dan conversion label opsional jika ingin tracking Ads
+- isi `VITE_GOOGLE_ADS_CONVERSION_CART_CHECKOUT_ORDER_SAVED` dengan conversion label utama untuk lead checkout WhatsApp
+- `VITE_GOOGLE_ADS_CONVERSION_BEGIN_CHECKOUT` opsional jika ingin membedakan event submit checkout dari lead yang sudah tersimpan
+- `VITE_GOOGLE_ADS_CONVERSION_DEFAULT_VALUE_IDR` bisa diisi `1000000` sampai `2000000` mengikuti estimasi nilai lead AHR
 
 ## Build
 

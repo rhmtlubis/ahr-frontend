@@ -34,6 +34,11 @@ const defaultCheckoutForm = {
   notes: '',
 }
 
+const DEFAULT_GOOGLE_ADS_CONVERSION_VALUE_IDR = Number.parseInt(
+  import.meta.env.VITE_GOOGLE_ADS_CONVERSION_DEFAULT_VALUE_IDR || '1000000',
+  10,
+)
+
 function findLocationName(options, code) {
   return options.find((option) => option.code === code)?.name || ''
 }
@@ -178,6 +183,35 @@ function getCartTotals(items, language) {
     discountLabel: formatCurrencyAmount(discountAmount, currency, language),
     discountDisplayLabel: `${discountAmount > 0 ? '-' : ''}${formatCurrencyAmount(discountAmount, currency, language)}`,
     netLabel: formatCurrencyAmount(netAmount, currency, language),
+  }
+}
+
+function normalizeGoogleAdsConversionValue(amountMinor, currency) {
+  if (!Number.isFinite(amountMinor)) {
+    return null
+  }
+
+  return String(currency || 'IDR').toUpperCase() === 'USD' ? amountMinor / 100 : amountMinor
+}
+
+function resolveCheckoutConversionValue(savedOrder) {
+  const orderCurrency = String(savedOrder?.summary?.currency || 'IDR').toUpperCase()
+  const orderNetAmountMinor = savedOrder?.summary?.net_total_amount_minor
+
+  if (Number.isFinite(orderNetAmountMinor)) {
+    return {
+      currency: orderCurrency,
+      value: normalizeGoogleAdsConversionValue(orderNetAmountMinor, orderCurrency),
+      source: 'order_total',
+    }
+  }
+
+  return {
+    currency: 'IDR',
+    value: Number.isFinite(DEFAULT_GOOGLE_ADS_CONVERSION_VALUE_IDR)
+      ? DEFAULT_GOOGLE_ADS_CONVERSION_VALUE_IDR
+      : 1000000,
+    source: 'default_estimate',
   }
 }
 
@@ -646,6 +680,18 @@ export default function CartPage() {
       message: t('cart.checkoutSaving'),
     })
 
+    trackEvent('begin_checkout', {
+      currency: cartTotals?.currency || 'IDR',
+      value:
+        cartTotals?.netAmount !== undefined && cartTotals?.netAmount !== null
+          ? normalizeGoogleAdsConversionValue(cartTotals.netAmount, cartTotals.currency)
+          : undefined,
+      source_page: '/cart',
+      cart_item_count: itemCount,
+      cart_unique_item_count: items.length,
+      fulfillment: checkoutForm.fulfillment,
+    })
+
     trackEvent('cart_checkout_whatsapp_click', {
       source_page: '/cart',
       cart_item_count: itemCount,
@@ -666,12 +712,30 @@ export default function CartPage() {
         }),
       })
 
+      const conversion = resolveCheckoutConversionValue(savedOrder)
+
       trackEvent('cart_checkout_order_saved', {
         source_page: '/cart',
         order_number: savedOrder?.order_number || null,
         order_status: savedOrder?.status || null,
         cart_item_count: itemCount,
         cart_unique_item_count: items.length,
+        transaction_id: savedOrder?.order_number || null,
+        currency: conversion.currency,
+        value: conversion.value,
+        value_source: conversion.source,
+      })
+
+      trackEvent('generate_lead', {
+        source_page: '/cart',
+        order_number: savedOrder?.order_number || null,
+        order_status: savedOrder?.status || null,
+        transaction_id: savedOrder?.order_number || null,
+        currency: conversion.currency,
+        value: conversion.value,
+        value_source: conversion.source,
+        checkout_channel: 'whatsapp',
+        lead_stage: 'pending_whatsapp',
       })
     } catch (error) {
       setCheckoutStatus({
