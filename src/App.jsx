@@ -307,6 +307,10 @@ function App() {
     landingPageContent.hero.desktopMedia?.alt_text ||
     landingPageContent.hero.title
   const faqVisualUrl = decorativeMedia.faq_visual?.url || faqPlaceholderImage
+  const clientBrandSlides = useMemo(
+    () => [...landingPageContent.clientBrands, ...landingPageContent.clientBrands],
+    [landingPageContent.clientBrands],
+  )
 
   useEffect(() => {
     setConsentPreferencesState(getConsentPreferences())
@@ -1086,37 +1090,45 @@ function App() {
             <p className="client-brand-caption">{sectionContent.client_brands_body}</p>
           </div>
 
-          <div className="client-brand-grid">
-            {landingPageContent.clientBrands.map((brand, index) => {
-              const brandKey = `${brand.label}-${brand.url || brand.image || index}`
+          <div className="client-brand-marquee" aria-label={sectionContent.client_brands_title}>
+            <div className="client-brand-track">
+              {clientBrandSlides.map((brand, index) => {
+                const brandKey = `${brand.label}-${brand.url || brand.image || index}`
+                const isDuplicate = index >= landingPageContent.clientBrands.length
+                const content = brand.image ? (
+                  <img
+                    className="client-brand-logo"
+                    src={brand.image}
+                    alt={isDuplicate ? '' : brand.label}
+                    width="240"
+                    height="96"
+                    loading="lazy"
+                    decoding="async"
+                    aria-hidden={isDuplicate ? 'true' : undefined}
+                  />
+                ) : (
+                  <span>{brand.label}</span>
+                )
 
-              return (
-              brand.url ? (
-                <a
-                  className="client-brand-card"
-                  key={brandKey}
-                 
-                  href={brand.url}
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  {brand.image ? (
-                    <img className="client-brand-logo" src={brand.image} alt={brand.label} width="188" height="72" loading="lazy" decoding="async" />
-                  ) : (
-                    <span>{brand.label}</span>
-                  )}
-                </a>
-              ) : (
-                <article className="client-brand-card" key={brandKey}>
-                  {brand.image ? (
-                    <img className="client-brand-logo" src={brand.image} alt={brand.label} width="188" height="72" loading="lazy" decoding="async" />
-                  ) : (
-                    <span>{brand.label}</span>
-                  )}
-                </article>
-              )
-              )
-            })}
+                return brand.url ? (
+                  <a
+                    className="client-brand-card"
+                    key={brandKey}
+                    href={brand.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    aria-hidden={isDuplicate ? 'true' : undefined}
+                    tabIndex={isDuplicate ? -1 : undefined}
+                  >
+                    {content}
+                  </a>
+                ) : (
+                  <article className="client-brand-card" key={brandKey} aria-hidden={isDuplicate ? 'true' : undefined}>
+                    {content}
+                  </article>
+                )
+              })}
+            </div>
           </div>
         </section>
 
