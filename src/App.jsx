@@ -1101,7 +1101,7 @@ function App() {
                   rel="noreferrer"
                 >
                   {brand.image ? (
-                    <img className="client-brand-logo" src={brand.image} alt={brand.label} width="132" height="44" loading="lazy" decoding="async" />
+                    <img className="client-brand-logo" src={brand.image} alt={brand.label} width="188" height="72" loading="lazy" decoding="async" />
                   ) : (
                     <span>{brand.label}</span>
                   )}
@@ -1109,7 +1109,7 @@ function App() {
               ) : (
                 <article className="client-brand-card" key={brandKey}>
                   {brand.image ? (
-                    <img className="client-brand-logo" src={brand.image} alt={brand.label} width="132" height="44" loading="lazy" decoding="async" />
+                    <img className="client-brand-logo" src={brand.image} alt={brand.label} width="188" height="72" loading="lazy" decoding="async" />
                   ) : (
                     <span>{brand.label}</span>
                   )}

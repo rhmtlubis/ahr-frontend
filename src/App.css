@@ -2592,11 +2592,16 @@ main {
 }
 
 .client-brand-card {
-  display: grid;
-  place-items: center;
-  min-height: 108px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 120px;
+  padding: 8px 12px;
+  border: 0;
+  background: transparent;
+  border-radius: 0;
+  box-shadow: none;
   text-align: center;
-  box-shadow: 0 16px 34px rgba(2, 37, 84, 0.06);
   text-decoration: none;
 }
 
@@ -2609,10 +2614,9 @@ main {
 
 .client-brand-logo {
   width: 100%;
-  max-width: 132px;
-  max-height: 44px;
+  max-width: 188px;
+  max-height: 72px;
   object-fit: contain;
-  filter: saturate(0.92);
 }
 
 .process-index {
@@ -3626,7 +3630,7 @@ main {
 
   .client-brand-card {
     flex: 0 0 78%;
-    min-height: 88px;
+    min-height: 104px;
     scroll-snap-align: start;
   }
 
