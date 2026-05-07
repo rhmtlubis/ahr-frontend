@@ -99,7 +99,7 @@ function normalizeCatalogProduct(item = {}, index = 0) {
     slug: item.slug || item.id || `product-${index + 1}`,
     name: item.name || 'Produk AHR',
     category: categoryLabel,
-    categoryId: item.category || slugifyCategoryLabel(categoryLabel) || 'uncategorized',
+    categoryId: item.category_slug || item.category || slugifyCategoryLabel(categoryLabel) || 'uncategorized',
     price: item.price || item.price_hint || '',
     originalPrice: item.originalPrice || (item.promo_price_hint ? item.price_hint : null),
     bestPrice: item.bestPrice || item.promo_price_hint || null,
@@ -142,9 +142,16 @@ export function normalizeProductDetail(item) {
 
 export function normalizeCategoryCard(category = {}, count = 0) {
   return {
-    id: category.id || slugifyCategoryLabel(category.label) || 'category',
+    id: category.slug || category.id || slugifyCategoryLabel(category.label) || 'category',
+    legacyId: category.id || category.slug || slugifyCategoryLabel(category.label) || 'category',
+    slug: category.slug || category.id || slugifyCategoryLabel(category.label) || 'category',
     label: category.label || 'Category',
     image: category.image || category.cover_image?.url || categoryPlaceholderImage,
+    bannerImage: category.banner_image || null,
+    bannerImageUrl: category.banner_image_url || category.banner_image?.url || '',
+    heroMedia: category.hero_media || null,
+    heroMediaUrl: category.hero_media_url || category.hero_media?.url || '',
+    heroMediaMimeType: category.hero_media?.mime_type || '',
     position: category.position || 'center center',
     audience: category.audience || 'hybrid',
     count,

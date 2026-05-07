@@ -1,17 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { ArrowLeft, ChevronDown, MessageSquareMore, ShoppingCart } from 'lucide-react'
-import { Link, useSearchParams } from 'react-router-dom'
+import { Link, Navigate, useParams, useSearchParams } from 'react-router-dom'
 import './App.css'
 import CategoryFilterHeader from './components/landing/CategoryFilterHeader'
 import ProductPrice from './components/catalog/ProductPrice'
 import CookieConsentBanner from './components/layout/CookieConsentBanner'
 import SiteFooter from './components/layout/SiteFooter'
 import SiteHeader from './components/layout/SiteHeader'
-import {
-  categoryPlaceholderImage,
-  normalizeCategoryCard,
-  normalizeProducts,
-} from './lib/cmsContent.js'
+import { categoryPlaceholderImage, normalizeCategoryCard, normalizeProducts } from './lib/cmsContent.js'
+import { getCategoryRoute, getCategorySeoContent } from './lib/categorySeo.js'
 import { initializeAnalytics, trackEvent, trackPageView } from './lib/analytics'
 import { fetchCatalogPriceQuote, getApiUrl, getPreferredCurrency } from './lib/api'
 import { useCart } from './lib/cart.jsx'
@@ -19,7 +16,7 @@ import { getConsentPreferences, hasAnalyticsConsent, setConsentPreferences } fro
 import { useLanguage } from './lib/i18n.jsx'
 import { getLandingChromeContent } from './lib/landingContent'
 import { clearPersonalizationData } from './lib/personalization'
-import { getCategoryRoute } from './lib/categorySeo.js'
+import { buildCategoryListingStructuredData } from './lib/structuredData'
 import useDocumentTitle from './lib/useDocumentTitle'
 
 const PRODUCTS_PER_PAGE = 8
@@ -76,9 +73,7 @@ function buildCategoryNavigationItems(products = [], catalogCategories = [], all
 
   const categoryProductCountMap = products.reduce((accumulator, product) => {
     const categoryId = product.categoryId || 'all'
-
     accumulator[categoryId] = (accumulator[categoryId] || 0) + 1
-
     return accumulator
   }, {})
 
@@ -97,25 +92,9 @@ function buildCategoryNavigationItems(products = [], catalogCategories = [], all
   ]
 }
 
-export default function AllProductsPage() {
+export default function CategoryPage() {
   const { language, t } = useLanguage()
-  useDocumentTitle(
-    language === 'en' ? 'Custom Jersey & Sportswear Catalog' : 'Katalog Jersey Custom & Seragam Printing',
-    language === 'en'
-      ? 'Browse AHR custom jerseys, sublimation apparel, and sportswear collections for teams, events, schools, and organizations.'
-      : 'Jelajahi katalog jersey custom, apparel sublimasi, dan seragam printing AHR untuk tim, event, sekolah, komunitas, dan instansi.',
-    {
-      canonicalPath: '/all-products',
-      image: '/ahr-brand-logo.webp',
-      imageAlt: 'Katalog jersey custom AHR',
-      keywords:
-        language === 'en'
-          ? 'custom jersey catalog, sportswear catalog, sublimation apparel, team uniforms, AHR products'
-          : 'katalog jersey custom, katalog seragam printing, apparel sublimasi, jersey tim, produk AHR',
-      locale: language,
-      type: 'website',
-    },
-  )
+  const { categoryId = '' } = useParams()
   const { addCartItem, itemCount } = useCart()
   const rootRef = useRef(null)
   const gsapRef = useRef(null)
@@ -125,6 +104,7 @@ export default function AllProductsPage() {
     products: [],
     catalogCategories: [],
   })
+  const [listingReady, setListingReady] = useState(false)
   const [consentPreferences, setConsentPreferencesState] = useState({
     analytics: 'unknown',
     personalization: 'unknown',
@@ -167,9 +147,11 @@ export default function AllProductsPage() {
 
     initializeAnalytics()
     trackPageView(window.location.pathname + window.location.search)
-  }, [searchParams])
+  }, [categoryId, searchParams])
 
   useEffect(() => {
+    setListingReady(false)
+
     fetch(getApiUrl(`/api/catalog/landing-page?locale=${language}`), {
       headers: {
         Accept: 'application/json',
@@ -177,7 +159,7 @@ export default function AllProductsPage() {
     })
       .then((response) => {
         if (!response.ok) {
-          throw new Error('Gagal memuat listing produk')
+          throw new Error('Gagal memuat listing kategori')
         }
 
         return response.json()
@@ -186,6 +168,8 @@ export default function AllProductsPage() {
         if (payload?.data) {
           setListingContent(normalizeListingContent(payload.data, language))
         }
+
+        setListingReady(true)
       })
       .catch(() => {
         setListingContent({
@@ -193,6 +177,7 @@ export default function AllProductsPage() {
           products: [],
           catalogCategories: [],
         })
+        setListingReady(true)
       })
   }, [language])
 
@@ -206,35 +191,48 @@ export default function AllProductsPage() {
     [listingContent.catalogCategories, listingContent.products, t],
   )
 
-  const requestedCategory = searchParams.get('category') || 'all'
-  const requestedPage = Number.parseInt(searchParams.get('page') || '1', 10)
-  const activeCatalogFilter = categoryNavigationItems.some((category) => category.id === requestedCategory)
-    ? requestedCategory
-    : 'all'
+  const activeCategory =
+    categoryNavigationItems.find((category) => category.id === categoryId) || null
 
+  const requestedPage = Number.parseInt(searchParams.get('page') || '1', 10)
   const activePage = Number.isFinite(requestedPage) && requestedPage > 0 ? requestedPage : 1
 
+  const visibleProducts = activeCategory
+    ? listingContent.products.filter((product) => product.categoryId === activeCategory.id)
+    : []
+  const heroMediaUrl = activeCategory?.heroMediaUrl || ''
+  const heroMediaMimeType = activeCategory?.heroMediaMimeType || ''
+  const heroHasMedia = Boolean(heroMediaUrl)
+  const heroUsesVideo = heroHasMedia && heroMediaMimeType.startsWith('video/')
+  const heroBannerImage =
+    activeCategory?.bannerImageUrl || activeCategory?.image || categoryPlaceholderImage
+  const sortedProducts = useMemo(
+    () => sortProducts(visibleProducts, sortKey),
+    [sortKey, visibleProducts],
+  )
+  const totalPages = Math.max(1, Math.ceil(sortedProducts.length / PRODUCTS_PER_PAGE))
+  const currentPage = Math.min(activePage, totalPages)
+  const paginatedProducts = sortedProducts.slice(
+    (currentPage - 1) * PRODUCTS_PER_PAGE,
+    currentPage * PRODUCTS_PER_PAGE,
+  )
+  const seoContent = getCategorySeoContent(activeCategory || {})
+
   useEffect(() => {
-    if (requestedCategory === activeCatalogFilter && requestedPage === activePage) {
+    if (activePage === currentPage) {
       return
     }
 
     const nextSearchParams = new URLSearchParams(searchParams)
 
-    if (activeCatalogFilter === 'all') {
-      nextSearchParams.delete('category')
-    } else {
-      nextSearchParams.set('category', activeCatalogFilter)
-    }
-
-    if (activePage <= 1) {
+    if (currentPage <= 1) {
       nextSearchParams.delete('page')
     } else {
-      nextSearchParams.set('page', String(activePage))
+      nextSearchParams.set('page', String(currentPage))
     }
 
     setSearchParams(nextSearchParams, { replace: true })
-  }, [activeCatalogFilter, activePage, requestedCategory, requestedPage, searchParams, setSearchParams])
+  }, [activePage, currentPage, searchParams, setSearchParams])
 
   useEffect(() => {
     if (!rootRef.current || !animationsReady || !gsapRef.current || window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
@@ -264,59 +262,45 @@ export default function AllProductsPage() {
     }, rootRef)
 
     return () => context.revert()
-  }, [activeCatalogFilter, activePage, animationsReady])
+  }, [categoryId, currentPage, animationsReady])
 
-  const visibleProducts =
-    activeCatalogFilter === 'all'
-      ? listingContent.products
-      : listingContent.products.filter((product) => product.categoryId === activeCatalogFilter)
-  const sortedProducts = useMemo(
-    () => sortProducts(visibleProducts, sortKey),
-    [sortKey, visibleProducts],
+  useDocumentTitle(
+    seoContent.title,
+    seoContent.description,
+    {
+      canonicalPath: activeCategory ? getCategoryRoute(activeCategory) : '/all-products',
+      image: activeCategory?.image || '/ahr-brand-logo.webp',
+      imageAlt: `${activeCategory?.label || 'Kategori'} custom AHR`,
+      keywords: seoContent.keywords,
+      locale: language,
+      structuredData: activeCategory
+        ? buildCategoryListingStructuredData(
+            {
+              id: activeCategory.id,
+              slug: activeCategory.slug,
+              label: activeCategory.label,
+              description: seoContent.description,
+            },
+            visibleProducts,
+            { siteUrl: import.meta.env.VITE_SITE_URL || 'https://ahrcorporation.id' },
+          )
+        : [],
+      type: 'website',
+    },
   )
-  const totalPages = Math.max(1, Math.ceil(sortedProducts.length / PRODUCTS_PER_PAGE))
-  const currentPage = Math.min(activePage, totalPages)
-  const paginatedProducts = sortedProducts.slice(
-    (currentPage - 1) * PRODUCTS_PER_PAGE,
-    currentPage * PRODUCTS_PER_PAGE,
-  )
 
-  const activeCategory =
-    categoryNavigationItems.find((category) => category.id === activeCatalogFilter) || categoryNavigationItems[0]
+  if (!listingReady) {
+    return (
+      <main className="all-products-page">
+        <div className="product-detail-empty">
+          <p>{language === 'en' ? 'Loading category...' : 'Memuat kategori...'}</p>
+        </div>
+      </main>
+    )
+  }
 
-  useEffect(() => {
-    if (activePage === currentPage) {
-      return
-    }
-
-    const nextSearchParams = new URLSearchParams(searchParams)
-
-    if (currentPage <= 1) {
-      nextSearchParams.delete('page')
-    } else {
-      nextSearchParams.set('page', String(currentPage))
-    }
-
-    setSearchParams(nextSearchParams, { replace: true })
-  }, [activePage, currentPage, searchParams, setSearchParams])
-
-  const handleCategorySelect = (categoryId) => {
-    const nextSearchParams = new URLSearchParams(searchParams)
-
-    if (categoryId === 'all') {
-      nextSearchParams.delete('category')
-    } else {
-      nextSearchParams.set('category', categoryId)
-    }
-
-    nextSearchParams.delete('page')
-
-    trackEvent('catalog_filter_click', {
-      filter_category: categoryId,
-      previous_filter: activeCatalogFilter,
-      source_page: '/all-products',
-    })
-    setSearchParams(nextSearchParams)
+  if (!activeCategory) {
+    return <Navigate replace to="/all-products" />
   }
 
   const handlePageChange = (nextPage) => {
@@ -329,8 +313,8 @@ export default function AllProductsPage() {
     }
 
     trackEvent('catalog_pagination_click', {
-      source_page: '/all-products',
-      active_filter: activeCatalogFilter,
+      source_page: getCategoryRoute(activeCategory),
+      active_filter: activeCategory.id,
       current_page: currentPage,
       next_page: nextPage,
     })
@@ -343,7 +327,7 @@ export default function AllProductsPage() {
       product_name: product.name,
       product_category: product.category,
       destination: `/produk/${product.slug}`,
-      source_page: '/all-products',
+      source_page: getCategoryRoute(activeCategory),
     })
   }
 
@@ -353,7 +337,7 @@ export default function AllProductsPage() {
     trackEvent('product_card_click', {
       product_name: product.name,
       product_category: product.category,
-      source_page: '/all-products',
+      source_page: getCategoryRoute(activeCategory),
     })
 
     try {
@@ -394,7 +378,7 @@ export default function AllProductsPage() {
     })
 
     trackEvent('cart_add_item', {
-      source_page: '/all-products',
+      source_page: getCategoryRoute(activeCategory),
       product_name: product.name,
       product_category: product.category,
       product_size: 'M',
@@ -404,7 +388,7 @@ export default function AllProductsPage() {
 
   const handleFooterWhatsApp = (message) => {
     trackEvent('footer_cta_click', {
-      source_page: '/all-products',
+      source_page: getCategoryRoute(activeCategory),
       button_location: 'footer',
     })
 
@@ -430,8 +414,8 @@ export default function AllProductsPage() {
     trackEvent('cookie_consent_updated', {
       analytics_consent: nextPreferences.analytics,
       personalization_consent: nextPreferences.personalization,
-      personalization_scope: 'homepage-top-listing',
-      source_page: '/all-products',
+      personalization_scope: 'category-page',
+      source_page: getCategoryRoute(activeCategory),
     })
   }
 
@@ -451,19 +435,57 @@ export default function AllProductsPage() {
       <main className="all-products-page">
         <section className="content-block section-plain all-products-hero" data-products-hero>
           <div className="all-products-breadcrumb">
-            <Link to="/">
+            <Link to="/all-products">
               <ArrowLeft size={16} />
               <span>{t('common.backToHome')}</span>
             </Link>
           </div>
 
+          <div className="category-hero-banner">
+            {heroHasMedia && heroUsesVideo ? (
+              <video
+                className="category-hero-banner-media"
+                src={heroMediaUrl}
+                poster={heroBannerImage || undefined}
+                autoPlay
+                muted
+                loop
+                playsInline
+                preload="metadata"
+              />
+            ) : null}
+            {heroHasMedia && !heroUsesVideo ? (
+              <img
+                className="category-hero-banner-media"
+                src={heroMediaUrl}
+                alt={activeCategory.label}
+                loading="eager"
+                decoding="async"
+              />
+            ) : null}
+            {!heroHasMedia ? (
+              <img
+                className="category-hero-banner-media"
+                src={heroBannerImage}
+                alt={activeCategory.label}
+                loading="eager"
+                decoding="async"
+              />
+            ) : null}
+
+            <div className="category-hero-banner-overlay">
+              <span>{activeCategory.label}</span>
+              <h1>{seoContent.title}</h1>
+              <p>{seoContent.intro}</p>
+            </div>
+          </div>
+
           <CategoryFilterHeader
             categories={categoryNavigationItems}
-            activeCategoryId={activeCatalogFilter}
-            activeCategoryLabel={activeCategory?.label}
+            activeCategoryId={activeCategory.id}
+            activeCategoryLabel={activeCategory.label}
             productCount={visibleProducts.length}
             getCategoryHref={(category) => getCategoryRoute(category)}
-            showHeading={false}
           />
         </section>
 
@@ -554,31 +576,40 @@ export default function AllProductsPage() {
             ))}
           </div>
 
-          {totalPages > 1 ? (
-            <div className="all-products-pagination" data-products-hero>
-              <button
-                className="all-products-pagination-button"
-                type="button"
-                onClick={() => handlePageChange(currentPage - 1)}
-                disabled={currentPage === 1}
-              >
-                {t('common.previous')}
-              </button>
+          <div className="all-products-pagination" data-products-hero>
+            <Link className="all-products-pagination-button" to="/all-products">
+              Semua koleksi
+            </Link>
+            {totalPages > 1 ? (
+              <>
+                <button
+                  className="all-products-pagination-button"
+                  type="button"
+                  onClick={() => handlePageChange(currentPage - 1)}
+                  disabled={currentPage === 1}
+                >
+                  {t('common.previous')}
+                </button>
 
+                <div className="all-products-pagination-status">
+                  <span>{t('common.pageStatus', { page: currentPage, total: totalPages })}</span>
+                </div>
+
+                <button
+                  className="all-products-pagination-button"
+                  type="button"
+                  onClick={() => handlePageChange(currentPage + 1)}
+                  disabled={currentPage === totalPages}
+                >
+                  {t('common.next')}
+                </button>
+              </>
+            ) : (
               <div className="all-products-pagination-status">
-                <span>{t('common.pageStatus', { page: currentPage, total: totalPages })}</span>
+                <span>{t('common.productsAvailable', { count: visibleProducts.length })}</span>
               </div>
-
-              <button
-                className="all-products-pagination-button"
-                type="button"
-                onClick={() => handlePageChange(currentPage + 1)}
-                disabled={currentPage === totalPages}
-              >
-                {t('common.next')}
-              </button>
-            </div>
-          ) : null}
+            )}
+          </div>
         </section>
       </main>
 

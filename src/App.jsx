@@ -44,6 +44,7 @@ import { useLanguage } from './lib/i18n.jsx'
 import { getLandingChromeContent, normalizeCompanyProfile } from './lib/landingContent'
 import { clearPersonalizationData, getPersonalizedProducts } from './lib/personalization'
 import { buildOrganizationStructuredData } from './lib/structuredData'
+import { getCategoryRoute } from './lib/categorySeo.js'
 import useDocumentTitle from './lib/useDocumentTitle'
 
 const defaultLeadForm = {
@@ -913,9 +914,7 @@ function App() {
             activeCategoryLabel={activeCategory?.label}
             productCount={visibleProducts.length}
             onCategorySelect={handleCatalogFilterClick}
-            getCategoryHref={(category) =>
-              category.id === 'all' ? '/all-products' : `/all-products?category=${category.id}`
-            }
+            getCategoryHref={(category) => getCategoryRoute(category)}
           />
 
           <div className="discover-grid">
@@ -1011,7 +1010,7 @@ function App() {
               </p>
               <Link
                 className="product-slider-view-all"
-                to={activeCatalogFilter === 'all' ? '/all-products' : `/all-products?category=${activeCatalogFilter}`}
+                to={getCategoryRoute(activeCategory || activeCatalogFilter)}
                 onClick={() =>
                   trackEvent('catalog_view_all_click', {
                     active_filter: activeCatalogFilter,

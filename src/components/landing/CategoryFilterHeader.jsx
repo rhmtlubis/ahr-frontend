@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 import gsap from 'gsap'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useLanguage } from '../../lib/i18n.jsx'
 
 function formatCategoryTitle(activeCategoryLabel, t) {
@@ -18,12 +18,20 @@ export default function CategoryFilterHeader({
   productCount = 0,
   onCategorySelect,
   getCategoryHref,
+  showHeading = true,
 }) {
   const { t } = useLanguage()
   const rootRef = useRef(null)
+  const navigate = useNavigate()
+  const hasAnimatedRef = useRef(false)
 
   useEffect(() => {
-    if (!rootRef.current || window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    if (
+      !rootRef.current ||
+      categories.length === 0 ||
+      hasAnimatedRef.current ||
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    ) {
       return undefined
     }
 
@@ -37,18 +45,21 @@ export default function CategoryFilterHeader({
         clearProps: 'transform',
       })
     }, rootRef)
+    hasAnimatedRef.current = true
 
     return () => context.revert()
   }, [categories])
 
   return (
     <section className="category-filter-header" ref={rootRef}>
-      <div className="category-filter-heading" data-category-card>
-        <div className="category-filter-title-row">
-          <h2>{formatCategoryTitle(activeCategoryLabel, t)}</h2>
-          <span className="category-filter-count">[{productCount}]</span>
+      {showHeading ? (
+        <div className="category-filter-heading" data-category-card>
+          <div className="category-filter-title-row">
+            <h2>{formatCategoryTitle(activeCategoryLabel, t)}</h2>
+            <span className="category-filter-count">[{productCount}]</span>
+          </div>
         </div>
-      </div>
+      ) : null}
 
       <div className="category-filter-carousel" aria-label={t('category.pickProductCategory')}>
         {categories.map((category) => {
@@ -61,7 +72,11 @@ export default function CategoryFilterHeader({
                 key={category.id}
                 className={isActive ? 'category-filter-card active' : 'category-filter-card'}
                 to={categoryHref}
-                onClick={() => onCategorySelect?.(category.id)}
+                onClick={(event) => {
+                  event.preventDefault()
+                  onCategorySelect?.(category.id)
+                  navigate(categoryHref)
+                }}
                 aria-current={isActive ? 'page' : undefined}
                 data-category-card
               >

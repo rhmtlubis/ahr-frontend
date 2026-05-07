@@ -277,3 +277,56 @@ export function buildArticleListingStructuredData(articleList = [], options = {}
     },
   ]
 }
+
+export function buildCategoryListingStructuredData(category, products = [], options = {}) {
+  if (!category) {
+    return []
+  }
+
+  const { siteUrl = 'https://ahrcorporation.id' } = options
+  const normalizedSiteUrl = siteUrl.replace(/\/+$/, '')
+  const categoryUrl = `${normalizedSiteUrl}/kategori/${category.id}`
+
+  return [
+    {
+      '@context': 'https://schema.org',
+      '@type': 'BreadcrumbList',
+      itemListElement: [
+        {
+          '@type': 'ListItem',
+          position: 1,
+          name: 'Home',
+          item: normalizedSiteUrl,
+        },
+        {
+          '@type': 'ListItem',
+          position: 2,
+          name: 'Produk',
+          item: `${normalizedSiteUrl}/all-products`,
+        },
+        {
+          '@type': 'ListItem',
+          position: 3,
+          name: category.label,
+          item: categoryUrl,
+        },
+      ],
+    },
+    {
+      '@context': 'https://schema.org',
+      '@type': 'CollectionPage',
+      name: category.label,
+      url: categoryUrl,
+      description: category.description,
+      mainEntity: {
+        '@type': 'ItemList',
+        itemListElement: products.slice(0, 24).map((product, index) => ({
+          '@type': 'ListItem',
+          position: index + 1,
+          url: `${normalizedSiteUrl}/produk/${product.slug}`,
+          name: product.name,
+        })),
+      },
+    },
+  ]
+}

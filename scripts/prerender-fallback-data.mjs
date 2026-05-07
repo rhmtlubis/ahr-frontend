@@ -23,78 +23,16 @@ export const fallbackSiteData = {
       answer: 'Estimasi standar adalah 7 hari kerja setelah desain final disetujui dan DP diterima.',
     },
   ],
-  products: [
-    {
-      slug: 'jersey-futsal-pro',
-      name: 'Jersey Tim Futsal Pro',
-      category: 'Futsal',
-      summary:
-        'Jersey full printing untuk tim futsal yang ingin warna tajam, cutting nyaman, dan repeat order yang lebih mudah.',
-      image: '/og-preview.png',
-      audience: 'Tim & Komunitas',
-      material: 'Dryfit premium, full printing',
-      moq: 'Min. 10 pcs',
-      productionEstimate: 'Produksi 7-10 hari kerja setelah approval desain',
-    },
-    {
-      slug: 'paket-esport',
-      name: 'Paket Event Sekolah',
-      category: 'E-Sport',
-      summary:
-        'Paket jersey event sekolah yang praktis untuk panitia, peserta, dan kebutuhan timeline acara yang padat.',
-      image: '/og-preview.png',
-      audience: 'Sekolah & Panitia Event',
-      material: 'Dryfit aktif, warna aman, ukuran lengkap',
-      moq: 'Min. 30 pcs',
-      productionEstimate: 'Produksi 7 hari kerja untuk order terjadwal',
-    },
-    {
-      slug: 'jersey-trail',
-      name: 'Jersey Event Turnamen',
-      category: 'Trail',
-      summary:
-        'Jersey event volume besar untuk turnamen dan race dengan kebutuhan nomor peserta, identitas sponsor, dan timeline yang ketat.',
-      image: '/og-preview.png',
-      audience: 'EO & Komunitas Event',
-      material: 'Dryfit ventilated + nomor peserta',
-      moq: 'Min. 50 pcs',
-      productionEstimate: 'Produksi 7-12 hari kerja tergantung jumlah peserta',
-    },
-    {
-      slug: 'jersey-baseball',
-      name: 'Paket Reseller Daerah',
-      category: 'Baseball',
-      summary:
-        'Paket volume untuk reseller daerah yang butuh margin aman, desain rapi, dan proses reorder yang cepat.',
-      image: '/og-preview.png',
-      audience: 'Reseller & Agen',
-      material: 'Harga tier + file desain permanen',
-      moq: 'Min. 100 pcs',
-      productionEstimate: 'Produksi bertahap sesuai slot dan kuantitas',
-    },
-    {
-      slug: 'jersey-sepak-bola',
-      name: 'Corporate Activewear',
-      category: 'Sepak Bola',
-      summary:
-        'Activewear untuk kebutuhan perusahaan, outing, dan event internal dengan branding yang lebih presisi.',
-      image: '/og-preview.png',
-      audience: 'Corporate & Brand Activation',
-      material: 'Premium texture + branding presisi',
-      moq: 'Min. 25 pcs',
-      productionEstimate: 'Produksi 7-10 hari kerja setelah final approval',
-    },
-    {
-      slug: 'jersey-badminton',
-      name: 'Bundle Komunitas Multi-Tim',
-      category: 'Badminton',
-      summary:
-        'Bundle khusus komunitas dengan beberapa divisi, chapter, atau tim warna dalam satu arus produksi.',
-      image: '/og-preview.png',
-      audience: 'Komunitas & Chapter',
-      material: 'Desain seri + sizing mix',
-      moq: 'Min. 30 pcs',
-      productionEstimate: 'Produksi menyesuaikan jumlah desain turunan',
-    },
-  ],
+  categories: [],
+  // Keep this empty so a failed API fetch does not accidentally publish legacy product URLs.
+  products: [],
 }
+
+export const legacyProductRedirects = [
+  { from: '/produk/jersey-badminton', to: '/all-products?category=badminton' },
+  { from: '/produk/jersey-baseball', to: '/all-products?category=baseball' },
+  { from: '/produk/jersey-futsal-pro', to: '/all-products?category=futsal' },
+  { from: '/produk/jersey-sepak-bola', to: '/all-products?category=sepak-bola' },
+  { from: '/produk/jersey-trail', to: '/all-products?category=trail' },
+  { from: '/produk/paket-esport', to: '/all-products?category=e-sport' },
+]

@@ -1,5 +1,5 @@
 /* eslint-disable react-refresh/only-export-components */
-import { Suspense, StrictMode, lazy, useEffect } from 'react'
+import { Suspense, lazy, useEffect } from 'react'
 import { createRoot } from 'react-dom/client'
 import { BrowserRouter, Route, Routes, useLocation } from 'react-router-dom'
 import './index.css'
@@ -12,6 +12,7 @@ import { hasAnalyticsConsent } from './lib/consent'
 
 const App = lazy(() => import('./App.jsx'))
 const AllProductsPage = lazy(() => import('./AllProductsPage.jsx'))
+const CategoryPage = lazy(() => import('./CategoryPage.jsx'))
 const CartPage = lazy(() => import('./CartPage.jsx'))
 const CompanyProfilePage = lazy(() => import('./CompanyProfilePage.jsx'))
 const B2BLandingPage = lazy(() => import('./B2BLandingPage.jsx'))
@@ -65,28 +66,27 @@ function AnalyticsRouteTracker() {
 }
 
 createRoot(document.getElementById('root')).render(
-  <StrictMode>
-    <LanguageProvider>
-      <CartProvider>
-        <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-          <AnalyticsRouteTracker />
-          <Suspense fallback={<RouteFallback />}>
-            <Routes>
-              <Route path="/admin/*" element={<LegacyAdminRedirect />} />
-              <Route path="/all-products" element={<AllProductsPage />} />
-              <Route path="/cart" element={<CartPage />} />
-              <Route path="/artikel" element={<ArticlesPage />} />
-              <Route path="/artikel/:articleSlug" element={<ArticleDetailPage />} />
-              <Route path="/b2b" element={<B2BLandingPage />} />
-              <Route path="/kontak-kerja-sama" element={<B2BLandingPage />} />
-              <Route path="/linktree" element={<LinktreePage />} />
-              <Route path="/profil" element={<CompanyProfilePage />} />
-              <Route path="/produk/:productSlug" element={<ProductDetailPage />} />
-              <Route path="*" element={<App />} />
-            </Routes>
-          </Suspense>
-        </BrowserRouter>
-      </CartProvider>
-    </LanguageProvider>
-  </StrictMode>,
+  <LanguageProvider>
+    <CartProvider>
+      <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+        <AnalyticsRouteTracker />
+        <Suspense fallback={<RouteFallback />}>
+          <Routes>
+            <Route path="/admin/*" element={<LegacyAdminRedirect />} />
+            <Route path="/all-products" element={<AllProductsPage />} />
+            <Route path="/kategori/:categoryId" element={<CategoryPage />} />
+            <Route path="/cart" element={<CartPage />} />
+            <Route path="/artikel" element={<ArticlesPage />} />
+            <Route path="/artikel/:articleSlug" element={<ArticleDetailPage />} />
+            <Route path="/b2b" element={<B2BLandingPage />} />
+            <Route path="/kontak-kerja-sama" element={<B2BLandingPage />} />
+            <Route path="/linktree" element={<LinktreePage />} />
+            <Route path="/profil" element={<CompanyProfilePage />} />
+            <Route path="/produk/:productSlug" element={<ProductDetailPage />} />
+            <Route path="*" element={<App />} />
+          </Routes>
+        </Suspense>
+      </BrowserRouter>
+    </CartProvider>
+  </LanguageProvider>,
 )

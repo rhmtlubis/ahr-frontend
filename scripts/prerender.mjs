@@ -1,7 +1,8 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { fallbackSiteData } from './prerender-fallback-data.mjs'
+import { fallbackSiteData, legacyProductRedirects } from './prerender-fallback-data.mjs'
+import { getCategoryRoute, getCategorySeoContent } from '../src/lib/categorySeo.js'
 import { articles as fallbackArticles } from '../src/content/articles.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -136,6 +137,35 @@ async function main() {
       },
     ],
   }
+
+  const categoryPages = siteData.categories.map((category) => {
+    const seoContent = getCategorySeoContent(category)
+
+    return {
+      routePath: getCategoryRoute(category),
+      filePath: path.join(distRoot, 'kategori', category.slug || category.id, 'index.html'),
+      title: seoContent.title,
+      description: seoContent.description,
+      image: resolveAbsoluteUrl(category.image || siteData.defaultImage),
+      imageAlt: `${category.label} custom AHR`,
+      type: 'website',
+      bodyContent: buildCategoryBodyContent(category, seoContent),
+      jsonLd: [
+        buildBreadcrumbSchema([
+          { name: 'Home', url: siteUrl },
+          { name: 'Produk', url: `${siteUrl}/all-products` },
+          { name: category.label, url: `${siteUrl}${getCategoryRoute(category)}` },
+        ]),
+        {
+          '@context': 'https://schema.org',
+          '@type': 'CollectionPage',
+          name: seoContent.title,
+          description: seoContent.description,
+          url: `${siteUrl}${getCategoryRoute(category)}`,
+        },
+      ],
+    }
+  })
 
   const staticPages = [
     {
@@ -287,14 +317,32 @@ async function main() {
     },
   ]
 
-  for (const page of [...staticPages, ...productPages, ...articlePages]) {
+  const redirectPages = legacyProductRedirects.map((redirect) => ({
+    routePath: redirect.from,
+    filePath: path.join(distRoot, ...redirect.from.split('/').filter(Boolean), 'index.html'),
+    title: 'Produk Dipindahkan',
+    description: 'Halaman produk lama sudah dipindahkan ke katalog yang lebih relevan.',
+    image: resolveAbsoluteUrl(siteData.defaultImage),
+    imageAlt: 'Redirect produk AHR',
+    type: 'website',
+    redirectTo: redirect.to,
+    bodyContent: buildRedirectBodyContent(redirect.to),
+    jsonLd: [
+      buildBreadcrumbSchema([
+        { name: 'Home', url: siteUrl },
+        { name: 'Produk', url: `${siteUrl}${redirect.to}` },
+      ]),
+    ],
+  }))
+
+  for (const page of [...staticPages, ...categoryPages, ...productPages, ...articlePages, ...redirectPages]) {
     await ensureDirectory(path.dirname(page.filePath))
     await writeFile(page.filePath, injectMetadata(template, page), 'utf8')
   }
 
   await writeFile(
     path.join(distRoot, 'sitemap.xml'),
-    buildSitemap([...staticPages, ...productPages, ...articlePages]),
+    buildSitemap([...staticPages, ...categoryPages, ...productPages, ...articlePages]),
     'utf8',
   )
 }
@@ -420,6 +468,16 @@ function buildSiteData(payload) {
       }))
         .filter((product) => product.slug)
     : fallbackSiteData.products
+  const categories = Array.isArray(payload.catalog_categories)
+    ? payload.catalog_categories
+        .map((category) => ({
+          id: String(category.id || '').trim(),
+          slug: String(category.slug || category.id || '').trim(),
+          label: String(category.label || '').trim(),
+          image: String(category.image || category.cover_image?.url || '').trim(),
+        }))
+        .filter((category) => category.id && category.label)
+    : fallbackSiteData.categories
 
   return {
     siteName: String(payload.brand?.name || fallbackSiteData.siteName).trim(),
@@ -444,12 +502,14 @@ function buildSiteData(payload) {
           .filter((faq) => faq.question && faq.answer)
           .slice(0, 6)
       : fallbackSiteData.faqItems,
+    categories: categories.length > 0 ? categories : fallbackSiteData.categories,
     products: products.length > 0 ? products : fallbackSiteData.products,
   }
 }
 
 function injectMetadata(template, page) {
-  const canonicalUrl = `${siteUrl}${page.routePath === '/' ? '' : page.routePath}`
+  const canonicalPath = page.redirectTo || page.routePath
+  const canonicalUrl = `${siteUrl}${canonicalPath === '/' ? '' : canonicalPath}`
   const fullTitle = `${page.title} | ${fallbackSiteData.siteName}`
   const locale = 'id_ID'
   const robots = page.routePath === '/cart' ? 'noindex, nofollow' : 'index, follow'
@@ -481,6 +541,14 @@ function injectMetadata(template, page) {
 
   if (jsonLdMarkup) {
     html = html.replace('</head>', `${jsonLdMarkup}\n  </head>`)
+  }
+
+  if (page.redirectTo) {
+    const redirectUrl = `${siteUrl}${page.redirectTo}`
+    html = html.replace(
+      '</head>',
+      `\n    <meta http-equiv="refresh" content="0;url=${redirectUrl}" />\n    <script>window.location.replace(${JSON.stringify(redirectUrl)})</script>\n  </head>`,
+    )
   }
 
   if (page.bodyContent) {
@@ -638,6 +706,28 @@ function buildSimplePageBodyContent(title, intro, paragraphs = []) {
     `  <h1>${escapeHtml(title)}</h1>`,
     `  <p>${escapeHtml(intro)}</p>`,
     ...paragraphs.map((paragraph) => `  <p>${escapeHtml(paragraph)}</p>`),
+    '</section>',
+  ].join('\n')
+}
+
+function buildCategoryBodyContent(category, seoContent) {
+  return [
+    '<section data-prerendered-seo hidden aria-hidden="true">',
+    `  <h1>${escapeHtml(seoContent.title)}</h1>`,
+    `  <p>${escapeHtml(seoContent.intro)}</p>`,
+    `  <p>${escapeHtml(seoContent.description)}</p>`,
+    `  <p><a href="${escapeAttribute(getCategoryRoute(category))}">Lihat koleksi ${escapeHtml(category.label)}</a></p>`,
+    '  <p><a href="/all-products">Kembali ke semua katalog</a></p>',
+    '</section>',
+  ].join('\n')
+}
+
+function buildRedirectBodyContent(targetPath) {
+  return [
+    '<section data-prerendered-seo hidden aria-hidden="true">',
+    '  <h1>Produk dipindahkan</h1>',
+    '  <p>URL produk lama sudah diarahkan ke halaman kategori yang paling relevan.</p>',
+    `  <p><a href="${escapeAttribute(targetPath)}">Lanjut ke halaman tujuan</a></p>`,
     '</section>',
   ].join('\n')
 }

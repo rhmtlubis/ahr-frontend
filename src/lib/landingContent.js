@@ -1,3 +1,5 @@
+import { normalizeCategoryHref } from './categorySeo.js'
+
 const localeDefaults = {
   id: {
     brand: {
@@ -25,7 +27,7 @@ function getArticleLinkLabel(locale) {
 
 function prefixHashHref(href, hashPrefix) {
   if (!href || !hashPrefix || !href.startsWith('#')) {
-    return href
+    return normalizeCategoryHref(href)
   }
 
   return `${hashPrefix}${href}`
