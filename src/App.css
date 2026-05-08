@@ -1518,6 +1518,8 @@ main {
   scroll-snap-type: x proximity;
   scrollbar-width: thin;
   scrollbar-color: rgba(7, 29, 64, 0.68) rgba(7, 29, 64, 0.08);
+  touch-action: pan-x;
+  -webkit-overflow-scrolling: touch;
 }
 
 .product-slider-viewport::-webkit-scrollbar {
@@ -1615,20 +1617,30 @@ main {
   transform: scale(1.03);
 }
 
-.product-card:hover .product-image-primary,
 .product-card:focus-within .product-image-primary,
-.all-products-card:hover .product-image-primary,
 .all-products-card:focus-within .product-image-primary {
   opacity: 0;
   transform: scale(1.02);
 }
 
-.product-card:hover .product-image-hover,
 .product-card:focus-within .product-image-hover,
-.all-products-card:hover .product-image-hover,
 .all-products-card:focus-within .product-image-hover {
   opacity: 1;
   transform: scale(1);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .product-card:hover .product-image-primary,
+  .all-products-card:hover .product-image-primary {
+    opacity: 0;
+    transform: scale(1.02);
+  }
+
+  .product-card:hover .product-image-hover,
+  .all-products-card:hover .product-image-hover {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
 .product-media::after {
