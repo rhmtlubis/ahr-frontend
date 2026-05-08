@@ -26,6 +26,22 @@ const apiCandidates = [
   .map((value) => normalizeApiBaseUrl(value))
   .filter(Boolean)
 
+function toPublicPath(routePath = '/') {
+  const normalized = String(routePath || '/').trim() || '/'
+
+  if (normalized === '/') {
+    return '/'
+  }
+
+  return normalized.endsWith('/') ? normalized : `${normalized}/`
+}
+
+function toPublicUrl(routePath = '/') {
+  const publicPath = toPublicPath(routePath)
+
+  return publicPath === '/' ? siteUrl : `${siteUrl}${publicPath}`
+}
+
 async function main() {
   const template = await readFile(indexPath, 'utf8')
   const remotePayload = await loadLandingPayload()
@@ -57,12 +73,12 @@ async function main() {
           '@type': 'Brand',
           name: siteData.siteName,
         },
-        url: `${siteUrl}/produk/${product.slug}`,
+        url: toPublicUrl(`/produk/${product.slug}`),
       },
       buildBreadcrumbSchema([
-        { name: 'Home', url: siteUrl },
-        { name: 'Produk', url: `${siteUrl}/all-products` },
-        { name: product.name, url: `${siteUrl}/produk/${product.slug}` },
+        { name: 'Home', url: toPublicUrl('/') },
+        { name: 'Produk', url: toPublicUrl('/all-products') },
+        { name: product.name, url: toPublicUrl(`/produk/${product.slug}`) },
       ]),
     ],
   }))
@@ -97,12 +113,12 @@ async function main() {
             url: resolveAbsoluteUrl('/ahr-brand-logo.webp'),
           },
         },
-        mainEntityOfPage: `${siteUrl}/artikel/${article.slug}`,
+        mainEntityOfPage: toPublicUrl(`/artikel/${article.slug}`),
       },
       buildBreadcrumbSchema([
-        { name: 'Home', url: siteUrl },
-        { name: 'Artikel', url: `${siteUrl}/artikel` },
-        { name: article.title, url: `${siteUrl}/artikel/${article.slug}` },
+        { name: 'Home', url: toPublicUrl('/') },
+        { name: 'Artikel', url: toPublicUrl('/artikel') },
+        { name: article.title, url: toPublicUrl(`/artikel/${article.slug}`) },
       ]),
     ],
   }))
@@ -119,18 +135,18 @@ async function main() {
     bodyContent: buildArticlesListingBodyContent(articles),
     jsonLd: [
       buildBreadcrumbSchema([
-        { name: 'Home', url: siteUrl },
-        { name: 'Artikel', url: `${siteUrl}/artikel` },
+        { name: 'Home', url: toPublicUrl('/') },
+        { name: 'Artikel', url: toPublicUrl('/artikel') },
       ]),
       {
         '@context': 'https://schema.org',
         '@type': 'Blog',
         name: 'Artikel AHR',
-        url: `${siteUrl}/artikel`,
+        url: toPublicUrl('/artikel'),
         blogPost: articles.map((article) => ({
           '@type': 'BlogPosting',
           headline: article.title,
-          url: `${siteUrl}/artikel/${article.slug}`,
+          url: toPublicUrl(`/artikel/${article.slug}`),
           datePublished: article.publishedAt,
           dateModified: article.updatedAt || article.publishedAt,
         })),
@@ -152,16 +168,16 @@ async function main() {
       bodyContent: buildCategoryBodyContent(category, seoContent),
       jsonLd: [
         buildBreadcrumbSchema([
-          { name: 'Home', url: siteUrl },
-          { name: 'Produk', url: `${siteUrl}/all-products` },
-          { name: category.label, url: `${siteUrl}${getCategoryRoute(category)}` },
+          { name: 'Home', url: toPublicUrl('/') },
+          { name: 'Produk', url: toPublicUrl('/all-products') },
+          { name: category.label, url: toPublicUrl(getCategoryRoute(category)) },
         ]),
         {
           '@context': 'https://schema.org',
           '@type': 'CollectionPage',
           name: seoContent.title,
           description: seoContent.description,
-          url: `${siteUrl}${getCategoryRoute(category)}`,
+          url: toPublicUrl(getCategoryRoute(category)),
         },
       ],
     }
@@ -182,7 +198,7 @@ async function main() {
           '@context': 'https://schema.org',
           '@type': 'Organization',
           name: siteData.siteName,
-          url: siteUrl,
+          url: toPublicUrl('/'),
           logo: resolveAbsoluteUrl(siteData.defaultImage),
           description: siteData.brandDescription,
           contactPoint: [
@@ -198,7 +214,7 @@ async function main() {
           '@context': 'https://schema.org',
           '@type': 'WebSite',
           name: siteData.siteName,
-          url: siteUrl,
+          url: toPublicUrl('/'),
           description: siteData.brandDescription,
         },
         buildFaqSchema(siteData.faqItems),
@@ -223,8 +239,8 @@ async function main() {
       ),
       jsonLd: [
         buildBreadcrumbSchema([
-          { name: 'Home', url: siteUrl },
-          { name: 'Kontak & Kerja Sama', url: `${siteUrl}/kontak-kerja-sama` },
+          { name: 'Home', url: toPublicUrl('/') },
+          { name: 'Kontak & Kerja Sama', url: toPublicUrl('/kontak-kerja-sama') },
         ]),
       ],
     },
@@ -247,8 +263,8 @@ async function main() {
       ),
       jsonLd: [
         buildBreadcrumbSchema([
-          { name: 'Home', url: siteUrl },
-          { name: 'Kontak & Kerja Sama', url: `${siteUrl}/b2b` },
+          { name: 'Home', url: toPublicUrl('/') },
+          { name: 'Kontak & Kerja Sama', url: toPublicUrl('/b2b') },
         ]),
       ],
     },
@@ -264,8 +280,8 @@ async function main() {
       bodyContent: buildListingBodyContent(siteData),
       jsonLd: [
         buildBreadcrumbSchema([
-          { name: 'Home', url: siteUrl },
-          { name: 'Produk', url: `${siteUrl}/all-products` },
+          { name: 'Home', url: toPublicUrl('/') },
+          { name: 'Produk', url: toPublicUrl('/all-products') },
         ]),
       ],
     },
@@ -288,8 +304,8 @@ async function main() {
       ),
       jsonLd: [
         buildBreadcrumbSchema([
-          { name: 'Home', url: siteUrl },
-          { name: 'Profil', url: `${siteUrl}/profil` },
+          { name: 'Home', url: toPublicUrl('/') },
+          { name: 'Profil', url: toPublicUrl('/profil') },
         ]),
       ],
     },
@@ -310,8 +326,8 @@ async function main() {
       ),
       jsonLd: [
         buildBreadcrumbSchema([
-          { name: 'Home', url: siteUrl },
-          { name: 'Linktree', url: `${siteUrl}/linktree` },
+          { name: 'Home', url: toPublicUrl('/') },
+          { name: 'Linktree', url: toPublicUrl('/linktree') },
         ]),
       ],
     },
@@ -329,8 +345,8 @@ async function main() {
     bodyContent: buildRedirectBodyContent(redirect.to),
     jsonLd: [
       buildBreadcrumbSchema([
-        { name: 'Home', url: siteUrl },
-        { name: 'Produk', url: `${siteUrl}${redirect.to}` },
+        { name: 'Home', url: toPublicUrl('/') },
+        { name: 'Produk', url: toPublicUrl(redirect.to) },
       ]),
     ],
   }))
@@ -509,7 +525,7 @@ function buildSiteData(payload) {
 
 function injectMetadata(template, page) {
   const canonicalPath = page.redirectTo || page.routePath
-  const canonicalUrl = `${siteUrl}${canonicalPath === '/' ? '' : canonicalPath}`
+  const canonicalUrl = toPublicUrl(canonicalPath)
   const fullTitle = `${page.title} | ${fallbackSiteData.siteName}`
   const locale = 'id_ID'
   const robots = page.routePath === '/cart' ? 'noindex, nofollow' : 'index, follow'
@@ -544,7 +560,7 @@ function injectMetadata(template, page) {
   }
 
   if (page.redirectTo) {
-    const redirectUrl = `${siteUrl}${page.redirectTo}`
+    const redirectUrl = toPublicUrl(page.redirectTo)
     html = html.replace(
       '</head>',
       `\n    <meta http-equiv="refresh" content="0;url=${redirectUrl}" />\n    <script>window.location.replace(${JSON.stringify(redirectUrl)})</script>\n  </head>`,
@@ -562,7 +578,7 @@ function buildSitemap(pages) {
   const entries = pages
     .filter((page) => page.routePath !== '/cart')
     .map((page) => {
-      const location = `${siteUrl}${page.routePath === '/' ? '' : page.routePath}`
+      const location = toPublicUrl(page.routePath)
       const changefreq = page.routePath.startsWith('/produk/') ? 'weekly' : page.routePath === '/' ? 'daily' : 'weekly'
       const priority = page.routePath === '/' ? '1.0' : page.routePath.startsWith('/produk/') ? '0.8' : '0.7'
 
