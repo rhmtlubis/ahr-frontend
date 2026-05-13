@@ -22,7 +22,9 @@ export function initializeAnalytics() {
     }
 
   const scriptDatasetKey = measurementId || googleAdsId
-  const existingScript = document.querySelector(`script[data-google-analytics="${scriptDatasetKey}"]`)
+  const existingScript =
+    document.querySelector(`script[data-google-analytics="${scriptDatasetKey}"]`) ||
+    document.querySelector(`script[src*="googletagmanager.com/gtag/js?id=${scriptDatasetKey}"]`)
 
   if (!existingScript) {
     const script = document.createElement('script')
