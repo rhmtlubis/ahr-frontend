@@ -67,28 +67,12 @@ export async function fetchCatalogPriceQuote({
 }
 
 export async function saveCatalogOrder(payload) {
-  const response = await fetch(getApiUrl('/api/catalog/orders'), {
-    method: 'POST',
-    credentials: 'include',
-    headers: {
-      'Content-Type': 'application/json',
-      Accept: 'application/json',
-    },
-    body: JSON.stringify(payload),
-  })
-
-  const responsePayload = await response.json().catch(() => null)
-
-  if (!response.ok) {
-    const errorMessage =
-      responsePayload?.message ||
-      Object.values(responsePayload?.errors || {}).flat()[0] ||
-      'Gagal menyimpan order'
-
-    throw new Error(errorMessage)
+  try {
+    const response = await apiClient.post('/api/catalog/orders', payload)
+    return response.data?.data || null
+  } catch (error) {
+    throw new Error(resolveApiError(error, 'Gagal menyimpan order'))
   }
-
-  return responsePayload?.data || null
 }
 
 async function fetchCatalogLocationOptions(path, params = {}) {
