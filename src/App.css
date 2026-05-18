@@ -4986,3 +4986,84 @@ main {
     display: none;
   }
 }
+
+/* Payment Result Page */
+.payment-result-page {
+  min-height: 60vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.payment-result-hero {
+  width: 100%;
+}
+
+.payment-result-content {
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 48px 24px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+}
+
+.payment-result-icon {
+  margin-bottom: 8px;
+}
+
+.payment-result-content h1 {
+  font-size: clamp(1.8rem, 4vw, 2.5rem);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: var(--text-900);
+  margin: 0;
+}
+
+.payment-result-order {
+  font-size: 1rem;
+  color: var(--text-600);
+  margin: 0;
+}
+
+.payment-result-order strong {
+  color: var(--text-900);
+  font-weight: 700;
+}
+
+.payment-result-message {
+  font-size: 1.1rem;
+  line-height: 1.6;
+  color: var(--text-700);
+  margin: 0;
+  max-width: 480px;
+}
+
+.payment-result-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: center;
+  margin-top: 12px;
+}
+
+.payment-result-actions .cta-button {
+  min-width: 180px;
+}
+
+@media (max-width: 640px) {
+  .payment-result-content {
+    padding: 32px 16px;
+  }
+
+  .payment-result-actions {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .payment-result-actions .cta-button {
+    width: 100%;
+  }
+}

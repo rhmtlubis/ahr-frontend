@@ -27,6 +27,14 @@ export function initializeAnalytics() {
     document.querySelector(`script[src*="googletagmanager.com/gtag/js?id=${scriptDatasetKey}"]`)
 
   if (!existingScript) {
+    window.gtag('consent', 'default', {
+      ad_storage: 'denied',
+      analytics_storage: 'denied',
+      ad_user_data: 'denied',
+      ad_personalization: 'denied',
+      wait_for_update: 500,
+    })
+
     const script = document.createElement('script')
     script.async = true
     script.src = `https://www.googletagmanager.com/gtag/js?id=${measurementId || googleAdsId}`
@@ -51,6 +59,19 @@ export function initializeAnalytics() {
 
   analyticsInitialized = true
   return true
+}
+
+export function updateConsent(preferences = {}) {
+  if (typeof window === 'undefined' || !window.gtag) {
+    return
+  }
+
+  window.gtag('consent', 'update', {
+    ad_storage: preferences.analytics === 'accepted' ? 'granted' : 'denied',
+    analytics_storage: preferences.analytics === 'accepted' ? 'granted' : 'denied',
+    ad_user_data: preferences.analytics === 'accepted' ? 'granted' : 'denied',
+    ad_personalization: preferences.analytics === 'accepted' ? 'granted' : 'denied',
+  })
 }
 
 export function trackEvent(name, params = {}) {
@@ -84,4 +105,14 @@ export function trackPageView(path = window.location.pathname + window.location.
   window.gtag('config', measurementId, {
     page_path: path,
   })
+}
+
+export function initializeAnalyticsAndTrackCurrentPage(path = window.location.pathname + window.location.search) {
+  if (!initializeAnalytics()) {
+    return false
+  }
+
+  trackPageView(path)
+
+  return true
 }

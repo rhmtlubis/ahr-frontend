@@ -22,7 +22,7 @@ import {
   Truck,
 } from 'lucide-react'
 import './App.css'
-import { initializeAnalytics, trackEvent, trackPageView } from './lib/analytics'
+import { initializeAnalytics, trackEvent, trackPageView, updateConsent } from './lib/analytics'
 import { getApiUrl } from './lib/api'
 import { getAttributionParams } from './lib/attribution'
 import { useCart } from './lib/cart.jsx'
@@ -511,8 +511,11 @@ function App() {
           },
           0.2,
         )
-        .from(
-          '.metric-card',
+
+      const metricCards = document.querySelectorAll('.metric-card')
+      if (metricCards.length > 0) {
+        heroTimeline.from(
+          metricCards,
           {
             y: 24,
             opacity: 0,
@@ -521,22 +524,25 @@ function App() {
           },
           0.55,
         )
+      }
 
       gsap.utils.toArray('[data-reveal]').forEach((section) => {
         const items = section.querySelectorAll('[data-reveal-item]')
 
-        gsap.from(items, {
-          y: 44,
-          opacity: 0,
-          stagger: 0.1,
-          duration: 0.85,
-          ease: 'power3.out',
-          scrollTrigger: {
-            trigger: section,
-            start: 'top 78%',
-            once: true,
-          },
-        })
+        if (items.length > 0) {
+          gsap.from(items, {
+            y: 44,
+            opacity: 0,
+            stagger: 0.1,
+            duration: 0.85,
+            ease: 'power3.out',
+            scrollTrigger: {
+              trigger: section,
+              start: 'top 78%',
+              once: true,
+            },
+          })
+        }
       })
 
       gsap.to('.hero-orb-one', {
@@ -629,6 +635,8 @@ function App() {
   const applyConsentPreferences = (nextPreferences) => {
     setConsentPreferences(nextPreferences)
     setConsentPreferencesState(nextPreferences)
+
+    updateConsent(nextPreferences)
 
     if (nextPreferences.analytics === 'accepted') {
       initializeAnalytics()

@@ -5,10 +5,10 @@ import { BrowserRouter, Route, Routes, useLocation } from 'react-router-dom'
 import './index.css'
 import { CartProvider } from './lib/cart.jsx'
 import { LanguageProvider } from './lib/i18n.jsx'
-import { initializeAnalytics, trackPageView } from './lib/analytics'
+import { initializeAnalytics, trackPageView, updateConsent } from './lib/analytics'
 import { getBackendUrl } from './lib/api'
 import { captureMarketingAttribution } from './lib/attribution'
-import { hasAnalyticsConsent } from './lib/consent'
+import { getConsentPreferences } from './lib/consent'
 
 const App = lazy(() => import('./App.jsx'))
 const AllProductsPage = lazy(() => import('./AllProductsPage.jsx'))
@@ -20,6 +20,7 @@ const ArticlesPage = lazy(() => import('./ArticlesPage.jsx'))
 const ArticleDetailPage = lazy(() => import('./ArticleDetailPage.jsx'))
 const LinktreePage = lazy(() => import('./LinktreePage.jsx'))
 const ProductDetailPage = lazy(() => import('./ProductDetailPage.jsx'))
+const PaymentResultPage = lazy(() => import('./PaymentResultPage.jsx'))
 
 function LegacyAdminRedirect() {
   useEffect(() => {
@@ -53,9 +54,8 @@ function AnalyticsRouteTracker() {
   useEffect(() => {
     captureMarketingAttribution()
 
-    if (!hasAnalyticsConsent()) {
-      return
-    }
+    const consentPreferences = getConsentPreferences()
+    updateConsent(consentPreferences)
 
     if (initializeAnalytics()) {
       trackPageView(`${location.pathname}${location.search}`)
@@ -83,6 +83,10 @@ createRoot(document.getElementById('root')).render(
             <Route path="/linktree" element={<LinktreePage />} />
             <Route path="/profil" element={<CompanyProfilePage />} />
             <Route path="/produk/:productSlug" element={<ProductDetailPage />} />
+            <Route path="/payment/success" element={<PaymentResultPage status="success" />} />
+            <Route path="/payment/pending" element={<PaymentResultPage status="pending" />} />
+            <Route path="/payment/unfinish" element={<PaymentResultPage status="pending" />} />
+            <Route path="/payment/error" element={<PaymentResultPage status="error" />} />
             <Route path="*" element={<App />} />
           </Routes>
         </Suspense>

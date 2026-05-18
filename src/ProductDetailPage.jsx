@@ -3,7 +3,7 @@ import { ChevronDown, ChevronLeft, ChevronRight, MessageCircleMore, Minus, MoveL
 import { Link, useLocation, useParams } from 'react-router-dom'
 import './App.css'
 import { normalizeProductDetail } from './lib/cmsContent.js'
-import { initializeAnalytics, trackEvent, trackPageView } from './lib/analytics'
+import { initializeAnalyticsAndTrackCurrentPage, trackEvent, updateConsent } from './lib/analytics'
 import { fetchCatalogPriceQuote, getApiUrl, getPreferredCurrency } from './lib/api'
 import { getProductSizeOptions, useCart } from './lib/cart.jsx'
 import { buildProductStructuredData } from './lib/structuredData'
@@ -12,7 +12,7 @@ import ProductPrice from './components/catalog/ProductPrice'
 import CookieConsentBanner from './components/layout/CookieConsentBanner'
 import SiteFooter from './components/layout/SiteFooter'
 import SiteHeader from './components/layout/SiteHeader'
-import { getConsentPreferences, hasAnalyticsConsent, setConsentPreferences } from './lib/consent'
+import { getConsentPreferences, setConsentPreferences } from './lib/consent'
 import { useLanguage } from './lib/i18n.jsx'
 import { getLandingChromeContent } from './lib/landingContent'
 import { clearPersonalizationData, recordProductView } from './lib/personalization'
@@ -171,15 +171,6 @@ export default function ProductDetailPage() {
   }, [])
 
   useEffect(() => {
-    if (!hasAnalyticsConsent()) {
-      return
-    }
-
-    initializeAnalytics()
-    trackPageView(window.location.pathname + window.location.search)
-  }, [productSlug])
-
-  useEffect(() => {
     window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
   }, [productSlug])
 
@@ -274,8 +265,10 @@ export default function ProductDetailPage() {
     setConsentPreferences(nextPreferences)
     setConsentPreferencesState(nextPreferences)
 
+    updateConsent(nextPreferences)
+
     if (nextPreferences.analytics === 'accepted') {
-      initializeAnalytics()
+      initializeAnalyticsAndTrackCurrentPage()
     }
 
     if (nextPreferences.personalization === 'rejected') {

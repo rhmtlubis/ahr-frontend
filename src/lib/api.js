@@ -119,3 +119,51 @@ export function fetchCatalogCities(provinceCode) {
 export function fetchCatalogDistricts(cityCode) {
   return fetchCatalogLocationOptions('/api/catalog/locations/districts', { city_code: cityCode })
 }
+
+export async function createPaymentTransaction(orderNumber, paymentAccessToken) {
+  const searchParams = new URLSearchParams({ token: paymentAccessToken })
+
+  const response = await fetch(getApiUrl(`/api/catalog/orders/${orderNumber}/pay?${searchParams.toString()}`), {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+    },
+  })
+
+  const responsePayload = await response.json().catch(() => null)
+
+  if (!response.ok) {
+    const errorMessage =
+      responsePayload?.message ||
+      Object.values(responsePayload?.errors || {}).flat()[0] ||
+      'Gagal membuat transaksi pembayaran'
+
+    throw new Error(errorMessage)
+  }
+
+  return responsePayload?.data || null
+}
+
+export async function fetchPaymentStatus(orderNumber, paymentAccessToken) {
+  const searchParams = new URLSearchParams({ token: paymentAccessToken })
+
+  const response = await fetch(getApiUrl(`/api/catalog/orders/${orderNumber}/payment-status?${searchParams.toString()}`), {
+    headers: {
+      Accept: 'application/json',
+    },
+  })
+
+  const responsePayload = await response.json().catch(() => null)
+
+  if (!response.ok) {
+    const errorMessage =
+      responsePayload?.message ||
+      Object.values(responsePayload?.errors || {}).flat()[0] ||
+      'Gagal memuat status pembayaran'
+
+    throw new Error(errorMessage)
+  }
+
+  return responsePayload?.data || null
+}

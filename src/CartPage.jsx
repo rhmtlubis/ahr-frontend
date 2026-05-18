@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useState } from 'react'
 import { ArrowLeft, MessageCircleMore, Minus, Plus, ShoppingBag, Trash2 } from 'lucide-react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import './App.css'
 import ProductPrice from './components/catalog/ProductPrice'
 import CookieConsentBanner from './components/layout/CookieConsentBanner'
 import SiteFooter from './components/layout/SiteFooter'
 import SiteHeader from './components/layout/SiteHeader'
-import { initializeAnalytics, trackEvent, trackPageView } from './lib/analytics'
+import { initializeAnalyticsAndTrackCurrentPage, trackEvent, updateConsent } from './lib/analytics'
 import {
   fetchCatalogCities,
   fetchCatalogDistricts,
@@ -16,9 +16,10 @@ import {
 } from './lib/api'
 import { getAttributionParams } from './lib/attribution'
 import { getProductSizeOptions, useCart } from './lib/cart.jsx'
-import { getConsentPreferences, hasAnalyticsConsent, setConsentPreferences } from './lib/consent'
+import { getConsentPreferences, setConsentPreferences } from './lib/consent'
 import { useLanguage } from './lib/i18n.jsx'
 import { getLandingChromeContent } from './lib/landingContent'
+import { useMidtransPayment } from './lib/useMidtransPayment'
 import { clearPersonalizationData } from './lib/personalization'
 import { formatCurrencyAmount, getProductPriceDisplay } from './lib/price'
 import useDocumentTitle from './lib/useDocumentTitle'
@@ -374,6 +375,7 @@ function buildCheckoutPayload(items, checkoutForm, language, cartTotals, locatio
 
 export default function CartPage() {
   const { language, t } = useLanguage()
+  const navigate = useNavigate()
   useDocumentTitle(
     language === 'en' ? 'Cart for Custom Jersey Orders' : 'Keranjang Belanja Jersey Custom',
     language === 'en'
@@ -393,6 +395,7 @@ export default function CartPage() {
     },
   )
   const { items, itemCount, updateCartItemQuantity, updateCartItemSize, distributeCartItemSizes, removeCartItem, clearCart } = useCart()
+  const { payOrder, isSnapReady } = useMidtransPayment()
   const [pageContent, setPageContent] = useState(() =>
     getLandingChromeContent({}, { hashPrefix: '/', locale: language }),
   )
@@ -410,15 +413,6 @@ export default function CartPage() {
   })
 
   const cartTotals = useMemo(() => getCartTotals(items, language), [items, language])
-
-  useEffect(() => {
-    if (!hasAnalyticsConsent()) {
-      return
-    }
-
-    initializeAnalytics()
-    trackPageView(window.location.pathname + window.location.search)
-  }, [])
 
   useEffect(() => {
     fetch(getApiUrl(`/api/catalog/landing-page?locale=${language}`), {
@@ -447,8 +441,10 @@ export default function CartPage() {
     setConsentPreferences(nextPreferences)
     setConsentPreferencesState(nextPreferences)
 
+    updateConsent(nextPreferences)
+
     if (nextPreferences.analytics === 'accepted') {
-      initializeAnalytics()
+      initializeAnalyticsAndTrackCurrentPage()
     }
 
     if (nextPreferences.personalization === 'rejected') {
@@ -655,26 +651,6 @@ export default function CartPage() {
       districts: districtOptions,
     }
 
-    const whatsappUrl = buildWhatsAppUrl(
-      pageContent.brand.whatsapp_number,
-      buildCheckoutMessage(checkoutItems, checkoutForm, language, cartTotals, locationOptions),
-    )
-    const whatsappWindow = window.open('', '_blank')
-
-    if (whatsappWindow) {
-      whatsappWindow.opener = null
-    }
-
-    const openWhatsAppCheckout = () => {
-      if (whatsappWindow && !whatsappWindow.closed) {
-        whatsappWindow.location.replace(whatsappUrl)
-
-        return
-      }
-
-      window.open(whatsappUrl, '_blank', 'noopener,noreferrer')
-    }
-
     setCheckoutStatus({
       state: 'loading',
       message: t('cart.checkoutSaving'),
@@ -690,14 +666,6 @@ export default function CartPage() {
       cart_item_count: itemCount,
       cart_unique_item_count: items.length,
       fulfillment: checkoutForm.fulfillment,
-    })
-
-    trackEvent('cart_checkout_whatsapp_click', {
-      source_page: '/cart',
-      cart_item_count: itemCount,
-      cart_unique_item_count: items.length,
-      fulfillment: checkoutForm.fulfillment,
-      net_total_estimate: cartTotals?.netLabel || 'manual-confirmation',
     })
 
     try {
@@ -734,8 +702,48 @@ export default function CartPage() {
         currency: conversion.currency,
         value: conversion.value,
         value_source: conversion.source,
-        checkout_channel: 'whatsapp',
-        lead_stage: 'pending_whatsapp',
+        checkout_channel: 'midtrans',
+        lead_stage: 'pending_payment',
+      })
+
+      if (!isSnapReady) {
+        setCheckoutStatus({
+          state: 'error',
+          message: 'Payment gateway belum siap. Silakan refresh halaman.',
+        })
+        return
+      }
+
+      setCheckoutStatus({
+        state: 'loading',
+        message: 'Membuka halaman pembayaran...',
+      })
+
+      await payOrder(savedOrder.order_number, savedOrder.payment_access_token, {
+        onSuccess: () => {
+          clearCart()
+          setCheckoutForm(defaultCheckoutForm)
+          setMixedSizeDrafts({})
+          navigate(`/payment/success?order=${savedOrder.order_number}`)
+        },
+        onPending: () => {
+          clearCart()
+          setCheckoutForm(defaultCheckoutForm)
+          setMixedSizeDrafts({})
+          navigate(`/payment/pending?order=${savedOrder.order_number}`)
+        },
+        onError: () => {
+          setCheckoutStatus({
+            state: 'error',
+            message: 'Pembayaran gagal atau dibatalkan.',
+          })
+        },
+        onClose: () => {
+          setCheckoutStatus({
+            state: 'idle',
+            message: 'Pembayaran ditutup. Anda dapat mencoba lagi.',
+          })
+        },
       })
     } catch (error) {
       setCheckoutStatus({
@@ -749,11 +757,6 @@ export default function CartPage() {
         cart_unique_item_count: items.length,
         error_message: error.message || 'unknown-error',
       })
-    } finally {
-      openWhatsAppCheckout()
-      clearCart()
-      setCheckoutForm(defaultCheckoutForm)
-      setMixedSizeDrafts({})
     }
   }
 
@@ -1081,7 +1084,7 @@ export default function CartPage() {
 
                 <button className="cart-submit-button" type="submit" disabled={checkoutStatus.state === 'loading'}>
                   <MessageCircleMore size={18} />
-                  <span>{checkoutStatus.state === 'loading' ? t('common.submitting') : t('cart.checkoutWhatsApp')}</span>
+                  <span>{checkoutStatus.state === 'loading' ? t('common.submitting') : t('cart.checkoutPay')}</span>
                 </button>
                 {checkoutStatus.message ? (
                   <p className={`cart-status ${checkoutStatus.state}`}>{checkoutStatus.message}</p>

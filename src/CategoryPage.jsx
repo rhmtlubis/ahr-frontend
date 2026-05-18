@@ -9,10 +9,10 @@ import SiteFooter from './components/layout/SiteFooter'
 import SiteHeader from './components/layout/SiteHeader'
 import { categoryPlaceholderImage, normalizeCategoryCard, normalizeProducts } from './lib/cmsContent.js'
 import { getCategoryRoute, getCategorySeoContent } from './lib/categorySeo.js'
-import { initializeAnalytics, trackEvent, trackPageView } from './lib/analytics'
+import { initializeAnalyticsAndTrackCurrentPage, trackEvent, updateConsent } from './lib/analytics'
 import { fetchCatalogPriceQuote, getApiUrl, getPreferredCurrency } from './lib/api'
 import { useCart } from './lib/cart.jsx'
-import { getConsentPreferences, hasAnalyticsConsent, setConsentPreferences } from './lib/consent'
+import { getConsentPreferences, setConsentPreferences } from './lib/consent'
 import { useLanguage } from './lib/i18n.jsx'
 import { getLandingChromeContent } from './lib/landingContent'
 import { clearPersonalizationData } from './lib/personalization'
@@ -139,15 +139,6 @@ export default function CategoryPage() {
       cancelled = true
     }
   }, [])
-
-  useEffect(() => {
-    if (!hasAnalyticsConsent()) {
-      return
-    }
-
-    initializeAnalytics()
-    trackPageView(window.location.pathname + window.location.search)
-  }, [categoryId, searchParams])
 
   useEffect(() => {
     setListingReady(false)
@@ -403,8 +394,10 @@ export default function CategoryPage() {
     setConsentPreferences(nextPreferences)
     setConsentPreferencesState(nextPreferences)
 
+    updateConsent(nextPreferences)
+
     if (nextPreferences.analytics === 'accepted') {
-      initializeAnalytics()
+      initializeAnalyticsAndTrackCurrentPage()
     }
 
     if (nextPreferences.personalization === 'rejected') {

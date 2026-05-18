@@ -2,14 +2,17 @@ import { useEffect, useMemo, useState } from 'react'
 import { ArrowRight, CheckCircle2, Building2, MessageCircleMore, ShieldCheck, Users } from 'lucide-react'
 import './App.css'
 import './B2BLandingPage.css'
+import CookieConsentBanner from './components/layout/CookieConsentBanner'
 import SiteFooter from './components/layout/SiteFooter'
 import SiteHeader from './components/layout/SiteHeader'
 import { getApiUrl } from './lib/api'
 import { captureMarketingAttribution, getAttributionParams } from './lib/attribution'
+import { initializeAnalyticsAndTrackCurrentPage, trackEvent, updateConsent } from './lib/analytics'
+import { getConsentPreferences, setConsentPreferences } from './lib/consent'
 import { useLanguage } from './lib/i18n.jsx'
 import { getLandingChromeContent } from './lib/landingContent'
+import { clearPersonalizationData } from './lib/personalization'
 import useDocumentTitle from './lib/useDocumentTitle'
-import { trackEvent } from './lib/analytics'
 
 const defaultForm = {
   name: '',
@@ -138,6 +141,10 @@ export default function B2BLandingPage() {
   const [pageContent, setPageContent] = useState(b2bFallbackContent)
   const [form, setForm] = useState(defaultForm)
   const [status, setStatus] = useState({ state: 'idle', message: '' })
+  const [consentPreferences, setConsentPreferencesState] = useState({
+    analytics: 'unknown',
+    personalization: 'unknown',
+  })
 
   useDocumentTitle(
     'AHR Corporation Kontak & Kerja Sama',
@@ -151,6 +158,10 @@ export default function B2BLandingPage() {
       type: 'website',
     },
   )
+
+  useEffect(() => {
+    setConsentPreferencesState(getConsentPreferences())
+  }, [])
 
   useEffect(() => {
     captureMarketingAttribution()
@@ -215,6 +226,28 @@ export default function B2BLandingPage() {
   const contactProfile = pageContent.brand
   const companyProfile = pageContent.companyProfile
   const footerGroups = pageContent.footerGroups
+  const applyConsentPreferences = (nextPreferences) => {
+    setConsentPreferences(nextPreferences)
+    setConsentPreferencesState(nextPreferences)
+
+    updateConsent(nextPreferences)
+
+    if (nextPreferences.analytics === 'accepted') {
+      initializeAnalyticsAndTrackCurrentPage()
+    }
+
+    if (nextPreferences.personalization === 'rejected') {
+      clearPersonalizationData()
+    }
+
+    trackEvent('cookie_consent_updated', {
+      analytics_consent: nextPreferences.analytics,
+      personalization_consent: nextPreferences.personalization,
+      personalization_scope: 'b2b-landing',
+      source_page: window.location.pathname,
+    })
+  }
+
   const formMessage = useMemo(
     () =>
       [
@@ -463,6 +496,35 @@ export default function B2BLandingPage() {
           window.open(buildWhatsAppUrl(contactProfile.whatsapp_number, message, 'footer'), '_blank', 'noopener,noreferrer')
         }}
       />
+
+      {consentPreferences.analytics === 'unknown' && consentPreferences.personalization === 'unknown' ? (
+        <CookieConsentBanner
+          onAcceptAll={() =>
+            applyConsentPreferences({
+              analytics: 'accepted',
+              personalization: 'accepted',
+            })
+          }
+          onAcceptAnalyticsOnly={() =>
+            applyConsentPreferences({
+              analytics: 'accepted',
+              personalization: 'rejected',
+            })
+          }
+          onAcceptPersonalizationOnly={() =>
+            applyConsentPreferences({
+              analytics: 'rejected',
+              personalization: 'accepted',
+            })
+          }
+          onRejectAll={() =>
+            applyConsentPreferences({
+              analytics: 'rejected',
+              personalization: 'rejected',
+            })
+          }
+        />
+      ) : null}
     </div>
   )
 }
