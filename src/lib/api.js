@@ -68,6 +68,7 @@ export async function fetchCatalogPriceQuote({
 export async function saveCatalogOrder(payload) {
   const response = await fetch(getApiUrl('/api/catalog/orders'), {
     method: 'POST',
+    credentials: 'include',
     headers: {
       'Content-Type': 'application/json',
       Accept: 'application/json',
@@ -166,4 +167,75 @@ export async function fetchPaymentStatus(orderNumber, paymentAccessToken) {
   }
 
   return responsePayload?.data || null
+}
+
+function resolveApiError(error, fallbackMessage) {
+  const responsePayload = error?.response?.data
+
+  return (
+    responsePayload?.message ||
+    Object.values(responsePayload?.errors || {}).flat()[0] ||
+    error?.message ||
+    fallbackMessage
+  )
+}
+
+export async function fetchCurrentCustomer() {
+  try {
+    const response = await apiClient.get('/api/customer/auth/me')
+
+    return response.data?.data || null
+  } catch (error) {
+    if (error?.response?.status === 401) {
+      return null
+    }
+
+    throw new Error(resolveApiError(error, 'Gagal memuat sesi customer'))
+  }
+}
+
+export async function registerCustomer(payload) {
+  await ensureCsrfCookie()
+
+  try {
+    const response = await apiClient.post('/api/customer/auth/register', payload)
+
+    return response.data?.data || null
+  } catch (error) {
+    throw new Error(resolveApiError(error, 'Gagal membuat akun customer'))
+  }
+}
+
+export async function loginCustomer(payload) {
+  await ensureCsrfCookie()
+
+  try {
+    const response = await apiClient.post('/api/customer/auth/login', payload)
+
+    return response.data?.data || null
+  } catch (error) {
+    throw new Error(resolveApiError(error, 'Gagal login customer'))
+  }
+}
+
+export async function updateCustomerProfile(payload) {
+  await ensureCsrfCookie()
+
+  try {
+    const response = await apiClient.put('/api/customer/auth/profile', payload)
+
+    return response.data?.data || null
+  } catch (error) {
+    throw new Error(resolveApiError(error, 'Gagal menyimpan profil customer'))
+  }
+}
+
+export async function logoutCustomer() {
+  await ensureCsrfCookie()
+
+  try {
+    await apiClient.post('/api/customer/auth/logout')
+  } catch (error) {
+    throw new Error(resolveApiError(error, 'Gagal logout customer'))
+  }
 }

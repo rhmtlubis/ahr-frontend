@@ -4,6 +4,7 @@ import { createRoot } from 'react-dom/client'
 import { BrowserRouter, Route, Routes, useLocation } from 'react-router-dom'
 import './index.css'
 import { CartProvider } from './lib/cart.jsx'
+import { CustomerProvider } from './lib/customer.jsx'
 import { LanguageProvider } from './lib/i18n.jsx'
 import { initializeAnalytics, trackPageView, updateConsent } from './lib/analytics'
 import { getBackendUrl } from './lib/api'
@@ -15,6 +16,7 @@ const AllProductsPage = lazy(() => import('./AllProductsPage.jsx'))
 const CategoryPage = lazy(() => import('./CategoryPage.jsx'))
 const CartPage = lazy(() => import('./CartPage.jsx'))
 const CompanyProfilePage = lazy(() => import('./CompanyProfilePage.jsx'))
+const CustomerAccountPage = lazy(() => import('./CustomerAccountPage.jsx'))
 const B2BLandingPage = lazy(() => import('./B2BLandingPage.jsx'))
 const ArticlesPage = lazy(() => import('./ArticlesPage.jsx'))
 const ArticleDetailPage = lazy(() => import('./ArticleDetailPage.jsx'))
@@ -67,30 +69,33 @@ function AnalyticsRouteTracker() {
 
 createRoot(document.getElementById('root')).render(
   <LanguageProvider>
-    <CartProvider>
-      <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-        <AnalyticsRouteTracker />
-        <Suspense fallback={<RouteFallback />}>
-          <Routes>
-            <Route path="/admin/*" element={<LegacyAdminRedirect />} />
-            <Route path="/all-products" element={<AllProductsPage />} />
-            <Route path="/kategori/:categoryId" element={<CategoryPage />} />
-            <Route path="/cart" element={<CartPage />} />
-            <Route path="/artikel" element={<ArticlesPage />} />
-            <Route path="/artikel/:articleSlug" element={<ArticleDetailPage />} />
-            <Route path="/b2b" element={<B2BLandingPage />} />
-            <Route path="/kontak-kerja-sama" element={<B2BLandingPage />} />
-            <Route path="/linktree" element={<LinktreePage />} />
-            <Route path="/profil" element={<CompanyProfilePage />} />
-            <Route path="/produk/:productSlug" element={<ProductDetailPage />} />
-            <Route path="/payment/success" element={<PaymentResultPage status="success" />} />
-            <Route path="/payment/pending" element={<PaymentResultPage status="pending" />} />
-            <Route path="/payment/unfinish" element={<PaymentResultPage status="pending" />} />
-            <Route path="/payment/error" element={<PaymentResultPage status="error" />} />
-            <Route path="*" element={<App />} />
-          </Routes>
-        </Suspense>
-      </BrowserRouter>
-    </CartProvider>
+    <CustomerProvider>
+      <CartProvider>
+        <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+          <AnalyticsRouteTracker />
+          <Suspense fallback={<RouteFallback />}>
+            <Routes>
+              <Route path="/admin/*" element={<LegacyAdminRedirect />} />
+              <Route path="/all-products" element={<AllProductsPage />} />
+              <Route path="/kategori/:categoryId" element={<CategoryPage />} />
+              <Route path="/cart" element={<CartPage />} />
+              <Route path="/akun" element={<CustomerAccountPage />} />
+              <Route path="/artikel" element={<ArticlesPage />} />
+              <Route path="/artikel/:articleSlug" element={<ArticleDetailPage />} />
+              <Route path="/b2b" element={<B2BLandingPage />} />
+              <Route path="/kontak-kerja-sama" element={<B2BLandingPage />} />
+              <Route path="/linktree" element={<LinktreePage />} />
+              <Route path="/profil" element={<CompanyProfilePage />} />
+              <Route path="/produk/:productSlug" element={<ProductDetailPage />} />
+              <Route path="/payment/success" element={<PaymentResultPage status="success" />} />
+              <Route path="/payment/pending" element={<PaymentResultPage status="pending" />} />
+              <Route path="/payment/unfinish" element={<PaymentResultPage status="pending" />} />
+              <Route path="/payment/error" element={<PaymentResultPage status="error" />} />
+              <Route path="*" element={<App />} />
+            </Routes>
+          </Suspense>
+        </BrowserRouter>
+      </CartProvider>
+    </CustomerProvider>
   </LanguageProvider>,
 )

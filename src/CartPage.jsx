@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { ArrowLeft, MessageCircleMore, Minus, Plus, ShoppingBag, Trash2 } from 'lucide-react'
+import { ArrowLeft, LockKeyhole, LogOut, Mail, MessageCircleMore, Minus, Plus, ShoppingBag, Trash2 } from 'lucide-react'
 import { Link, useNavigate } from 'react-router-dom'
 import './App.css'
 import ProductPrice from './components/catalog/ProductPrice'
@@ -12,11 +12,16 @@ import {
   fetchCatalogDistricts,
   fetchCatalogProvinces,
   getApiUrl,
+  loginCustomer,
+  logoutCustomer,
+  registerCustomer,
   saveCatalogOrder,
+  updateCustomerProfile,
 } from './lib/api'
 import { getAttributionParams } from './lib/attribution'
 import { getProductSizeOptions, useCart } from './lib/cart.jsx'
 import { getConsentPreferences, setConsentPreferences } from './lib/consent'
+import { useCustomer } from './lib/customer.jsx'
 import { useLanguage } from './lib/i18n.jsx'
 import { getLandingChromeContent } from './lib/landingContent'
 import { useMidtransPayment } from './lib/useMidtransPayment'
@@ -26,6 +31,7 @@ import useDocumentTitle from './lib/useDocumentTitle'
 
 const defaultCheckoutForm = {
   name: '',
+  email: '',
   whatsapp: '',
   fulfillment: 'delivery',
   provinceCode: '',
@@ -33,6 +39,14 @@ const defaultCheckoutForm = {
   districtCode: '',
   addressLine: '',
   notes: '',
+}
+
+const defaultAuthForm = {
+  name: '',
+  email: '',
+  whatsapp: '',
+  password: '',
+  passwordConfirmation: '',
 }
 
 const DEFAULT_GOOGLE_ADS_CONVERSION_VALUE_IDR = Number.parseInt(
@@ -344,6 +358,7 @@ function buildCheckoutPayload(items, checkoutForm, language, cartTotals, locatio
 
   return {
     name: checkoutForm.name,
+    email: checkoutForm.email,
     whatsapp: checkoutForm.whatsapp,
     fulfillment: checkoutForm.fulfillment,
     address: formattedAddress || undefined,
@@ -373,8 +388,55 @@ function buildCheckoutPayload(items, checkoutForm, language, cartTotals, locatio
   }
 }
 
+function mapCustomerToCheckoutForm(customer) {
+  return {
+    name: customer?.name || '',
+    email: customer?.email || '',
+    whatsapp: customer?.phone || '',
+    fulfillment: customer?.default_fulfillment_method || 'delivery',
+    provinceCode: customer?.default_shipping_province_code || '',
+    cityCode: customer?.default_shipping_city_code || '',
+    districtCode: customer?.default_shipping_district_code || '',
+    addressLine: customer?.default_shipping_address || '',
+    notes: '',
+  }
+}
+
+function mapCustomerToAuthForm(customer) {
+  return {
+    ...defaultAuthForm,
+    name: customer?.name || '',
+    email: customer?.email || '',
+    whatsapp: customer?.phone || '',
+  }
+}
+
+function buildCustomerProfilePayload(checkoutForm, locationOptions) {
+  return {
+    name: checkoutForm.name,
+    email: checkoutForm.email,
+    whatsapp: checkoutForm.whatsapp,
+    fulfillment: checkoutForm.fulfillment,
+    address_line: checkoutForm.fulfillment === 'delivery' ? checkoutForm.addressLine : '',
+    province_code: checkoutForm.fulfillment === 'delivery' ? checkoutForm.provinceCode : '',
+    province_name:
+      checkoutForm.fulfillment === 'delivery'
+        ? findLocationName(locationOptions.provinces, checkoutForm.provinceCode)
+        : '',
+    city_code: checkoutForm.fulfillment === 'delivery' ? checkoutForm.cityCode : '',
+    city_name:
+      checkoutForm.fulfillment === 'delivery' ? findLocationName(locationOptions.cities, checkoutForm.cityCode) : '',
+    district_code: checkoutForm.fulfillment === 'delivery' ? checkoutForm.districtCode : '',
+    district_name:
+      checkoutForm.fulfillment === 'delivery'
+        ? findLocationName(locationOptions.districts, checkoutForm.districtCode)
+        : '',
+  }
+}
+
 export default function CartPage() {
   const { language, t } = useLanguage()
+  const { customer: customerSession, isLoading: customerLoading, setCustomer: setCustomerSession } = useCustomer()
   const navigate = useNavigate()
   useDocumentTitle(
     language === 'en' ? 'Cart for Custom Jersey Orders' : 'Keranjang Belanja Jersey Custom',
@@ -401,6 +463,9 @@ export default function CartPage() {
   )
   const [checkoutForm, setCheckoutForm] = useState(defaultCheckoutForm)
   const [checkoutStatus, setCheckoutStatus] = useState({ state: 'idle', message: '' })
+  const [authMode, setAuthMode] = useState('login')
+  const [authForm, setAuthForm] = useState(defaultAuthForm)
+  const [authStatus, setAuthStatus] = useState({ state: 'idle', message: '' })
   const [mixedSizeDrafts, setMixedSizeDrafts] = useState({})
   const [consentPreferences, setConsentPreferencesState] = useState(() => getConsentPreferences())
   const [provinceOptions, setProvinceOptions] = useState([])
@@ -473,6 +538,34 @@ export default function CartPage() {
   const updateCheckoutForm = (field, value) => {
     updateCheckoutFormFields({ [field]: value })
   }
+
+  const updateAuthForm = (field, value) => {
+    if (authStatus.state !== 'idle' || authStatus.message) {
+      setAuthStatus({ state: 'idle', message: '' })
+    }
+
+    setAuthForm((current) => ({
+      ...current,
+      [field]: value,
+    }))
+  }
+
+  const applyCustomerProfileToForms = (customer) => {
+    setCustomerSession(customer)
+    setCheckoutForm((current) => ({
+      ...mapCustomerToCheckoutForm(customer),
+      notes: current.notes,
+    }))
+    setAuthForm(mapCustomerToAuthForm(customer))
+  }
+
+  useEffect(() => {
+    if (!customerSession) {
+      return
+    }
+
+    applyCustomerProfileToForms(customerSession)
+  }, [customerSession])
 
   useEffect(() => {
     let isActive = true
@@ -642,8 +735,80 @@ export default function CartPage() {
     })
   }
 
+  const handleCustomerLogin = async (event) => {
+    event.preventDefault()
+    setAuthStatus({ state: 'loading', message: '' })
+
+    try {
+      const customer = await loginCustomer({
+        email: authForm.email,
+        password: authForm.password,
+      })
+
+      applyCustomerProfileToForms(customer)
+      setAuthStatus({ state: 'success', message: '' })
+    } catch (error) {
+      setAuthStatus({
+        state: 'error',
+        message: error.message,
+      })
+    }
+  }
+
+  const handleCustomerRegister = async (event) => {
+    event.preventDefault()
+    setAuthStatus({ state: 'loading', message: '' })
+
+    try {
+      const customer = await registerCustomer({
+        name: authForm.name,
+        email: authForm.email,
+        whatsapp: authForm.whatsapp,
+        password: authForm.password,
+        password_confirmation: authForm.passwordConfirmation,
+      })
+
+      applyCustomerProfileToForms(customer)
+      setAuthMode('login')
+      setAuthStatus({ state: 'success', message: '' })
+    } catch (error) {
+      setAuthStatus({
+        state: 'error',
+        message: error.message,
+      })
+    }
+  }
+
+  const handleCustomerLogout = async () => {
+    setAuthStatus({ state: 'loading', message: '' })
+
+    try {
+      await logoutCustomer()
+      setCustomerSession(null)
+      setCheckoutForm(defaultCheckoutForm)
+      setAuthForm(defaultAuthForm)
+      setAuthStatus({ state: 'idle', message: '' })
+    } catch (error) {
+      setAuthStatus({
+        state: 'error',
+        message: error.message,
+      })
+    }
+  }
+
   const handleCheckoutSubmit = async (event) => {
     event.preventDefault()
+
+    if (!customerSession) {
+      if (authMode === 'register') {
+        await handleCustomerRegister(event)
+        return
+      }
+
+      await handleCustomerLogin(event)
+      return
+    }
+
     const checkoutItems = materializeCheckoutItems(items, mixedSizeDrafts)
     const locationOptions = {
       provinces: provinceOptions,
@@ -653,7 +818,7 @@ export default function CartPage() {
 
     setCheckoutStatus({
       state: 'loading',
-      message: t('cart.checkoutSaving'),
+      message: t('cart.profileSyncing'),
     })
 
     trackEvent('begin_checkout', {
@@ -669,6 +834,9 @@ export default function CartPage() {
     })
 
     try {
+      const syncedCustomer = await updateCustomerProfile(buildCustomerProfilePayload(checkoutForm, locationOptions))
+
+      setCustomerSession(syncedCustomer)
       const savedOrder = await saveCatalogOrder(
         buildCheckoutPayload(checkoutItems, checkoutForm, language, cartTotals, locationOptions),
       )
@@ -722,13 +890,19 @@ export default function CartPage() {
       await payOrder(savedOrder.order_number, savedOrder.payment_access_token, {
         onSuccess: () => {
           clearCart()
-          setCheckoutForm(defaultCheckoutForm)
+          setCheckoutForm((current) => ({
+            ...current,
+            notes: '',
+          }))
           setMixedSizeDrafts({})
           navigate(`/payment/success?order=${savedOrder.order_number}`)
         },
         onPending: () => {
           clearCart()
-          setCheckoutForm(defaultCheckoutForm)
+          setCheckoutForm((current) => ({
+            ...current,
+            notes: '',
+          }))
           setMixedSizeDrafts({})
           navigate(`/payment/pending?order=${savedOrder.order_number}`)
         },
@@ -954,12 +1128,175 @@ export default function CartPage() {
               </div>
 
               <form className="cart-checkout-form" onSubmit={handleCheckoutSubmit}>
+                {customerLoading ? (
+                  <div className="cart-auth-card">
+                    <p className="cart-auth-copy">{t('cart.authLoading')}</p>
+                  </div>
+                ) : !customerSession ? (
+                  <div className="cart-auth-card">
+                    <div className="cart-auth-heading">
+                      <div>
+                        <span>{t('cart.summaryEyebrow')}</span>
+                        <h3>{t('cart.loginTitle')}</h3>
+                      </div>
+                      <LockKeyhole size={18} />
+                    </div>
+                    <p className="cart-auth-copy">{t('cart.loginBody')}</p>
+
+                    <div className="cart-auth-tabs" role="tablist" aria-label={t('cart.loginTitle')}>
+                      <button
+                        className={authMode === 'login' ? 'cart-auth-tab active' : 'cart-auth-tab'}
+                        type="button"
+                        onClick={() => setAuthMode('login')}
+                      >
+                        {t('cart.loginTab')}
+                      </button>
+                      <button
+                        className={authMode === 'register' ? 'cart-auth-tab active' : 'cart-auth-tab'}
+                        type="button"
+                        onClick={() => setAuthMode('register')}
+                      >
+                        {t('cart.registerTab')}
+                      </button>
+                    </div>
+
+                    {authMode === 'login' ? (
+                      <div className="cart-auth-form">
+                        <div className="cart-form-field">
+                          <label htmlFor="customer-login-email">{t('cart.customerEmail')}</label>
+                          <input
+                            id="customer-login-email"
+                            type="email"
+                            value={authForm.email}
+                            onChange={(event) => updateAuthForm('email', event.target.value)}
+                            required
+                          />
+                        </div>
+                        <div className="cart-form-field">
+                          <label htmlFor="customer-login-password">{t('cart.password')}</label>
+                          <input
+                            id="customer-login-password"
+                            type="password"
+                            value={authForm.password}
+                            onChange={(event) => updateAuthForm('password', event.target.value)}
+                            required
+                          />
+                        </div>
+                        <button
+                          className="cart-submit-button"
+                          type="button"
+                          disabled={authStatus.state === 'loading'}
+                          onClick={handleCustomerLogin}
+                        >
+                          <Mail size={18} />
+                          <span>{authStatus.state === 'loading' ? t('common.submitting') : t('cart.loginCta')}</span>
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="cart-auth-form">
+                        <div className="cart-form-field">
+                          <label htmlFor="customer-register-name">{t('cart.customerName')}</label>
+                          <input
+                            id="customer-register-name"
+                            value={authForm.name}
+                            onChange={(event) => updateAuthForm('name', event.target.value)}
+                            required
+                          />
+                        </div>
+                        <div className="cart-form-field">
+                          <label htmlFor="customer-register-email">{t('cart.customerEmail')}</label>
+                          <input
+                            id="customer-register-email"
+                            type="email"
+                            value={authForm.email}
+                            onChange={(event) => updateAuthForm('email', event.target.value)}
+                            required
+                          />
+                        </div>
+                        <div className="cart-form-field">
+                          <label htmlFor="customer-register-whatsapp">{t('cart.customerWhatsapp')}</label>
+                          <input
+                            id="customer-register-whatsapp"
+                            value={authForm.whatsapp}
+                            onChange={(event) => updateAuthForm('whatsapp', event.target.value)}
+                            required
+                          />
+                        </div>
+                        <div className="cart-form-grid">
+                          <div className="cart-form-field">
+                            <label htmlFor="customer-register-password">{t('cart.password')}</label>
+                            <input
+                              id="customer-register-password"
+                              type="password"
+                              value={authForm.password}
+                              onChange={(event) => updateAuthForm('password', event.target.value)}
+                              required
+                            />
+                          </div>
+                          <div className="cart-form-field">
+                            <label htmlFor="customer-register-password-confirmation">{t('cart.passwordConfirmation')}</label>
+                            <input
+                              id="customer-register-password-confirmation"
+                              type="password"
+                              value={authForm.passwordConfirmation}
+                              onChange={(event) => updateAuthForm('passwordConfirmation', event.target.value)}
+                              required
+                            />
+                          </div>
+                        </div>
+                        <button
+                          className="cart-submit-button"
+                          type="button"
+                          disabled={authStatus.state === 'loading'}
+                          onClick={handleCustomerRegister}
+                        >
+                          <Mail size={18} />
+                          <span>{authStatus.state === 'loading' ? t('common.submitting') : t('cart.registerCta')}</span>
+                        </button>
+                      </div>
+                    )}
+
+                    {authStatus.message ? <p className={`cart-status ${authStatus.state}`}>{authStatus.message}</p> : null}
+                  </div>
+                ) : (
+                  <div className="cart-auth-card customer-account-card">
+                    <div className="cart-auth-heading">
+                      <div>
+                        <span>{t('cart.summaryEyebrow')}</span>
+                        <h3>{t('cart.accountTitle')}</h3>
+                      </div>
+                      <button className="cart-account-logout" type="button" onClick={handleCustomerLogout}>
+                        <LogOut size={16} />
+                        <span>{t('cart.logout')}</span>
+                      </button>
+                    </div>
+                    <p className="cart-auth-copy">{t('cart.accountBody')}</p>
+                    <div className="cart-account-meta">
+                      <strong>{customerSession.name}</strong>
+                      <span>{customerSession.email}</span>
+                    </div>
+                  </div>
+                )}
+
+                {!customerSession ? null : (
+                  <>
                 <div className="cart-form-field">
                   <label htmlFor="cart-name">{t('cart.customerName')}</label>
                   <input
                     id="cart-name"
                     value={checkoutForm.name}
                     onChange={(event) => updateCheckoutForm('name', event.target.value)}
+                    required
+                  />
+                </div>
+
+                <div className="cart-form-field">
+                  <label htmlFor="cart-email">{t('cart.customerEmail')}</label>
+                  <input
+                    id="cart-email"
+                    type="email"
+                    value={checkoutForm.email}
+                    onChange={(event) => updateCheckoutForm('email', event.target.value)}
                     required
                   />
                 </div>
@@ -1089,6 +1426,8 @@ export default function CartPage() {
                 {checkoutStatus.message ? (
                   <p className={`cart-status ${checkoutStatus.state}`}>{checkoutStatus.message}</p>
                 ) : null}
+                  </>
+                )}
               </form>
             </aside>
           </section>

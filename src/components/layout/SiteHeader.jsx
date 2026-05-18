@@ -1,6 +1,7 @@
-import { ChevronRight, Menu, ShoppingBag, ShoppingCart, X } from 'lucide-react'
+import { ChevronRight, Menu, ShoppingBag, ShoppingCart, UserRound, X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { useCustomer } from '../../lib/customer.jsx'
 import { useLanguage } from '../../lib/i18n.jsx'
 
 function normalizeLinks(links = [], defaultHref = '/#products') {
@@ -25,6 +26,7 @@ export default function SiteHeader({
   onUtilityInteraction,
 }) {
   const { language, setLanguage, t } = useLanguage()
+  const { customer } = useCustomer()
   const [activeNav, setActiveNav] = useState(navGroups[0]?.id || '')
   const [menuOpen, setMenuOpen] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
@@ -361,6 +363,13 @@ export default function SiteHeader({
           </nav>
 
           <div className="header-actions">
+            <Link
+              className={customer ? 'header-account-button active' : 'header-account-button'}
+              to="/akun"
+              aria-label={t('common.customerAccount')}
+            >
+              <UserRound size={18} />
+            </Link>
             <Link className="header-cart-button" to="/cart" aria-label={t('cart.openCart')}>
               <ShoppingCart size={18} />
               {cartItemCount > 0 ? (
