@@ -4521,6 +4521,10 @@ main {
     transform 160ms ease;
 }
 
+.cart-shipping-option-body {
+  display: contents;
+}
+
 .cart-shipping-option:hover {
   border-color: rgba(226, 178, 75, 0.72);
   box-shadow: 0 10px 24px rgba(2, 37, 84, 0.08);
@@ -4570,6 +4574,7 @@ main {
   color: var(--navy-900);
   font-size: 0.94rem;
   line-height: 1.35;
+  overflow-wrap: anywhere;
 }
 
 .cart-shipping-option-copy > span:not(.cart-shipping-option-duration) {
@@ -4597,6 +4602,7 @@ main {
   font-size: 0.98rem;
   font-weight: 800;
   white-space: nowrap;
+  text-align: right;
 }
 
 .cart-shipping-option-check {
@@ -4648,34 +4654,87 @@ main {
 }
 
 @media (max-width: 640px) {
+  .cart-shipping-picker-list {
+    max-height: min(420px, 58vh);
+    gap: 10px;
+  }
+
   .cart-shipping-option {
-    grid-template-columns: auto 1fr;
-    grid-template-areas:
-      'badge copy'
-      'badge meta';
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    padding: 12px 14px;
+  }
+
+  .cart-shipping-option-body {
+    display: grid;
+    grid-template-columns: 48px minmax(0, 1fr) 28px;
+    align-items: start;
     gap: 10px 12px;
   }
 
   .cart-shipping-option-badge {
-    grid-area: badge;
-    min-width: 46px;
-    min-height: 46px;
+    align-self: center;
+    min-width: 48px;
+    min-height: 48px;
+    padding: 0 8px;
+    font-size: 0.68rem;
   }
 
   .cart-shipping-option-copy {
-    grid-area: copy;
+    align-self: center;
+    gap: 3px;
   }
 
-  .cart-shipping-option-price {
-    grid-area: meta;
-    justify-self: start;
-    padding-left: 58px;
+  .cart-shipping-option-copy strong {
+    font-size: 0.9rem;
+    line-height: 1.3;
+  }
+
+  .cart-shipping-option-copy > span:not(.cart-shipping-option-duration) {
+    font-size: 0.78rem;
+    line-height: 1.35;
+  }
+
+  .cart-shipping-option-duration {
+    margin-top: 4px;
+    font-size: 0.72rem;
   }
 
   .cart-shipping-option-check {
-    position: absolute;
-    top: 12px;
-    right: 12px;
+    align-self: start;
+    justify-self: end;
+    margin-top: 2px;
+  }
+
+  .cart-shipping-option-price {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding-top: 10px;
+    border-top: 1px solid rgba(2, 37, 84, 0.08);
+    font-size: 1rem;
+    text-align: right;
+  }
+
+  .cart-shipping-option-price::before {
+    content: 'Ongkir';
+    color: var(--text-700);
+    font-size: 0.78rem;
+    font-weight: 600;
+    text-align: left;
+  }
+
+  .cart-shipping-option-skeleton {
+    min-height: 96px;
+  }
+}
+
+@media (max-width: 640px) {
+  :lang(en) .cart-shipping-option-price::before {
+    content: 'Shipping';
   }
 }
 

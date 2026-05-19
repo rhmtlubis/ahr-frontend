@@ -67,7 +67,7 @@ export default function ShippingOptionPicker({
   }
 
   return (
-    <fieldset className="cart-shipping-picker" disabled={disabled}>
+    <fieldset className="cart-shipping-picker" disabled={disabled} lang={language === 'en' ? 'en' : 'id'}>
       <legend className="cart-shipping-picker-legend">{labels.title}</legend>
       <p className="cart-shipping-picker-hint">{labels.hint}</p>
       <div className="cart-shipping-picker-list" role="radiogroup" aria-label={labels.title}>
@@ -87,21 +87,23 @@ export default function ShippingOptionPicker({
                 checked={isSelected}
                 onChange={() => onSelect(option.key)}
               />
-              <span className="cart-shipping-option-badge" aria-hidden="true">
-                {getCourierCode(option)}
-              </span>
-              <span className="cart-shipping-option-copy">
-                <strong>{getShippingOptionTitle(option)}</strong>
-                {option.description ? <span>{option.description}</span> : null}
-                <span className="cart-shipping-option-duration">
-                  <Clock3 size={14} aria-hidden="true" />
-                  {option.duration}
+              <div className="cart-shipping-option-body">
+                <span className="cart-shipping-option-badge" aria-hidden="true">
+                  {getCourierCode(option)}
                 </span>
-              </span>
+                <span className="cart-shipping-option-copy">
+                  <strong>{getShippingOptionTitle(option)}</strong>
+                  {option.description ? <span>{option.description}</span> : null}
+                  <span className="cart-shipping-option-duration">
+                    <Clock3 size={14} aria-hidden="true" />
+                    {option.duration}
+                  </span>
+                </span>
+                <span className="cart-shipping-option-check" aria-hidden="true">
+                  {isSelected ? <Check size={18} strokeWidth={2.5} /> : null}
+                </span>
+              </div>
               <span className="cart-shipping-option-price">{priceLabel}</span>
-              <span className="cart-shipping-option-check" aria-hidden="true">
-                {isSelected ? <Check size={18} strokeWidth={2.5} /> : null}
-              </span>
             </label>
           )
         })}
