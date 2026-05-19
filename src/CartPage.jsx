@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { ArrowLeft, LockKeyhole, LogOut, Mail, MessageCircleMore, Minus, Plus, ShoppingBag, Trash2 } from 'lucide-react'
 import { Link, useNavigate } from 'react-router-dom'
 import './App.css'
+import ShippingOptionPicker from './components/checkout/ShippingOptionPicker'
 import ProductPrice from './components/catalog/ProductPrice'
 import CookieConsentBanner from './components/layout/CookieConsentBanner'
 import SiteFooter from './components/layout/SiteFooter'
@@ -200,14 +201,6 @@ function getCartTotals(items, language) {
     discountDisplayLabel: `${discountAmount > 0 ? '-' : ''}${formatCurrencyAmount(discountAmount, currency, language)}`,
     netLabel: formatCurrencyAmount(netAmount, currency, language),
   }
-}
-
-function getShippingOptionLabel(option) {
-  if (!option) {
-    return ''
-  }
-
-  return [option.courier_name, option.courier_service_name].filter(Boolean).join(' - ')
 }
 
 function getSelectedShippingOption(shippingOptions, selectedShippingOptionKey) {
@@ -1582,43 +1575,17 @@ export default function CartPage() {
                       />
                     </div>
 
-                    <div className="cart-form-field">
-                      <label htmlFor="cart-shipping-option">{language === 'en' ? 'Courier service' : 'Layanan pengiriman'}</label>
-                      <select
-                        id="cart-shipping-option"
-                        value={selectedShippingOptionKey}
-                        onChange={(event) => setSelectedShippingOptionKey(event.target.value)}
-                        required
-                        disabled={shippingStatus.state === 'loading' || shippingOptions.length === 0}
-                      >
-                        <option value="">
-                          {shippingStatus.state === 'loading'
-                            ? language === 'en'
-                              ? 'Loading shipping options...'
-                              : 'Memuat opsi pengiriman...'
-                            : language === 'en'
-                              ? 'Select a courier service'
-                              : 'Pilih layanan pengiriman'}
-                        </option>
-                        {shippingOptions.map((option) => (
-                          <option key={option.key} value={option.key}>
-                            {`${getShippingOptionLabel(option)} | ${option.duration} | ${formatCurrencyAmount(
-                              option.price,
-                              option.currency || checkoutTotals.currency,
-                              language,
-                            )}`}
-                          </option>
-                        ))}
-                      </select>
+                    <div className="cart-form-field cart-form-field-shipping">
+                      <ShippingOptionPicker
+                        options={shippingOptions}
+                        selectedKey={selectedShippingOptionKey}
+                        onSelect={setSelectedShippingOptionKey}
+                        loading={shippingStatus.state === 'loading'}
+                        disabled={shippingStatus.state === 'loading'}
+                        language={language}
+                        currency={checkoutTotals.currency}
+                      />
                     </div>
-
-                    {selectedShippingOption ? (
-                      <p className="cart-form-location-status">
-                        {language === 'en'
-                          ? `Selected shipping: ${getShippingOptionLabel(selectedShippingOption)} (${selectedShippingOption.duration})`
-                          : `Pengiriman terpilih: ${getShippingOptionLabel(selectedShippingOption)} (${selectedShippingOption.duration})`}
-                      </p>
-                    ) : null}
 
                     {shippingStatus.message ? (
                       <p className={`cart-status ${shippingStatus.state}`}>{shippingStatus.message}</p>

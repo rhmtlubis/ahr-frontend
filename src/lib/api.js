@@ -78,27 +78,15 @@ export async function saveCatalogOrder(payload) {
 }
 
 export async function fetchCatalogShippingRates(payload) {
-  const response = await fetch(getApiUrl('/api/catalog/shipping/rates'), {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Accept: 'application/json',
-    },
-    body: JSON.stringify(payload),
-  })
+  await ensureCsrfCookie()
 
-  const responsePayload = await response.json().catch(() => null)
+  try {
+    const response = await apiClient.post('/api/catalog/shipping/rates', payload)
 
-  if (!response.ok) {
-    const errorMessage =
-      responsePayload?.message ||
-      Object.values(responsePayload?.errors || {}).flat()[0] ||
-      'Gagal memuat opsi pengiriman'
-
-    throw new Error(errorMessage)
+    return response.data?.data || null
+  } catch (error) {
+    throw new Error(resolveApiError(error, 'Gagal memuat opsi pengiriman'))
   }
-
-  return responsePayload?.data || null
 }
 
 async function fetchCatalogLocationOptions(path, params = {}) {
