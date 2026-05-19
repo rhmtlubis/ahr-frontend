@@ -97,7 +97,22 @@ export function trackEvent(name, params = {}) {
   }
 }
 
-export function trackPageView(path = window.location.pathname + window.location.search) {
+export function sanitizeAnalyticsPath(pathname, search = '') {
+  if (!search) {
+    return pathname
+  }
+
+  const params = new URLSearchParams(search)
+  ;['token', 'auth', 'needs_phone', 'password', 'code'].forEach((key) => {
+    params.delete(key)
+  })
+
+  const sanitizedSearch = params.toString()
+
+  return sanitizedSearch ? `${pathname}?${sanitizedSearch}` : pathname
+}
+
+export function trackPageView(path = sanitizeAnalyticsPath(window.location.pathname, window.location.search)) {
   if (typeof window === 'undefined' || !window.gtag || !measurementId) {
     return
   }
@@ -107,7 +122,9 @@ export function trackPageView(path = window.location.pathname + window.location.
   })
 }
 
-export function initializeAnalyticsAndTrackCurrentPage(path = window.location.pathname + window.location.search) {
+export function initializeAnalyticsAndTrackCurrentPage(
+  path = sanitizeAnalyticsPath(window.location.pathname, window.location.search),
+) {
   if (!initializeAnalytics()) {
     return false
   }

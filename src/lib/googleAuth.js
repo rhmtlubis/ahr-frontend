@@ -6,8 +6,20 @@ export function isGoogleAuthEnabled() {
   return import.meta.env.VITE_GOOGLE_AUTH_ENABLED === 'true'
 }
 
-export function getCustomerGoogleAuthUrl(returnPath = '/account') {
-  const params = new URLSearchParams({ return_to: returnPath })
+export function sanitizeAuthReturnPath(returnPath = '/akun') {
+  if (typeof returnPath !== 'string' || returnPath === '') {
+    return '/akun'
+  }
+
+  if (!returnPath.startsWith('/') || returnPath.startsWith('//') || returnPath.includes('://')) {
+    return '/akun'
+  }
+
+  return returnPath
+}
+
+export function getCustomerGoogleAuthUrl(returnPath = '/akun') {
+  const params = new URLSearchParams({ return_to: sanitizeAuthReturnPath(returnPath) })
 
   return getBackendUrl(`/api/customer/auth/google/redirect?${params.toString()}`)
 }

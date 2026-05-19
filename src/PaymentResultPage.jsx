@@ -23,17 +23,12 @@ export default function PaymentResultPage({ status }) {
   const [searchParams] = useSearchParams()
   const orderNumber = searchParams.get('order')
   const paymentAccessToken = useMemo(() => {
-    const tokenFromUrl = searchParams.get('token')
-    if (tokenFromUrl) {
-      return tokenFromUrl
-    }
-
     if (!orderNumber) {
       return null
     }
 
     return getPendingPayment(orderNumber)?.paymentAccessToken || null
-  }, [orderNumber, searchParams])
+  }, [orderNumber])
   const [pageContent, setPageContent] = useState(() =>
     getLandingChromeContent({}, { hashPrefix: '/', locale: language }),
   )

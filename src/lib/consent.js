@@ -16,7 +16,7 @@ function setCookie(name, value, maxAgeInSeconds = ONE_YEAR_IN_SECONDS) {
     return
   }
 
-  document.cookie = `${name}=${encodeURIComponent(value)}; path=/; max-age=${maxAgeInSeconds}; SameSite=Lax`
+  document.cookie = `${name}=${encodeURIComponent(value)}; path=/; max-age=${maxAgeInSeconds}; SameSite=Lax${window.location.protocol === 'https:' ? '; Secure' : ''}`
 }
 
 function getCookie(name) {

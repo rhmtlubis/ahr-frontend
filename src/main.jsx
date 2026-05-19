@@ -6,7 +6,7 @@ import './index.css'
 import { CartProvider } from './lib/cart.jsx'
 import { CustomerProvider } from './lib/customer.jsx'
 import { LanguageProvider } from './lib/i18n.jsx'
-import { initializeAnalytics, trackPageView, updateConsent } from './lib/analytics'
+import { initializeAnalytics, sanitizeAnalyticsPath, trackPageView, updateConsent } from './lib/analytics'
 import { getBackendUrl } from './lib/api'
 import { captureMarketingAttribution } from './lib/attribution'
 import { getConsentPreferences } from './lib/consent'
@@ -61,7 +61,7 @@ function AnalyticsRouteTracker() {
     updateConsent(consentPreferences)
 
     if (initializeAnalytics()) {
-      trackPageView(`${location.pathname}${location.search}`)
+      trackPageView(sanitizeAnalyticsPath(location.pathname, location.search))
     }
   }, [location.pathname, location.search])
 

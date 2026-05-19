@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import { createPaymentTransaction, createPaymentTransactionForCustomer } from './api'
 
 const MIDTRANS_CLIENT_KEY = import.meta.env.VITE_MIDTRANS_CLIENT_KEY || ''
@@ -61,24 +61,7 @@ function loadSnapScript() {
 
 export function useMidtransPayment() {
   const snapRef = useRef(null)
-  const [isSnapReady, setIsSnapReady] = useState(false)
-
-  useEffect(() => {
-    if (!MIDTRANS_CLIENT_KEY) {
-      console.warn('VITE_MIDTRANS_CLIENT_KEY is not set. Payment will not work.')
-      return
-    }
-
-    loadSnapScript()
-      .then((snap) => {
-        snapRef.current = snap
-        setIsSnapReady(true)
-      })
-      .catch((error) => {
-        console.error('Failed to load Midtrans Snap:', error)
-        setIsSnapReady(false)
-      })
-  }, [])
+  const [isSnapReady, setIsSnapReady] = useState(Boolean(MIDTRANS_CLIENT_KEY))
 
   const payOrder = useCallback(async (orderNumber, paymentAccessToken, callbacks = {}) => {
     const { onSuccess, onPending, onError, onClose } = callbacks
@@ -94,6 +77,7 @@ export function useMidtransPayment() {
 
       if (!snapRef.current) {
         snapRef.current = await loadSnapScript()
+        setIsSnapReady(true)
       }
 
       if (!snapRef.current) {

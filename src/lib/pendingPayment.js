@@ -1,4 +1,5 @@
 const STORAGE_KEY = 'ahr-pending-payment-v1'
+const MAX_PENDING_AGE_MS = 24 * 60 * 60 * 1000
 
 export function savePendingPayment(orderNumber, paymentAccessToken) {
   if (!orderNumber || !paymentAccessToken) {
@@ -30,6 +31,12 @@ export function getPendingPayment(orderNumber) {
     const payload = JSON.parse(raw)
 
     if (payload?.orderNumber !== orderNumber || !payload?.paymentAccessToken) {
+      return null
+    }
+
+    if (payload?.savedAt && Date.now() - payload.savedAt > MAX_PENDING_AGE_MS) {
+      clearPendingPayment()
+
       return null
     }
 

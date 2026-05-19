@@ -140,10 +140,10 @@ export function fetchCatalogDistricts(cityCode) {
 export async function createPaymentTransaction(orderNumber, paymentAccessToken) {
   await ensureCsrfCookie()
 
-  const searchParams = new URLSearchParams({ token: paymentAccessToken })
-
   try {
-    const response = await apiClient.post(`/api/catalog/orders/${orderNumber}/pay?${searchParams.toString()}`)
+    const response = await apiClient.post(`/api/catalog/orders/${orderNumber}/pay`, {
+      token: paymentAccessToken,
+    })
     return response.data?.data || null
   } catch (error) {
     throw new Error(resolveApiError(error, 'Gagal membuat transaksi pembayaran'))
@@ -151,10 +151,12 @@ export async function createPaymentTransaction(orderNumber, paymentAccessToken) 
 }
 
 export async function fetchPaymentStatus(orderNumber, paymentAccessToken) {
-  const searchParams = new URLSearchParams({ token: paymentAccessToken })
-
   try {
-    const response = await apiClient.get(`/api/catalog/orders/${orderNumber}/payment-status?${searchParams.toString()}`)
+    const response = await apiClient.get(`/api/catalog/orders/${orderNumber}/payment-status`, {
+      headers: {
+        'X-Payment-Access-Token': paymentAccessToken,
+      },
+    })
     return response.data?.data || null
   } catch (error) {
     throw new Error(resolveApiError(error, 'Gagal memuat status pembayaran'))
