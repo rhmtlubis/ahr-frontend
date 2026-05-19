@@ -67,6 +67,8 @@ export async function fetchCatalogPriceQuote({
 }
 
 export async function saveCatalogOrder(payload) {
+  await ensureCsrfCookie()
+
   try {
     const response = await apiClient.post('/api/catalog/orders', payload)
     return response.data?.data || null
@@ -107,51 +109,27 @@ export function fetchCatalogDistricts(cityCode) {
 }
 
 export async function createPaymentTransaction(orderNumber, paymentAccessToken) {
+  await ensureCsrfCookie()
+
   const searchParams = new URLSearchParams({ token: paymentAccessToken })
 
-  const response = await fetch(getApiUrl(`/api/catalog/orders/${orderNumber}/pay?${searchParams.toString()}`), {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Accept: 'application/json',
-    },
-  })
-
-  const responsePayload = await response.json().catch(() => null)
-
-  if (!response.ok) {
-    const errorMessage =
-      responsePayload?.message ||
-      Object.values(responsePayload?.errors || {}).flat()[0] ||
-      'Gagal membuat transaksi pembayaran'
-
-    throw new Error(errorMessage)
+  try {
+    const response = await apiClient.post(`/api/catalog/orders/${orderNumber}/pay?${searchParams.toString()}`)
+    return response.data?.data || null
+  } catch (error) {
+    throw new Error(resolveApiError(error, 'Gagal membuat transaksi pembayaran'))
   }
-
-  return responsePayload?.data || null
 }
 
 export async function fetchPaymentStatus(orderNumber, paymentAccessToken) {
   const searchParams = new URLSearchParams({ token: paymentAccessToken })
 
-  const response = await fetch(getApiUrl(`/api/catalog/orders/${orderNumber}/payment-status?${searchParams.toString()}`), {
-    headers: {
-      Accept: 'application/json',
-    },
-  })
-
-  const responsePayload = await response.json().catch(() => null)
-
-  if (!response.ok) {
-    const errorMessage =
-      responsePayload?.message ||
-      Object.values(responsePayload?.errors || {}).flat()[0] ||
-      'Gagal memuat status pembayaran'
-
-    throw new Error(errorMessage)
+  try {
+    const response = await apiClient.get(`/api/catalog/orders/${orderNumber}/payment-status?${searchParams.toString()}`)
+    return response.data?.data || null
+  } catch (error) {
+    throw new Error(resolveApiError(error, 'Gagal memuat status pembayaran'))
   }
-
-  return responsePayload?.data || null
 }
 
 function resolveApiError(error, fallbackMessage) {
