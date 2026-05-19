@@ -77,6 +77,30 @@ export async function saveCatalogOrder(payload) {
   }
 }
 
+export async function fetchCatalogShippingRates(payload) {
+  const response = await fetch(getApiUrl('/api/catalog/shipping/rates'), {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+    },
+    body: JSON.stringify(payload),
+  })
+
+  const responsePayload = await response.json().catch(() => null)
+
+  if (!response.ok) {
+    const errorMessage =
+      responsePayload?.message ||
+      Object.values(responsePayload?.errors || {}).flat()[0] ||
+      'Gagal memuat opsi pengiriman'
+
+    throw new Error(errorMessage)
+  }
+
+  return responsePayload?.data || null
+}
+
 async function fetchCatalogLocationOptions(path, params = {}) {
   const searchParams = new URLSearchParams(
     Object.entries(params).filter(([, value]) => value !== undefined && value !== null && value !== ''),

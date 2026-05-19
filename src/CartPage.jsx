@@ -8,6 +8,7 @@ import SiteFooter from './components/layout/SiteFooter'
 import SiteHeader from './components/layout/SiteHeader'
 import { initializeAnalyticsAndTrackCurrentPage, trackEvent, updateConsent } from './lib/analytics'
 import {
+  fetchCatalogShippingRates,
   fetchCatalogCities,
   fetchCatalogDistricts,
   fetchCatalogProvinces,
@@ -201,6 +202,40 @@ function getCartTotals(items, language) {
   }
 }
 
+function getShippingOptionLabel(option) {
+  if (!option) {
+    return ''
+  }
+
+  return [option.courier_name, option.courier_service_name].filter(Boolean).join(' - ')
+}
+
+function getSelectedShippingOption(shippingOptions, selectedShippingOptionKey) {
+  if (!selectedShippingOptionKey) {
+    return null
+  }
+
+  return shippingOptions.find((option) => option.key === selectedShippingOptionKey) || null
+}
+
+function getCheckoutTotals(cartTotals, shippingOption, language) {
+  const shippingAmount = Number.isFinite(shippingOption?.price) ? shippingOption.price : 0
+  const shippingCurrency = shippingOption?.currency || cartTotals?.currency || (language === 'en' ? 'USD' : 'IDR')
+  const hasKnownCartTotal = Number.isFinite(cartTotals?.netAmount)
+  const grandTotalAmount = hasKnownCartTotal ? cartTotals.netAmount + shippingAmount : null
+
+  return {
+    currency: shippingCurrency,
+    shippingAmount,
+    shippingLabel: formatCurrencyAmount(shippingAmount, shippingCurrency, language),
+    grandTotalAmount,
+    grandTotalLabel:
+      grandTotalAmount !== null
+        ? formatCurrencyAmount(grandTotalAmount, shippingCurrency, language)
+        : null,
+  }
+}
+
 function normalizeGoogleAdsConversionValue(amountMinor, currency) {
   if (!Number.isFinite(amountMinor)) {
     return null
@@ -211,7 +246,8 @@ function normalizeGoogleAdsConversionValue(amountMinor, currency) {
 
 function resolveCheckoutConversionValue(savedOrder) {
   const orderCurrency = String(savedOrder?.summary?.currency || 'IDR').toUpperCase()
-  const orderNetAmountMinor = savedOrder?.summary?.net_total_amount_minor
+  const orderNetAmountMinor =
+    savedOrder?.summary?.grand_total_amount_minor ?? savedOrder?.summary?.net_total_amount_minor
 
   if (Number.isFinite(orderNetAmountMinor)) {
     return {
@@ -388,6 +424,26 @@ function buildCheckoutPayload(items, checkoutForm, language, cartTotals, locatio
   }
 }
 
+function buildShippingQuotePayload(items, checkoutForm, language) {
+  return {
+    province_code: checkoutForm.provinceCode,
+    city_code: checkoutForm.cityCode,
+    district_code: checkoutForm.districtCode,
+    items: items.map((item) => {
+      const priceAmounts = getItemPriceAmounts(item, language)
+
+      return {
+        product_slug: item.product.slug,
+        product_name: item.product.name,
+        product_category: item.product.category || null,
+        quantity: item.quantity,
+        expected_unit_amount_minor: priceAmounts?.unitNetAmount ?? null,
+        expected_original_unit_amount_minor: priceAmounts?.unitOriginalAmount ?? null,
+      }
+    }),
+  }
+}
+
 function mapCustomerToCheckoutForm(customer) {
   return {
     name: customer?.name || '',
@@ -457,7 +513,7 @@ export default function CartPage() {
     },
   )
   const { items, itemCount, updateCartItemQuantity, updateCartItemSize, distributeCartItemSizes, removeCartItem, clearCart } = useCart()
-  const { payOrder, isSnapReady } = useMidtransPayment()
+  const { payOrder } = useMidtransPayment()
   const [pageContent, setPageContent] = useState(() =>
     getLandingChromeContent({}, { hashPrefix: '/', locale: language }),
   )
@@ -471,6 +527,9 @@ export default function CartPage() {
   const [provinceOptions, setProvinceOptions] = useState([])
   const [cityOptions, setCityOptions] = useState([])
   const [districtOptions, setDistrictOptions] = useState([])
+  const [shippingOptions, setShippingOptions] = useState([])
+  const [selectedShippingOptionKey, setSelectedShippingOptionKey] = useState('')
+  const [shippingStatus, setShippingStatus] = useState({ state: 'idle', message: '' })
   const [locationLoading, setLocationLoading] = useState({
     provinces: false,
     cities: false,
@@ -478,6 +537,15 @@ export default function CartPage() {
   })
 
   const cartTotals = useMemo(() => getCartTotals(items, language), [items, language])
+  const checkoutItems = useMemo(() => materializeCheckoutItems(items, mixedSizeDrafts), [items, mixedSizeDrafts])
+  const selectedShippingOption = useMemo(
+    () => getSelectedShippingOption(shippingOptions, selectedShippingOptionKey),
+    [shippingOptions, selectedShippingOptionKey],
+  )
+  const checkoutTotals = useMemo(
+    () => getCheckoutTotals(cartTotals, selectedShippingOption, language),
+    [cartTotals, selectedShippingOption, language],
+  )
 
   useEffect(() => {
     fetch(getApiUrl(`/api/catalog/landing-page?locale=${language}`), {
@@ -679,6 +747,85 @@ export default function CartPage() {
     }
   }, [checkoutForm.cityCode])
 
+  useEffect(() => {
+    if (checkoutForm.fulfillment !== 'delivery') {
+      setShippingOptions([])
+      setSelectedShippingOptionKey('')
+      setShippingStatus({ state: 'idle', message: '' })
+
+      return
+    }
+
+    if (!checkoutForm.provinceCode || !checkoutForm.cityCode || !checkoutForm.districtCode || checkoutItems.length === 0) {
+      setShippingOptions([])
+      setSelectedShippingOptionKey('')
+      setShippingStatus({ state: 'idle', message: '' })
+
+      return
+    }
+
+    let isActive = true
+
+    setShippingStatus({ state: 'loading', message: '' })
+
+    fetchCatalogShippingRates(buildShippingQuotePayload(checkoutItems, checkoutForm, language))
+      .then((data) => {
+        if (!isActive) {
+          return
+        }
+
+        const rates = Array.isArray(data?.rates)
+          ? data.rates.map((rate, index) => ({
+              ...rate,
+              key: `${rate.company || rate.courier_code}-${rate.courier_type}-${rate.courier_service_code || index}`,
+            }))
+          : []
+
+        setShippingOptions(rates)
+        setSelectedShippingOptionKey((current) => {
+          if (current && rates.some((rate) => rate.key === current)) {
+            return current
+          }
+
+          return rates[0]?.key || ''
+        })
+        setShippingStatus(
+          rates.length > 0
+            ? { state: 'success', message: '' }
+            : {
+                state: 'error',
+                message:
+                  language === 'en'
+                    ? 'No shipping service is currently available for this destination.'
+                    : 'Belum ada layanan pengiriman yang tersedia untuk tujuan ini.',
+              },
+        )
+      })
+      .catch((error) => {
+        if (!isActive) {
+          return
+        }
+
+        setShippingOptions([])
+        setSelectedShippingOptionKey('')
+        setShippingStatus({
+          state: 'error',
+          message: error.message,
+        })
+      })
+
+    return () => {
+      isActive = false
+    }
+  }, [
+    checkoutForm.fulfillment,
+    checkoutForm.provinceCode,
+    checkoutForm.cityCode,
+    checkoutForm.districtCode,
+    checkoutItems,
+    language,
+  ])
+
   const getMixedSizeDraft = (item) => {
     const savedDraft = mixedSizeDrafts[item.id]
 
@@ -809,11 +956,21 @@ export default function CartPage() {
       return
     }
 
-    const checkoutItems = materializeCheckoutItems(items, mixedSizeDrafts)
     const locationOptions = {
       provinces: provinceOptions,
       cities: cityOptions,
       districts: districtOptions,
+    }
+
+    if (checkoutForm.fulfillment === 'delivery' && !selectedShippingOption) {
+      setCheckoutStatus({
+        state: 'error',
+        message:
+          language === 'en'
+            ? 'Please choose one shipping service before checkout.'
+            : 'Silakan pilih salah satu layanan pengiriman sebelum checkout.',
+      })
+      return
     }
 
     setCheckoutStatus({
@@ -838,7 +995,21 @@ export default function CartPage() {
 
       setCustomerSession(syncedCustomer)
       const savedOrder = await saveCatalogOrder(
-        buildCheckoutPayload(checkoutItems, checkoutForm, language, cartTotals, locationOptions),
+        {
+          ...buildCheckoutPayload(checkoutItems, checkoutForm, language, cartTotals, locationOptions),
+          shipping_option: selectedShippingOption
+            ? {
+                provider: selectedShippingOption.provider,
+                company: selectedShippingOption.company,
+                courier_code: selectedShippingOption.courier_code,
+                courier_name: selectedShippingOption.courier_name,
+                courier_service_code: selectedShippingOption.courier_service_code,
+                courier_service_name: selectedShippingOption.courier_service_name,
+                courier_type: selectedShippingOption.courier_type,
+                price: selectedShippingOption.price,
+              }
+            : undefined,
+        },
       )
 
       setCheckoutStatus({
@@ -1116,6 +1287,18 @@ export default function CartPage() {
                 <div className="cart-summary-row nett">
                   <span>{t('cart.nettTotal')}</span>
                   <strong>{cartTotals?.netLabel || t('cart.subtotalManual')}</strong>
+                </div>
+                {checkoutForm.fulfillment === 'delivery' ? (
+                  <div className="cart-summary-row">
+                    <span>{language === 'en' ? 'Shipping' : 'Ongkir'}</span>
+                    <strong>
+                      {selectedShippingOption ? checkoutTotals.shippingLabel : language === 'en' ? 'Choose courier' : 'Pilih kurir'}
+                    </strong>
+                  </div>
+                ) : null}
+                <div className="cart-summary-row nett">
+                  <span>{language === 'en' ? 'Grand total' : 'Total akhir'}</span>
+                  <strong>{checkoutTotals.grandTotalLabel || cartTotals?.netLabel || t('cart.subtotalManual')}</strong>
                 </div>
               </div>
 
@@ -1398,6 +1581,48 @@ export default function CartPage() {
                         required
                       />
                     </div>
+
+                    <div className="cart-form-field">
+                      <label htmlFor="cart-shipping-option">{language === 'en' ? 'Courier service' : 'Layanan pengiriman'}</label>
+                      <select
+                        id="cart-shipping-option"
+                        value={selectedShippingOptionKey}
+                        onChange={(event) => setSelectedShippingOptionKey(event.target.value)}
+                        required
+                        disabled={shippingStatus.state === 'loading' || shippingOptions.length === 0}
+                      >
+                        <option value="">
+                          {shippingStatus.state === 'loading'
+                            ? language === 'en'
+                              ? 'Loading shipping options...'
+                              : 'Memuat opsi pengiriman...'
+                            : language === 'en'
+                              ? 'Select a courier service'
+                              : 'Pilih layanan pengiriman'}
+                        </option>
+                        {shippingOptions.map((option) => (
+                          <option key={option.key} value={option.key}>
+                            {`${getShippingOptionLabel(option)} | ${option.duration} | ${formatCurrencyAmount(
+                              option.price,
+                              option.currency || checkoutTotals.currency,
+                              language,
+                            )}`}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {selectedShippingOption ? (
+                      <p className="cart-form-location-status">
+                        {language === 'en'
+                          ? `Selected shipping: ${getShippingOptionLabel(selectedShippingOption)} (${selectedShippingOption.duration})`
+                          : `Pengiriman terpilih: ${getShippingOptionLabel(selectedShippingOption)} (${selectedShippingOption.duration})`}
+                      </p>
+                    ) : null}
+
+                    {shippingStatus.message ? (
+                      <p className={`cart-status ${shippingStatus.state}`}>{shippingStatus.message}</p>
+                    ) : null}
                   </>
                 ) : null}
 
