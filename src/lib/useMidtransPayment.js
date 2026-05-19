@@ -91,7 +91,7 @@ export function useMidtransPayment() {
       }
 
       if (!snapRef.current) {
-        await loadSnapScript()
+        snapRef.current = await loadSnapScript()
       }
 
       if (!snapRef.current) {

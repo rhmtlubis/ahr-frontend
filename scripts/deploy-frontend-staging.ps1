@@ -35,6 +35,11 @@ $remoteScript = @'
 set -euo pipefail
 cd __REMOTE_REPO__
 
+MIDTRANS_CLIENT_KEY=""
+if [ -f /opt/ahrcorporation/backend-staging/.env ]; then
+  MIDTRANS_CLIENT_KEY="$(grep -E '^MIDTRANS_CLIENT_KEY=' /opt/ahrcorporation/backend-staging/.env | tail -n 1 | cut -d= -f2-)"
+fi
+
 git stash push -m "auto-deploy backup $(date -u +%Y%m%dT%H%M%SZ)" >/dev/null || true
 git pull --ff-only origin __BRANCH__
 
@@ -42,6 +47,7 @@ cat > .env.production <<'EOF'
 VITE_API_BASE_URL=__API_URL__
 VITE_PRERENDER_API_BASE_URL=__API_URL__
 VITE_SITE_URL=__FRONTEND_URL__
+VITE_MIDTRANS_CLIENT_KEY=__MIDTRANS_CLIENT_KEY__
 VITE_MIDTRANS_IS_PRODUCTION=false
 EOF
 
@@ -52,7 +58,7 @@ cd __REMOTE_REPO__
 git stash pop --index >/dev/null 2>&1 || true
 '@
 
-$remoteScript = $remoteScript.Replace('__REMOTE_REPO__', $RemoteRepo).Replace('__DEPLOY_DIR__', $DeployDir).Replace('__BRANCH__', $Branch).Replace('__FRONTEND_URL__', $FrontendUrl).Replace('__API_URL__', $ApiUrl)
+$remoteScript = $remoteScript.Replace('__REMOTE_REPO__', $RemoteRepo).Replace('__DEPLOY_DIR__', $DeployDir).Replace('__BRANCH__', $Branch).Replace('__FRONTEND_URL__', $FrontendUrl).Replace('__API_URL__', $ApiUrl).Replace('__MIDTRANS_CLIENT_KEY__', '${MIDTRANS_CLIENT_KEY}')
 $remoteScript = $remoteScript -replace "`r`n", "`n"
 
 $tempScriptPath = Join-Path ([System.IO.Path]::GetTempPath()) ("ahr-frontend-staging-deploy-{0}.sh" -f ([guid]::NewGuid().ToString('N')))

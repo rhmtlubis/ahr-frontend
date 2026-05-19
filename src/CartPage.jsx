@@ -874,14 +874,6 @@ export default function CartPage() {
         lead_stage: 'pending_payment',
       })
 
-      if (!isSnapReady) {
-        setCheckoutStatus({
-          state: 'error',
-          message: 'Payment gateway belum siap. Silakan refresh halaman.',
-        })
-        return
-      }
-
       setCheckoutStatus({
         state: 'loading',
         message: 'Membuka halaman pembayaran...',
