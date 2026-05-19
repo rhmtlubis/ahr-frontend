@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { createPaymentTransaction } from './api'
+import { createPaymentTransaction, createPaymentTransactionForCustomer } from './api'
 
 const MIDTRANS_CLIENT_KEY = import.meta.env.VITE_MIDTRANS_CLIENT_KEY || ''
 const MIDTRANS_IS_PRODUCTION = import.meta.env.VITE_MIDTRANS_IS_PRODUCTION === 'true'
@@ -84,7 +84,9 @@ export function useMidtransPayment() {
     const { onSuccess, onPending, onError, onClose } = callbacks
 
     try {
-      const transaction = await createPaymentTransaction(orderNumber, paymentAccessToken)
+      const transaction = paymentAccessToken
+        ? await createPaymentTransaction(orderNumber, paymentAccessToken)
+        : await createPaymentTransactionForCustomer(orderNumber)
 
       if (!transaction?.snap_token) {
         throw new Error('Snap token tidak tersedia')

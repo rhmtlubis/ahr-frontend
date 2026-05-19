@@ -1,25 +1,45 @@
-import { useEffect, useState } from 'react'
-import { ArrowLeft, CheckCircle, Clock, MessageCircleMore, XCircle } from 'lucide-react'
-import { Link, useSearchParams } from 'react-router-dom'
+import { useEffect, useMemo, useState } from 'react'
+import { ArrowLeft, CheckCircle, Clock, CreditCard, MessageCircleMore, XCircle } from 'lucide-react'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import './App.css'
 import CookieConsentBanner from './components/layout/CookieConsentBanner'
 import SiteFooter from './components/layout/SiteFooter'
 import SiteHeader from './components/layout/SiteHeader'
 import { getApiUrl } from './lib/api'
+import { useCustomer } from './lib/customer.jsx'
 import { getConsentPreferences, setConsentPreferences } from './lib/consent'
 import { useLanguage } from './lib/i18n.jsx'
 import { getLandingChromeContent } from './lib/landingContent'
+import { clearPendingPayment, getPendingPayment } from './lib/pendingPayment'
 import { updateConsent } from './lib/analytics'
+import { useMidtransPayment } from './lib/useMidtransPayment'
 import useDocumentTitle from './lib/useDocumentTitle'
 
 export default function PaymentResultPage({ status }) {
   const { language, t } = useLanguage()
+  const navigate = useNavigate()
+  const { customer } = useCustomer()
+  const { payOrder, isSnapReady } = useMidtransPayment()
   const [searchParams] = useSearchParams()
   const orderNumber = searchParams.get('order')
+  const paymentAccessToken = useMemo(() => {
+    const tokenFromUrl = searchParams.get('token')
+    if (tokenFromUrl) {
+      return tokenFromUrl
+    }
+
+    if (!orderNumber) {
+      return null
+    }
+
+    return getPendingPayment(orderNumber)?.paymentAccessToken || null
+  }, [orderNumber, searchParams])
   const [pageContent, setPageContent] = useState(() =>
     getLandingChromeContent({}, { hashPrefix: '/', locale: language }),
   )
   const [consentPreferences, setConsentPreferencesState] = useState(() => getConsentPreferences())
+  const [paymentStatus, setPaymentStatus] = useState({ state: 'idle', message: '' })
+  const canRetryPayment = (status === 'pending' || status === 'error') && Boolean(orderNumber)
 
   useDocumentTitle(
     status === 'success'
@@ -93,8 +113,8 @@ export default function PaymentResultPage({ status }) {
       message: language === 'en'
         ? 'Your payment is being processed. Please complete the payment according to the instructions sent.'
         : 'Pembayaran Anda sedang diproses. Silakan selesaikan pembayaran sesuai instruksi yang dikirim.',
-      actionLabel: language === 'en' ? 'Continue Shopping' : 'Lanjut Belanja',
-      actionHref: '/all-products',
+      actionLabel: language === 'en' ? 'View order detail' : 'Lihat detail pesanan',
+      actionHref: orderNumber ? `/akun/pesanan/${orderNumber}` : '/akun',
       secondaryAction: pageContent.brand?.whatsapp_number
         ? {
             label: language === 'en' ? 'Contact via WhatsApp' : 'Hubungi via WhatsApp',
@@ -109,8 +129,8 @@ export default function PaymentResultPage({ status }) {
       message: language === 'en'
         ? 'Your payment failed or was cancelled. You can try again or contact us for assistance.'
         : 'Pembayaran Anda gagal atau dibatalkan. Anda dapat mencoba lagi atau hubungi kami untuk bantuan.',
-      actionLabel: language === 'en' ? 'Try Again' : 'Coba Lagi',
-      actionHref: '/cart',
+      actionLabel: language === 'en' ? 'View order detail' : 'Lihat detail pesanan',
+      actionHref: orderNumber ? `/akun/pesanan/${orderNumber}` : '/akun',
       secondaryAction: pageContent.brand?.whatsapp_number
         ? {
             label: language === 'en' ? 'Contact via WhatsApp' : 'Hubungi via WhatsApp',
@@ -122,6 +142,53 @@ export default function PaymentResultPage({ status }) {
 
   const currentConfig = config[status] || config.error
   const IconComponent = currentConfig.icon
+
+  const handlePayAgain = async () => {
+    if (!orderNumber) {
+      return
+    }
+
+    setPaymentStatus({
+      state: 'loading',
+      message: language === 'en' ? 'Opening payment...' : 'Membuka pembayaran...',
+    })
+
+    try {
+      await payOrder(orderNumber, paymentAccessToken, {
+        onSuccess: () => {
+          clearPendingPayment()
+          setPaymentStatus({ state: 'idle', message: '' })
+          navigate(`/payment/success?order=${orderNumber}`)
+        },
+        onPending: () => {
+          setPaymentStatus({ state: 'idle', message: '' })
+          if (customer) {
+            navigate(`/akun/pesanan/${orderNumber}`)
+            return
+          }
+
+          navigate(`/payment/pending?order=${orderNumber}`)
+        },
+        onError: () => {
+          setPaymentStatus({
+            state: 'error',
+            message: language === 'en' ? 'Payment failed or was cancelled.' : 'Pembayaran gagal atau dibatalkan.',
+          })
+        },
+        onClose: () => {
+          setPaymentStatus({
+            state: 'idle',
+            message:
+              language === 'en'
+                ? 'Payment window closed. You can try again anytime.'
+                : 'Pembayaran ditutup. Anda bisa mencoba lagi kapan saja.',
+          })
+        },
+      })
+    } catch (error) {
+      setPaymentStatus({ state: 'error', message: error.message })
+    }
+  }
 
   return (
     <div className="app-shell">
@@ -164,7 +231,25 @@ export default function PaymentResultPage({ status }) {
             <p className="payment-result-message">{currentConfig.message}</p>
 
             <div className="payment-result-actions">
-              <Link className="cta-button cta-button-dark" to={currentConfig.actionHref}>
+              {canRetryPayment ? (
+                <button
+                  className="cta-button cta-button-dark"
+                  type="button"
+                  disabled={paymentStatus.state === 'loading' || !isSnapReady}
+                  onClick={handlePayAgain}
+                >
+                  <CreditCard size={18} />
+                  <span>
+                    {paymentStatus.state === 'loading'
+                      ? t('common.submitting')
+                      : language === 'en'
+                        ? 'Pay now'
+                        : 'Bayar sekarang'}
+                  </span>
+                </button>
+              ) : null}
+
+              <Link className="cta-button cta-button-light" to={currentConfig.actionHref}>
                 {currentConfig.actionLabel}
               </Link>
 
@@ -180,6 +265,10 @@ export default function PaymentResultPage({ status }) {
                 </a>
               )}
             </div>
+
+            {paymentStatus.message ? (
+              <p className={`cart-status ${paymentStatus.state === 'error' ? 'error' : 'success'}`}>{paymentStatus.message}</p>
+            ) : null}
           </div>
         </section>
       </main>

@@ -181,11 +181,15 @@ export async function registerCustomer(payload) {
   }
 }
 
-export async function loginCustomer(payload) {
+export async function loginCustomer({ email, password, remember = true }) {
   await ensureCsrfCookie()
 
   try {
-    const response = await apiClient.post('/api/customer/auth/login', payload)
+    const response = await apiClient.post('/api/customer/auth/login', {
+      email,
+      password,
+      remember,
+    })
 
     return response.data?.data || null
   } catch (error) {
@@ -212,5 +216,38 @@ export async function logoutCustomer() {
     await apiClient.post('/api/customer/auth/logout')
   } catch (error) {
     throw new Error(resolveApiError(error, 'Gagal logout customer'))
+  }
+}
+
+export async function fetchCustomerOrders() {
+  await ensureCsrfCookie()
+
+  try {
+    const response = await apiClient.get('/api/customer/auth/orders')
+    return response.data?.data || []
+  } catch (error) {
+    throw new Error(resolveApiError(error, 'Gagal memuat daftar pesanan'))
+  }
+}
+
+export async function fetchCustomerOrder(orderNumber) {
+  await ensureCsrfCookie()
+
+  try {
+    const response = await apiClient.get(`/api/customer/auth/orders/${orderNumber}`)
+    return response.data?.data || null
+  } catch (error) {
+    throw new Error(resolveApiError(error, 'Gagal memuat detail pesanan'))
+  }
+}
+
+export async function createPaymentTransactionForCustomer(orderNumber) {
+  await ensureCsrfCookie()
+
+  try {
+    const response = await apiClient.post(`/api/catalog/orders/${orderNumber}/pay`)
+    return response.data?.data || null
+  } catch (error) {
+    throw new Error(resolveApiError(error, 'Gagal membuat transaksi pembayaran'))
   }
 }

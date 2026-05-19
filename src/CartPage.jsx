@@ -26,6 +26,7 @@ import { getConsentPreferences, setConsentPreferences } from './lib/consent'
 import { useCustomer } from './lib/customer.jsx'
 import { useLanguage } from './lib/i18n.jsx'
 import { getLandingChromeContent } from './lib/landingContent'
+import { clearPendingPayment, savePendingPayment } from './lib/pendingPayment'
 import { useMidtransPayment } from './lib/useMidtransPayment'
 import { clearPersonalizationData } from './lib/personalization'
 import { formatCurrencyAmount, getProductPriceDisplay } from './lib/price'
@@ -1038,6 +1039,8 @@ export default function CartPage() {
         lead_stage: 'pending_payment',
       })
 
+      savePendingPayment(savedOrder.order_number, savedOrder.payment_access_token)
+
       setCheckoutStatus({
         state: 'loading',
         message: 'Membuka halaman pembayaran...',
@@ -1045,6 +1048,7 @@ export default function CartPage() {
 
       await payOrder(savedOrder.order_number, savedOrder.payment_access_token, {
         onSuccess: () => {
+          clearPendingPayment()
           clearCart()
           setCheckoutForm((current) => ({
             ...current,
@@ -1054,25 +1058,31 @@ export default function CartPage() {
           navigate(`/payment/success?order=${savedOrder.order_number}`)
         },
         onPending: () => {
-          clearCart()
-          setCheckoutForm((current) => ({
-            ...current,
-            notes: '',
-          }))
-          setMixedSizeDrafts({})
-          navigate(`/payment/pending?order=${savedOrder.order_number}`)
+          setCheckoutStatus({
+            state: 'idle',
+            message:
+              language === 'en'
+                ? 'Payment is pending. You can complete it from your order detail.'
+                : 'Pembayaran masih pending. Anda bisa menyelesaikannya dari detail pesanan.',
+          })
+          navigate(`/akun/pesanan/${savedOrder.order_number}`)
         },
         onError: () => {
           setCheckoutStatus({
             state: 'error',
             message: 'Pembayaran gagal atau dibatalkan.',
           })
+          navigate(`/akun/pesanan/${savedOrder.order_number}`)
         },
         onClose: () => {
           setCheckoutStatus({
             state: 'idle',
-            message: 'Pembayaran ditutup. Anda dapat mencoba lagi.',
+            message:
+              language === 'en'
+                ? 'Payment window closed. Continue from your order detail anytime.'
+                : 'Pembayaran ditutup. Anda bisa melanjutkan dari detail pesanan kapan saja.',
           })
+          navigate(`/akun/pesanan/${savedOrder.order_number}`)
         },
       })
     } catch (error) {

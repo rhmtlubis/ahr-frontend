@@ -1,6 +1,6 @@
 /* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useEffect, useMemo, useState } from 'react'
-import { fetchCurrentCustomer } from './api'
+import { ensureCsrfCookie, fetchCurrentCustomer } from './api'
 
 const CustomerContext = createContext(null)
 
@@ -11,7 +11,8 @@ export function CustomerProvider({ children }) {
   useEffect(() => {
     let isActive = true
 
-    fetchCurrentCustomer()
+    ensureCsrfCookie()
+      .then(() => fetchCurrentCustomer())
       .then((currentCustomer) => {
         if (!isActive) {
           return
