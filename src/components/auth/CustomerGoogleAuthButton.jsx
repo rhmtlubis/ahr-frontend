@@ -1,4 +1,4 @@
-import { isGoogleAuthEnabled, getCustomerGoogleAuthUrl } from '../lib/googleAuth'
+import { isGoogleAuthEnabled, getCustomerGoogleAuthUrl } from '../../lib/googleAuth'
 
 function GoogleIcon() {
   return (

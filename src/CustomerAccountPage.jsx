@@ -145,6 +145,7 @@ export default function CustomerAccountPage() {
   const [profileForm, setProfileForm] = useState(defaultProfileForm)
   const [authStatus, setAuthStatus] = useState({ state: 'idle', message: '' })
   const [profileStatus, setProfileStatus] = useState({ state: 'idle', message: '' })
+  const [profileFieldErrors, setProfileFieldErrors] = useState({})
   const [consentPreferences, setConsentPreferencesState] = useState(() => getConsentPreferences())
   const [provinceOptions, setProvinceOptions] = useState([])
   const [cityOptions, setCityOptions] = useState([])
@@ -425,6 +426,10 @@ export default function CustomerAccountPage() {
       setProfileStatus({ state: 'idle', message: '' })
     }
 
+    if (Object.keys(profileFieldErrors).length > 0) {
+      setProfileFieldErrors({})
+    }
+
     setProfileForm((current) => ({
       ...current,
       ...updates,
@@ -485,6 +490,7 @@ export default function CustomerAccountPage() {
   const handleProfileSave = async (event) => {
     event.preventDefault()
     setProfileStatus({ state: 'loading', message: t('cart.profileSyncing') })
+    setProfileFieldErrors({})
 
     try {
       const nextCustomer = await updateCustomerProfile({
@@ -512,7 +518,12 @@ export default function CustomerAccountPage() {
         message: language === 'en' ? 'Customer profile saved.' : 'Profil customer berhasil disimpan.',
       })
     } catch (error) {
+      setProfileFieldErrors(error.fieldErrors || {})
       setProfileStatus({ state: 'error', message: error.message })
+
+      if (error.fieldErrors?.whatsapp) {
+        document.getElementById('profile-whatsapp')?.focus()
+      }
     }
   }
 
@@ -765,10 +776,18 @@ export default function CustomerAccountPage() {
                     <input
                       id="profile-email"
                       type="email"
+                      className={profileFieldErrors.email ? 'has-error' : undefined}
                       value={profileForm.email}
                       onChange={(event) => updateProfileForm({ email: event.target.value })}
                       required
+                      aria-invalid={profileFieldErrors.email ? 'true' : undefined}
+                      aria-describedby={profileFieldErrors.email ? 'profile-email-error' : undefined}
                     />
+                    {profileFieldErrors.email ? (
+                      <p className="cart-field-error" id="profile-email-error">
+                        {profileFieldErrors.email}
+                      </p>
+                    ) : null}
                   </div>
                 </div>
 
@@ -776,10 +795,24 @@ export default function CustomerAccountPage() {
                   <label htmlFor="profile-whatsapp">{t('cart.customerWhatsapp')}</label>
                   <input
                     id="profile-whatsapp"
+                    className={profileFieldErrors.whatsapp ? 'has-error' : undefined}
                     value={profileForm.whatsapp}
                     onChange={(event) => updateProfileForm({ whatsapp: event.target.value })}
                     required
+                    aria-invalid={profileFieldErrors.whatsapp ? 'true' : undefined}
+                    aria-describedby={profileFieldErrors.whatsapp ? 'profile-whatsapp-error' : undefined}
                   />
+                  {profileFieldErrors.whatsapp ? (
+                    <p className="cart-field-error" id="profile-whatsapp-error">
+                      {profileFieldErrors.whatsapp}
+                    </p>
+                  ) : (
+                    <p className="cart-field-hint">
+                      {language === 'en'
+                        ? 'Use the same number for order updates via WhatsApp.'
+                        : 'Gunakan nomor yang sama untuk update pesanan via WhatsApp.'}
+                    </p>
+                  )}
                 </div>
 
                 <div className="cart-form-field">

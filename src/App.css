@@ -4311,6 +4311,27 @@ main {
   gap: 12px;
 }
 
+.cart-field-error {
+  color: #b42318;
+  font-size: 0.84rem;
+  line-height: 1.45;
+  margin: 0.35rem 0 0;
+}
+
+.cart-field-hint {
+  color: var(--text-700);
+  font-size: 0.82rem;
+  line-height: 1.45;
+  margin: 0.35rem 0 0;
+}
+
+.cart-form-field input.has-error,
+.cart-form-field textarea.has-error,
+.cart-form-field select.has-error {
+  border-color: #b42318;
+  box-shadow: 0 0 0 1px rgba(180, 35, 24, 0.15);
+}
+
 .customer-account-card {
   background:
     linear-gradient(180deg, rgba(2, 37, 84, 0.06), rgba(2, 37, 84, 0.02)),

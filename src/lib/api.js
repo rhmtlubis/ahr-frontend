@@ -163,13 +163,36 @@ export async function fetchPaymentStatus(orderNumber, paymentAccessToken) {
 
 function resolveApiError(error, fallbackMessage) {
   const responsePayload = error?.response?.data
+  const firstFieldError = Object.values(responsePayload?.errors || {}).flat()[0]
 
-  return (
-    responsePayload?.message ||
-    Object.values(responsePayload?.errors || {}).flat()[0] ||
-    error?.message ||
-    fallbackMessage
+  if (typeof firstFieldError === 'string' && !firstFieldError.startsWith('validation.')) {
+    return firstFieldError
+  }
+
+  return responsePayload?.message || error?.message || fallbackMessage
+}
+
+function parseApiFieldErrors(error) {
+  const errors = error?.response?.data?.errors
+
+  if (!errors || typeof errors !== 'object') {
+    return {}
+  }
+
+  return Object.fromEntries(
+    Object.entries(errors).map(([field, messages]) => {
+      const message = Array.isArray(messages) ? messages[0] : messages
+
+      return [field, typeof message === 'string' && message.startsWith('validation.') ? null : message]
+    }).filter(([, message]) => message),
   )
+}
+
+function createApiError(error, fallbackMessage) {
+  const apiError = new Error(resolveApiError(error, fallbackMessage))
+  apiError.fieldErrors = parseApiFieldErrors(error)
+
+  return apiError
 }
 
 function isUnauthorizedError(error) {
@@ -242,7 +265,7 @@ export async function updateCustomerProfile(payload) {
 
     return response.data?.data || null
   } catch (error) {
-    throw new Error(resolveApiError(error, 'Gagal menyimpan profil customer'))
+    throw createApiError(error, 'Gagal menyimpan profil customer')
   }
 }
 
