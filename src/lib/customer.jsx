@@ -1,6 +1,6 @@
 /* eslint-disable react-refresh/only-export-components */
-import { createContext, useContext, useEffect, useMemo, useState } from 'react'
-import { ensureCsrfCookie, fetchCurrentCustomer } from './api'
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
+import { ensureCsrfCookie, fetchCurrentCustomer, setUnauthorizedHandler } from './api'
 
 const CustomerContext = createContext(null)
 
@@ -8,8 +8,22 @@ export function CustomerProvider({ children }) {
   const [customer, setCustomer] = useState(null)
   const [isLoading, setIsLoading] = useState(true)
 
+  const refreshCustomer = useCallback(async () => {
+    await ensureCsrfCookie()
+    const currentCustomer = await fetchCurrentCustomer()
+    setCustomer(currentCustomer)
+
+    return currentCustomer
+  }, [])
+
   useEffect(() => {
     let isActive = true
+
+    setUnauthorizedHandler(() => {
+      if (isActive) {
+        setCustomer(null)
+      }
+    })
 
     ensureCsrfCookie()
       .then(() => fetchCurrentCustomer())
@@ -37,6 +51,7 @@ export function CustomerProvider({ children }) {
 
     return () => {
       isActive = false
+      setUnauthorizedHandler(null)
     }
   }, [])
 
@@ -45,8 +60,9 @@ export function CustomerProvider({ children }) {
       customer,
       isLoading,
       setCustomer,
+      refreshCustomer,
     }),
-    [customer, isLoading],
+    [customer, isLoading, refreshCustomer],
   )
 
   return <CustomerContext.Provider value={value}>{children}</CustomerContext.Provider>

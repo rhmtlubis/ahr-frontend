@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from 'react'
-import { ArrowLeft, LockKeyhole, LogOut, Mail, MapPin, Package } from 'lucide-react'
-import { Link } from 'react-router-dom'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { ArrowLeft, ChevronRight, LockKeyhole, LogOut, Mail, MapPin, Package } from 'lucide-react'
+import { Link, useLocation } from 'react-router-dom'
 import './App.css'
 import CookieConsentBanner from './components/layout/CookieConsentBanner'
 import SiteFooter from './components/layout/SiteFooter'
@@ -37,6 +37,48 @@ function getOrderStatusLabel(status, language) {
   }
 
   return labels[status] || status
+}
+
+function formatOrderDate(isoDate, language) {
+  if (!isoDate) {
+    return '-'
+  }
+
+  return new Date(isoDate).toLocaleDateString(language === 'en' ? 'en-ID' : 'id-ID', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  })
+}
+
+function CustomerOrderRow({ order, language }) {
+  const statusLabel = getOrderStatusLabel(order.status, language)
+
+  return (
+    <Link className="customer-order-row" to={`/akun/pesanan/${order.order_number}`}>
+      <div className="customer-order-row-order">
+        <strong>{order.order_number}</strong>
+        <span>{formatOrderDate(order.created_at, language)}</span>
+      </div>
+
+      <span className={`customer-order-status customer-order-status-${order.status}`}>{statusLabel}</span>
+
+      <span className="customer-order-row-amount">
+        {formatCurrencyAmount(order.grand_total_amount_minor, order.currency || 'IDR')}
+      </span>
+
+      <span className="customer-order-row-action">
+        {order.can_pay ? (
+          <em>{language === 'en' ? 'Pay now' : 'Bayar sekarang'}</em>
+        ) : (
+          <>
+            <span>{language === 'en' ? 'Detail' : 'Detail'}</span>
+            <ChevronRight size={16} aria-hidden="true" />
+          </>
+        )}
+      </span>
+    </Link>
+  )
 }
 
 const defaultProfileForm = {
@@ -91,7 +133,8 @@ function mapCustomerToAuthForm(customer) {
 export default function CustomerAccountPage() {
   const { language, t } = useLanguage()
   const { itemCount } = useCart()
-  const { customer, isLoading: customerLoading, setCustomer } = useCustomer()
+  const location = useLocation()
+  const { customer, isLoading: customerLoading, setCustomer, refreshCustomer } = useCustomer()
   const [pageContent, setPageContent] = useState(() =>
     getLandingChromeContent({}, { hashPrefix: '/', locale: language }),
   )
@@ -162,32 +205,54 @@ export default function CustomerAccountPage() {
     setAuthForm(mapCustomerToAuthForm(customer))
   }, [customer])
 
+  const loadOrders = useCallback(async () => {
+    setOrdersStatus({ state: 'loading', message: '' })
+
+    try {
+      const data = await fetchCustomerOrders()
+      setOrders(data)
+      setOrdersStatus({ state: 'idle', message: '' })
+    } catch (error) {
+      const message = error.message || ''
+      setOrders([])
+      setOrdersStatus({
+        state: 'error',
+        message: message.toLowerCase().includes('unauthenticated')
+          ? language === 'en'
+            ? 'Your session has expired. Please sign in again.'
+            : 'Sesi Anda berakhir. Silakan login ulang.'
+          : message,
+      })
+
+      if (message.toLowerCase().includes('unauthenticated')) {
+        await refreshCustomer()
+      }
+    }
+  }, [language, refreshCustomer])
+
   useEffect(() => {
     if (!customer) {
       return
     }
 
-    let isActive = true
-    setOrdersStatus({ state: 'loading', message: '' })
+    loadOrders()
+  }, [customer, loadOrders])
 
-    fetchCustomerOrders()
-      .then((data) => {
-        if (isActive) {
-          setOrders(data)
-          setOrdersStatus({ state: 'idle', message: '' })
-        }
-      })
-      .catch((error) => {
-        if (isActive) {
-          setOrders([])
-          setOrdersStatus({ state: 'error', message: error.message })
-        }
-      })
-
-    return () => {
-      isActive = false
+  useEffect(() => {
+    if (location.pathname !== '/akun' || customerLoading) {
+      return
     }
-  }, [customer])
+
+    refreshCustomer().catch(() => {})
+  }, [location.pathname, customerLoading, refreshCustomer])
+
+  useEffect(() => {
+    if (location.pathname !== '/akun' || customerLoading || !customer) {
+      return
+    }
+
+    loadOrders()
+  }, [location.pathname, customerLoading, customer, loadOrders])
 
   useEffect(() => {
     let isActive = true
@@ -463,45 +528,57 @@ export default function CustomerAccountPage() {
 
         {customer ? (
           <section className="content-block section-soft customer-orders-section">
-            <div className="cart-items-heading">
+            <div className="customer-section-heading customer-section-heading-row">
               <div>
                 <span>{language === 'en' ? 'Orders' : 'Pesanan'}</span>
                 <h2>{language === 'en' ? 'Recent orders' : 'Pesanan terbaru'}</h2>
               </div>
+              {orders.length > 0 ? (
+                <p className="customer-orders-count">
+                  {orders.length} {language === 'en' ? 'orders' : 'pesanan'}
+                </p>
+              ) : null}
             </div>
 
             {ordersStatus.state === 'loading' ? (
               <p className="cart-auth-copy">{t('cart.authLoading')}</p>
             ) : ordersStatus.message ? (
-              <p className="cart-status error">{ordersStatus.message}</p>
+              <div className="customer-account-notice customer-account-notice-inline">
+                <p>{ordersStatus.message}</p>
+                {ordersStatus.message.toLowerCase().includes('login') ||
+                ordersStatus.message.toLowerCase().includes('sesi') ? (
+                  <button className="cart-auth-tab active" type="button" onClick={() => setCustomer(null)}>
+                    {language === 'en' ? 'Sign in again' : 'Login ulang'}
+                  </button>
+                ) : null}
+              </div>
             ) : orders.length === 0 ? (
               <div className="cart-empty-state customer-orders-empty">
                 <Package size={28} />
                 <p>{language === 'en' ? 'No orders yet.' : 'Belum ada pesanan.'}</p>
               </div>
             ) : (
-              <div className="customer-orders-list">
-                {orders.map((order) => (
-                  <Link key={order.order_number} className="customer-order-card" to={`/akun/pesanan/${order.order_number}`}>
-                    <div>
-                      <strong>{order.order_number}</strong>
-                      <p>{getOrderStatusLabel(order.status, language)}</p>
-                    </div>
-                    <div className="customer-order-card-meta">
-                      <span>{formatCurrencyAmount(order.grand_total_amount_minor, order.currency || 'IDR')}</span>
-                      {order.can_pay ? (
-                        <em>{language === 'en' ? 'Pay now' : 'Bayar sekarang'}</em>
-                      ) : null}
-                    </div>
-                  </Link>
-                ))}
+              <div className="customer-orders-panel">
+                <div className="customer-orders-table">
+                  <div className="customer-orders-table-head" aria-hidden="true">
+                    <span>{language === 'en' ? 'Order' : 'Pesanan'}</span>
+                    <span>{language === 'en' ? 'Status' : 'Status'}</span>
+                    <span>{language === 'en' ? 'Total' : 'Total'}</span>
+                    <span>{language === 'en' ? 'Action' : 'Aksi'}</span>
+                  </div>
+                  <div className="customer-orders-table-body">
+                    {orders.map((order) => (
+                      <CustomerOrderRow key={order.order_number} order={order} language={language} />
+                    ))}
+                  </div>
+                </div>
               </div>
             )}
           </section>
         ) : null}
 
-        <section className="content-block section-soft account-page-layout">
-          <aside className="cart-summary-panel">
+        <section className="content-block section-soft account-page-layout customer-account-shell">
+          <aside className="cart-summary-panel customer-account-sidebar">
             {customerLoading ? (
               <div className="cart-auth-card">
                 <p className="cart-auth-copy">{t('cart.authLoading')}</p>
@@ -624,8 +701,8 @@ export default function CustomerAccountPage() {
             )}
           </aside>
 
-          <section className="cart-items-panel">
-            <div className="cart-items-heading">
+          <section className="cart-items-panel customer-account-profile-panel">
+            <div className="customer-section-heading">
               <div>
                 <span>{language === 'en' ? 'Profile' : 'Profil'}</span>
                 <h2>{language === 'en' ? 'Shipping Identity' : 'Identitas Pengiriman'}</h2>

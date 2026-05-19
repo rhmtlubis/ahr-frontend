@@ -14,6 +14,23 @@ export const apiClient = axios.create({
   },
 })
 
+let unauthorizedHandler = null
+
+export function setUnauthorizedHandler(handler) {
+  unauthorizedHandler = handler
+}
+
+apiClient.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error?.response?.status === 401) {
+      unauthorizedHandler?.(error)
+    }
+
+    return Promise.reject(error)
+  },
+)
+
 export function getApiUrl(path) {
   return `${apiBaseUrl}${path}`
 }
@@ -155,6 +172,26 @@ function resolveApiError(error, fallbackMessage) {
   )
 }
 
+function isUnauthorizedError(error) {
+  return error?.response?.status === 401
+}
+
+async function retryCustomerRequest(request, fallbackMessage) {
+  await ensureCsrfCookie()
+
+  const currentCustomer = await fetchCurrentCustomer()
+
+  if (!currentCustomer) {
+    throw new Error('Unauthenticated.')
+  }
+
+  try {
+    return await request()
+  } catch (error) {
+    throw new Error(resolveApiError(error, fallbackMessage))
+  }
+}
+
 export async function fetchCurrentCustomer() {
   try {
     const response = await apiClient.get('/api/customer/auth/me')
@@ -226,6 +263,16 @@ export async function fetchCustomerOrders() {
     const response = await apiClient.get('/api/customer/auth/orders')
     return response.data?.data || []
   } catch (error) {
+    if (isUnauthorizedError(error)) {
+      return retryCustomerRequest(
+        async () => {
+          const response = await apiClient.get('/api/customer/auth/orders')
+          return response.data?.data || []
+        },
+        'Gagal memuat daftar pesanan',
+      )
+    }
+
     throw new Error(resolveApiError(error, 'Gagal memuat daftar pesanan'))
   }
 }
@@ -234,9 +281,23 @@ export async function fetchCustomerOrder(orderNumber) {
   await ensureCsrfCookie()
 
   try {
-    const response = await apiClient.get(`/api/customer/auth/orders/${orderNumber}`)
+    const response = await apiClient.get(`/api/customer/auth/orders/${encodeURIComponent(orderNumber)}`)
     return response.data?.data || null
   } catch (error) {
+    if (isUnauthorizedError(error)) {
+      return retryCustomerRequest(
+        async () => {
+          const response = await apiClient.get(`/api/customer/auth/orders/${encodeURIComponent(orderNumber)}`)
+          return response.data?.data || null
+        },
+        'Gagal memuat detail pesanan',
+      )
+    }
+
+    if (error?.response?.status === 422) {
+      throw new Error(resolveApiError(error, 'Pesanan tidak ditemukan.'))
+    }
+
     throw new Error(resolveApiError(error, 'Gagal memuat detail pesanan'))
   }
 }

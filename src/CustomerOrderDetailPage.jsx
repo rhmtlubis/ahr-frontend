@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { ArrowLeft, CreditCard, Package } from 'lucide-react'
+import { ArrowLeft, CreditCard, LockKeyhole, Package, Wallet } from 'lucide-react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import './App.css'
 import CookieConsentBanner from './components/layout/CookieConsentBanner'
@@ -13,6 +13,7 @@ import { useLanguage } from './lib/i18n.jsx'
 import { getLandingChromeContent } from './lib/landingContent'
 import { useMidtransPayment } from './lib/useMidtransPayment'
 import { formatCurrencyAmount } from './lib/price'
+import { savePendingPayment } from './lib/pendingPayment'
 import useDocumentTitle from './lib/useDocumentTitle'
 
 function formatOrderAmount(amountMinor, currency) {
@@ -45,7 +46,8 @@ export default function CustomerOrderDetailPage() {
   const navigate = useNavigate()
   const { language, t } = useLanguage()
   const { itemCount } = useCart()
-  const { customer, isLoading: customerLoading } = useCustomer()
+  const { customer, isLoading: customerLoading, refreshCustomer } = useCustomer()
+  const [sessionExpired, setSessionExpired] = useState(false)
   const { payOrder, isSnapReady } = useMidtransPayment()
   const [pageContent, setPageContent] = useState(() =>
     getLandingChromeContent({}, { hashPrefix: '/', locale: language }),
@@ -75,15 +77,27 @@ export default function CustomerOrderDetailPage() {
     }
 
     setLoadError('')
+    setSessionExpired(false)
 
     try {
       const data = await fetchCustomerOrder(orderNumber)
       setOrder(data)
+
+      if (data?.order_number && data?.payment_access_token) {
+        savePendingPayment(data.order_number, data.payment_access_token)
+      }
     } catch (error) {
-      setLoadError(error.message)
+      const message = error.message || ''
+      const expired = message.toLowerCase().includes('unauthenticated')
+      setSessionExpired(expired)
+      setLoadError(expired ? '' : message)
       setOrder(null)
+
+      if (expired) {
+        await refreshCustomer()
+      }
     }
-  }, [orderNumber])
+  }, [orderNumber, refreshCustomer])
 
   useEffect(() => {
     fetch(getApiUrl(`/api/catalog/landing-page?locale=${language}`), {
@@ -139,11 +153,19 @@ export default function CustomerOrderDetailPage() {
             state: 'idle',
             message:
               language === 'en'
-                ? 'Payment window closed. You can try again anytime.'
-                : 'Jendela pembayaran ditutup. Anda bisa mencoba lagi kapan saja.',
+                ? 'Payment window closed. Tap Pay now to reopen Midtrans or use the payment details below.'
+                : 'Jendela pembayaran ditutup. Tekan Bayar sekarang untuk buka ulang Midtrans atau gunakan detail pembayaran di bawah.',
           })
           loadOrder()
         },
+      })
+
+      setPaymentStatus({
+        state: 'idle',
+        message:
+          language === 'en'
+            ? 'Complete your payment in the Midtrans window.'
+            : 'Selesaikan pembayaran di jendela Midtrans.',
       })
     } catch (error) {
       setPaymentStatus({ state: 'error', message: error.message })
@@ -169,11 +191,11 @@ export default function CustomerOrderDetailPage() {
           <OrderDetailHeading language={language} />
         </section>
 
-        <section className="content-block section-soft account-page-layout">
-          <section className="cart-items-panel customer-order-detail-panel">
-            {!customerLoading && !customer ? (
-              <GuestPrompt language={language} t={t} />
-            ) : customerLoading || (!order && !loadError) ? (
+        <section className="content-block section-soft">
+          <section className="customer-order-detail-shell">
+            {!customerLoading && (!customer || sessionExpired) ? (
+              <SessionPrompt language={language} t={t} expired={sessionExpired} />
+            ) : customerLoading || (!order && !loadError && !sessionExpired) ? (
               <p className="cart-auth-copy">{t('cart.authLoading')}</p>
             ) : loadError ? (
               <ErrorState language={language} loadError={loadError} />
@@ -251,8 +273,17 @@ function OrderDetailContent({ order, language, t, paymentStatus, isSnapReady, on
         </p>
       ) : null}
 
+      <OrderPaymentInfo order={order} language={language} />
+
       {order.can_pay ? (
         <div className="customer-order-pay">
+          {!isSnapReady ? (
+            <p className="cart-status error">
+              {language === 'en'
+                ? 'Online payment is not ready yet. Refresh the page or contact support if this persists.'
+                : 'Pembayaran online belum siap. Muat ulang halaman atau hubungi kami jika masalah berlanjut.'}
+            </p>
+          ) : null}
           <button
             className="cart-submit-button"
             type="button"
@@ -274,6 +305,78 @@ function OrderDetailContent({ order, language, t, paymentStatus, isSnapReady, on
         </div>
       ) : null}
     </>
+  )
+}
+
+function OrderPaymentInfo({ order, language }) {
+  const payment = order.payment
+
+  if (!payment?.has_midtrans_transaction && !payment?.instructions?.length) {
+    return null
+  }
+
+  const statusLabel =
+    payment.transaction_status_label ||
+    (payment.transaction_status === 'pending'
+      ? language === 'en'
+        ? 'Awaiting payment'
+        : 'Menunggu pembayaran'
+      : payment.transaction_status)
+
+  return (
+    <section className="customer-order-payment-info">
+      <div className="customer-order-payment-info-head">
+        <Wallet size={18} />
+        <div>
+          <strong>{language === 'en' ? 'Payment details' : 'Detail pembayaran'}</strong>
+          <p>
+            {language === 'en'
+              ? 'Use these details if you already chose a payment method in Midtrans.'
+              : 'Gunakan detail ini jika Anda sudah memilih metode bayar di Midtrans.'}
+          </p>
+        </div>
+      </div>
+
+      <div className="customer-order-payment-info-meta">
+        {statusLabel ? (
+          <span>
+            {language === 'en' ? 'Status' : 'Status'}: <strong>{statusLabel}</strong>
+          </span>
+        ) : null}
+        {payment.payment_type_label ? (
+          <span>
+            {language === 'en' ? 'Method' : 'Metode'}: <strong>{payment.payment_type_label}</strong>
+          </span>
+        ) : null}
+        {(order.payment_expires_at || payment.expiry_time) ? (
+          <span>
+            {language === 'en' ? 'Pay before' : 'Bayar sebelum'}:{' '}
+            <strong>
+              {new Date(order.payment_expires_at || payment.expiry_time).toLocaleString(
+                language === 'en' ? 'en-ID' : 'id-ID',
+              )}
+            </strong>
+          </span>
+        ) : null}
+      </div>
+
+      {payment.instructions?.length ? (
+        <ul className="customer-order-payment-info-list">
+          {payment.instructions.map((instruction) => (
+            <li key={`${instruction.kind}-${instruction.label}-${instruction.value}`}>
+              <span>{instruction.label}</span>
+              <strong>{instruction.value}</strong>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="customer-order-payment-info-hint">
+          {language === 'en'
+            ? 'Choose a payment method via Pay now to generate VA/QRIS details here.'
+            : 'Pilih metode bayar lewat Bayar sekarang untuk menampilkan nomor VA/QRIS di sini.'}
+        </p>
+      )}
+    </section>
   )
 }
 
@@ -310,12 +413,30 @@ function OrderDetailHeading({ language }) {
   )
 }
 
-function GuestPrompt({ language, t }) {
+function SessionPrompt({ language, t, expired }) {
   return (
-    <div className="cart-empty-state">
-      <Package size={28} />
-      <h2>{language === 'en' ? 'Login required' : 'Login diperlukan'}</h2>
-      <p>{t('cart.loginBody')}</p>
+    <div className="customer-account-notice">
+      <div className="customer-account-notice-icon">
+        <LockKeyhole size={22} />
+      </div>
+      <div>
+        <h2>
+          {expired
+            ? language === 'en'
+              ? 'Session expired'
+              : 'Sesi berakhir'
+            : language === 'en'
+              ? 'Login required'
+              : 'Login diperlukan'}
+        </h2>
+        <p>
+          {expired
+            ? language === 'en'
+              ? 'Please sign in again to view this order.'
+              : 'Silakan login ulang untuk melihat detail pesanan ini.'
+            : t('cart.loginBody')}
+        </p>
+      </div>
       <Link className="cta-button cta-button-dark" to="/akun">
         {language === 'en' ? 'Go to account' : 'Ke halaman akun'}
       </Link>
@@ -325,10 +446,14 @@ function GuestPrompt({ language, t }) {
 
 function ErrorState({ language, loadError }) {
   return (
-    <div className="cart-empty-state">
-      <Package size={28} />
-      <h2>{language === 'en' ? 'Order not found' : 'Pesanan tidak ditemukan'}</h2>
-      <p>{loadError}</p>
+    <div className="customer-account-notice customer-account-notice-muted">
+      <div className="customer-account-notice-icon">
+        <Package size={22} />
+      </div>
+      <div>
+        <h2>{language === 'en' ? 'Order not found' : 'Pesanan tidak ditemukan'}</h2>
+        <p>{loadError}</p>
+      </div>
       <Link className="cta-button cta-button-dark" to="/akun">
         {language === 'en' ? 'Back to account' : 'Kembali ke akun'}
       </Link>
