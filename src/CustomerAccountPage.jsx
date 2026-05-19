@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { ArrowLeft, ChevronRight, LockKeyhole, LogOut, Mail, MapPin, Package } from 'lucide-react'
 import { Link, useLocation } from 'react-router-dom'
 import './App.css'
+import CustomerGoogleAuthButton from './components/auth/CustomerGoogleAuthButton'
 import CookieConsentBanner from './components/layout/CookieConsentBanner'
 import SiteFooter from './components/layout/SiteFooter'
 import SiteHeader from './components/layout/SiteHeader'
@@ -20,6 +21,7 @@ import {
 import { useCart } from './lib/cart.jsx'
 import { getConsentPreferences, setConsentPreferences } from './lib/consent'
 import { useCustomer } from './lib/customer.jsx'
+import { useGoogleAuthCallback } from './lib/googleAuth'
 import { useLanguage } from './lib/i18n.jsx'
 import { getLandingChromeContent } from './lib/landingContent'
 import { clearPersonalizationData } from './lib/personalization'
@@ -154,6 +156,32 @@ export default function CustomerAccountPage() {
   })
   const [orders, setOrders] = useState([])
   const [ordersStatus, setOrdersStatus] = useState({ state: 'idle', message: '' })
+
+  const handleGoogleAuthStatus = useCallback(
+    (status) => {
+      setAuthStatus({
+        state: status.state,
+        message:
+          status.state === 'success'
+            ? status.needsPhone
+              ? t('cart.googleLoginNeedsPhone')
+              : t('cart.googleLoginSuccess')
+            : t('cart.googleLoginError'),
+      })
+
+      if (status.customer) {
+        setProfileForm(mapCustomerToProfileForm(status.customer))
+        setAuthForm(mapCustomerToAuthForm(status.customer))
+      }
+    },
+    [t],
+  )
+
+  useGoogleAuthCallback({
+    refreshCustomer,
+    setCustomer,
+    onStatus: handleGoogleAuthStatus,
+  })
 
   useDocumentTitle(
     language === 'en' ? 'Customer Account' : 'Akun Customer',
@@ -609,6 +637,16 @@ export default function CustomerAccountPage() {
                   >
                     {t('cart.registerTab')}
                   </button>
+                </div>
+
+                <CustomerGoogleAuthButton
+                  returnPath="/akun"
+                  disabled={authStatus.state === 'loading'}
+                  label={t('cart.googleLoginCta')}
+                />
+
+                <div className="cart-auth-divider">
+                  <span>{t('cart.authOrDivider')}</span>
                 </div>
 
                 <form className="cart-auth-form" onSubmit={authMode === 'login' ? handleLogin : handleRegister}>

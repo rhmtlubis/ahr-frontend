@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, useCallback } from 'react'
 import { ArrowLeft, LockKeyhole, LogOut, Mail, MessageCircleMore, Minus, Plus, ShoppingBag, Trash2 } from 'lucide-react'
 import { Link, useNavigate } from 'react-router-dom'
 import './App.css'
+import CustomerGoogleAuthButton from './components/auth/CustomerGoogleAuthButton'
 import ShippingOptionPicker from './components/checkout/ShippingOptionPicker'
 import ProductPrice from './components/catalog/ProductPrice'
 import CookieConsentBanner from './components/layout/CookieConsentBanner'
@@ -24,6 +25,7 @@ import { getAttributionParams } from './lib/attribution'
 import { getProductSizeOptions, useCart } from './lib/cart.jsx'
 import { getConsentPreferences, setConsentPreferences } from './lib/consent'
 import { useCustomer } from './lib/customer.jsx'
+import { useGoogleAuthCallback } from './lib/googleAuth'
 import { useLanguage } from './lib/i18n.jsx'
 import { getLandingChromeContent } from './lib/landingContent'
 import { clearPendingPayment, savePendingPayment } from './lib/pendingPayment'
@@ -486,7 +488,7 @@ function buildCustomerProfilePayload(checkoutForm, locationOptions) {
 
 export default function CartPage() {
   const { language, t } = useLanguage()
-  const { customer: customerSession, isLoading: customerLoading, setCustomer: setCustomerSession } = useCustomer()
+  const { customer: customerSession, isLoading: customerLoading, setCustomer: setCustomerSession, refreshCustomer } = useCustomer()
   const navigate = useNavigate()
   useDocumentTitle(
     language === 'en' ? 'Cart for Custom Jersey Orders' : 'Keranjang Belanja Jersey Custom',
@@ -620,6 +622,31 @@ export default function CartPage() {
     }))
     setAuthForm(mapCustomerToAuthForm(customer))
   }
+
+  const handleGoogleAuthStatus = useCallback(
+    (status) => {
+      setAuthStatus({
+        state: status.state,
+        message:
+          status.state === 'success'
+            ? status.needsPhone
+              ? t('cart.googleLoginNeedsPhone')
+              : t('cart.googleLoginSuccess')
+            : t('cart.googleLoginError'),
+      })
+
+      if (status.customer) {
+        applyCustomerProfileToForms(status.customer)
+      }
+    },
+    [t],
+  )
+
+  useGoogleAuthCallback({
+    refreshCustomer,
+    setCustomer: setCustomerSession,
+    onStatus: handleGoogleAuthStatus,
+  })
 
   useEffect(() => {
     if (!customerSession) {
@@ -1336,6 +1363,16 @@ export default function CartPage() {
                       >
                         {t('cart.registerTab')}
                       </button>
+                    </div>
+
+                    <CustomerGoogleAuthButton
+                      returnPath="/cart"
+                      disabled={authStatus.state === 'loading'}
+                      label={t('cart.googleLoginCta')}
+                    />
+
+                    <div className="cart-auth-divider">
+                      <span>{t('cart.authOrDivider')}</span>
                     </div>
 
                     {authMode === 'login' ? (
