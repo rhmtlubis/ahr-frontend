@@ -63,13 +63,62 @@ function findLocationName(options, code) {
   return options.find((option) => option.code === code)?.name || ''
 }
 
+function stripTrailingRegionsFromAddressLine(addressLine, locationOptions, checkoutForm) {
+  let line = String(addressLine || '').trim()
+
+  if (!line) {
+    return ''
+  }
+
+  const regionParts = [
+    findLocationName(locationOptions.districts, checkoutForm.districtCode),
+    findLocationName(locationOptions.cities, checkoutForm.cityCode),
+    findLocationName(locationOptions.provinces, checkoutForm.provinceCode),
+  ]
+    .map((value) => String(value || '').trim())
+    .filter(Boolean)
+
+  if (regionParts.length === 0) {
+    return line
+  }
+
+  let changed = true
+
+  while (changed && line) {
+    changed = false
+    const fullSuffix = `, ${regionParts.join(', ')}`
+
+    if (fullSuffix !== ', ' && line.endsWith(fullSuffix)) {
+      line = line.slice(0, -fullSuffix.length).trim()
+      changed = true
+    }
+
+    for (let index = regionParts.length - 1; index >= 0; index -= 1) {
+      const suffix = `, ${regionParts[index]}`
+
+      if (line.endsWith(suffix)) {
+        line = line.slice(0, -suffix.length).trim()
+        changed = true
+      }
+    }
+  }
+
+  return line.replace(/,\s*$/, '')
+}
+
 function buildStructuredAddress(checkoutForm, locationOptions) {
   if (checkoutForm.fulfillment !== 'delivery') {
     return ''
   }
 
-  return [
+  const streetLine = stripTrailingRegionsFromAddressLine(
     checkoutForm.addressLine,
+    locationOptions,
+    checkoutForm,
+  )
+
+  return [
+    streetLine,
     findLocationName(locationOptions.districts, checkoutForm.districtCode),
     findLocationName(locationOptions.cities, checkoutForm.cityCode),
     findLocationName(locationOptions.provinces, checkoutForm.provinceCode),
@@ -387,6 +436,11 @@ function buildCheckoutMessage(items, checkoutForm, language, cartTotals, locatio
 function buildCheckoutPayload(items, checkoutForm, language, cartTotals, locationOptions) {
   const firstItemCurrency = items.length > 0 ? getItemCurrency(items[0], language) : language === 'en' ? 'USD' : 'IDR'
   const formattedAddress = buildStructuredAddress(checkoutForm, locationOptions)
+  const addressLine = stripTrailingRegionsFromAddressLine(
+    checkoutForm.addressLine,
+    locationOptions,
+    checkoutForm,
+  )
 
   return {
     name: checkoutForm.name,
@@ -394,7 +448,7 @@ function buildCheckoutPayload(items, checkoutForm, language, cartTotals, locatio
     whatsapp: checkoutForm.whatsapp,
     fulfillment: checkoutForm.fulfillment,
     address: formattedAddress || undefined,
-    address_line: checkoutForm.addressLine || undefined,
+    address_line: addressLine || undefined,
     province_code: checkoutForm.provinceCode || undefined,
     city_code: checkoutForm.cityCode || undefined,
     district_code: checkoutForm.districtCode || undefined,
@@ -440,8 +494,8 @@ function buildShippingQuotePayload(items, checkoutForm, language) {
   }
 }
 
-function mapCustomerToCheckoutForm(customer) {
-  return {
+function mapCustomerToCheckoutForm(customer, locationOptions = { provinces: [], cities: [], districts: [] }) {
+  const checkoutForm = {
     name: customer?.name || '',
     email: customer?.email || '',
     whatsapp: customer?.phone || '',
@@ -452,6 +506,14 @@ function mapCustomerToCheckoutForm(customer) {
     addressLine: customer?.default_shipping_address || '',
     notes: '',
   }
+
+  checkoutForm.addressLine = stripTrailingRegionsFromAddressLine(
+    checkoutForm.addressLine,
+    locationOptions,
+    checkoutForm,
+  )
+
+  return checkoutForm
 }
 
 function mapCustomerToAuthForm(customer) {
@@ -617,7 +679,11 @@ export default function CartPage() {
   const applyCustomerProfileToForms = (customer) => {
     setCustomerSession(customer)
     setCheckoutForm((current) => ({
-      ...mapCustomerToCheckoutForm(customer),
+      ...mapCustomerToCheckoutForm(customer, {
+        provinces: provinceOptions,
+        cities: cityOptions,
+        districts: districtOptions,
+      }),
       notes: current.notes,
     }))
     setAuthForm(mapCustomerToAuthForm(customer))
