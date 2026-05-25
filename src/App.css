@@ -5916,6 +5916,215 @@ main {
   line-height: 1.55;
 }
 
+.customer-order-tracking {
+  display: grid;
+  gap: 14px;
+  margin-bottom: 20px;
+  padding: 18px 20px;
+  border-radius: 18px;
+  background: rgba(2, 37, 84, 0.04);
+  border: 1px solid rgba(2, 37, 84, 0.1);
+}
+
+.customer-order-tracking .customer-order-payment-info-head {
+  justify-content: space-between;
+}
+
+.customer-order-tracking-refresh {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+  padding: 8px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(2, 37, 84, 0.12);
+  background: rgba(255, 255, 255, 0.9);
+  color: var(--navy-900);
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.customer-order-tracking-refresh:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.customer-order-tracking-refresh-spin {
+  animation: customer-order-tracking-spin 0.8s linear infinite;
+}
+
+@keyframes customer-order-tracking-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.customer-order-tracking-phase {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  padding: 10px 14px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(2, 37, 84, 0.08);
+  font-size: 0.86rem;
+  color: var(--text-700);
+}
+
+.customer-order-tracking-phase strong {
+  color: var(--navy-900);
+}
+
+.customer-order-tracking-phase-delivered {
+  border-color: rgba(34, 197, 94, 0.35);
+  background: rgba(34, 197, 94, 0.08);
+}
+
+.customer-order-tracking-phase-in_transit,
+.customer-order-tracking-phase-awaiting_shipment {
+  border-color: rgba(59, 130, 246, 0.28);
+  background: rgba(59, 130, 246, 0.08);
+}
+
+.customer-order-tracking-phase-cancelled,
+.customer-order-tracking-phase-issue {
+  border-color: rgba(239, 68, 68, 0.28);
+  background: rgba(239, 68, 68, 0.08);
+}
+
+.customer-order-tracking-steps {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.customer-order-tracking-step {
+  display: grid;
+  gap: 8px;
+  justify-items: center;
+  text-align: center;
+}
+
+.customer-order-tracking-step-marker {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: rgba(2, 37, 84, 0.15);
+  border: 2px solid rgba(2, 37, 84, 0.2);
+}
+
+.customer-order-tracking-step-label {
+  font-size: 0.72rem;
+  line-height: 1.35;
+  color: var(--text-700);
+  font-weight: 700;
+}
+
+.customer-order-tracking-step-done .customer-order-tracking-step-marker {
+  background: var(--gold-500);
+  border-color: var(--gold-500);
+}
+
+.customer-order-tracking-step-current .customer-order-tracking-step-marker {
+  background: var(--navy-900);
+  border-color: var(--navy-900);
+  box-shadow: 0 0 0 4px rgba(2, 37, 84, 0.12);
+}
+
+.customer-order-tracking-step-current .customer-order-tracking-step-label {
+  color: var(--navy-900);
+}
+
+.customer-order-tracking-courier {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-700);
+  font-size: 0.86rem;
+}
+
+.customer-order-tracking-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.customer-order-tracking-copy,
+.customer-order-tracking-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: 999px;
+  font-size: 0.84rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.customer-order-tracking-copy {
+  border: 1px solid rgba(2, 37, 84, 0.12);
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--navy-900);
+  cursor: pointer;
+}
+
+.customer-order-tracking-link {
+  background: var(--navy-900);
+  color: #fff;
+}
+
+.customer-order-tracking-copy-status {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--text-700);
+}
+
+.customer-order-tracking-copy-status.error {
+  color: #b91c1c;
+}
+
+.customer-order-row-tracking {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+  font-size: 0.78rem;
+  color: var(--text-700);
+  font-weight: 600;
+}
+
+.customer-order-row-tracking-delivered {
+  color: #15803d;
+}
+
+.customer-order-row-tracking-in_transit,
+.customer-order-row-tracking-awaiting_shipment {
+  color: #1d4ed8;
+}
+
+.customer-order-row-tracking-cancelled,
+.customer-order-row-tracking-issue {
+  color: #b91c1c;
+}
+
+@media (max-width: 720px) {
+  .customer-order-tracking-steps {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .customer-order-tracking-step {
+    grid-template-columns: 14px 1fr;
+    justify-items: start;
+    text-align: left;
+  }
+}
+
 .customer-section-heading {
   margin-bottom: 18px;
 }

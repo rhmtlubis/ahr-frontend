@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { ArrowLeft, ChevronRight, LockKeyhole, LogOut, Mail, MapPin, Package } from 'lucide-react'
+import { ArrowLeft, ChevronRight, LockKeyhole, LogOut, Mail, MapPin, Package, Truck } from 'lucide-react'
+import { getShipmentPhaseLabel } from './lib/shipmentTracking'
 import { Link, useLocation } from 'react-router-dom'
 import './App.css'
 import CustomerGoogleAuthButton from './components/auth/CustomerGoogleAuthButton'
@@ -55,12 +56,20 @@ function formatOrderDate(isoDate, language) {
 
 function CustomerOrderRow({ order, language }) {
   const statusLabel = getOrderStatusLabel(order.status, language)
+  const tracking = order.shipment_tracking
+  const trackingLabel = tracking ? getShipmentPhaseLabel(tracking.phase, language) : null
 
   return (
     <Link className="customer-order-row" to={`/akun/pesanan/${order.order_number}`}>
       <div className="customer-order-row-order">
         <strong>{order.order_number}</strong>
         <span>{formatOrderDate(order.created_at, language)}</span>
+        {trackingLabel ? (
+          <span className={`customer-order-row-tracking customer-order-row-tracking-${tracking.phase}`}>
+            <Truck size={14} aria-hidden="true" />
+            {tracking.waybill_id ? `${trackingLabel} · ${tracking.waybill_id}` : trackingLabel}
+          </span>
+        ) : null}
       </div>
 
       <span className={`customer-order-status customer-order-status-${order.status}`}>{statusLabel}</span>

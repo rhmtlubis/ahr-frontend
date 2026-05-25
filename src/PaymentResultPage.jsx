@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { ArrowLeft, CheckCircle, Clock, CreditCard, MessageCircleMore, XCircle } from 'lucide-react'
+import { ArrowLeft, CheckCircle, Clock, CreditCard, MessageCircleMore, Package, XCircle } from 'lucide-react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import './App.css'
 import CookieConsentBanner from './components/layout/CookieConsentBanner'
@@ -94,6 +94,7 @@ export default function PaymentResultPage({ status }) {
         : 'Pembayaran Anda telah berhasil diproses. Kami akan segera mengkonfirmasi order Anda.',
       actionLabel: language === 'en' ? 'Continue Shopping' : 'Lanjut Belanja',
       actionHref: '/all-products',
+      trackOrderHref: orderNumber ? `/akun/pesanan/${orderNumber}` : null,
       secondaryAction: pageContent.brand?.whatsapp_number
         ? {
             label: language === 'en' ? 'Contact via WhatsApp' : 'Hubungi via WhatsApp',
@@ -247,6 +248,13 @@ export default function PaymentResultPage({ status }) {
               <Link className="cta-button cta-button-light" to={currentConfig.actionHref}>
                 {currentConfig.actionLabel}
               </Link>
+
+              {status === 'success' && currentConfig.trackOrderHref ? (
+                <Link className="cta-button cta-button-light" to={currentConfig.trackOrderHref}>
+                  <Package size={18} />
+                  <span>{language === 'en' ? 'Track shipment' : 'Lacak pengiriman'}</span>
+                </Link>
+              ) : null}
 
               {currentConfig.secondaryAction && (
                 <a
