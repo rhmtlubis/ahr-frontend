@@ -6,7 +6,7 @@ import './App.css'
 import CookieConsentBanner from './components/layout/CookieConsentBanner'
 import SiteFooter from './components/layout/SiteFooter'
 import SiteHeader from './components/layout/SiteHeader'
-import { fetchCustomerOrder, getApiUrl } from './lib/api'
+import { fetchCustomerOrder, getApiUrl, syncCustomerOrderShipment } from './lib/api'
 import { useCart } from './lib/cart.jsx'
 import { getConsentPreferences, setConsentPreferences } from './lib/consent'
 import { useCustomer } from './lib/customer.jsx'
@@ -102,14 +102,34 @@ export default function CustomerOrderDetailPage() {
   }, [orderNumber, refreshCustomer])
 
   const handleRefreshTracking = useCallback(async () => {
+    if (!orderNumber) {
+      return
+    }
+
     setIsRefreshingTracking(true)
 
     try {
-      await loadOrder()
+      const hasBiteshipShipment =
+        order?.shipment?.waybill_id ||
+        order?.shipment?.tracking_id ||
+        order?.shipment_tracking?.waybill_id ||
+        order?.shipment_tracking?.tracking_id
+
+      if (hasBiteshipShipment) {
+        const synced = await syncCustomerOrderShipment(orderNumber)
+
+        if (synced) {
+          setOrder(synced)
+        }
+      } else {
+        await loadOrder()
+      }
+    } catch (error) {
+      setLoadError(error.message || '')
     } finally {
       setIsRefreshingTracking(false)
     }
-  }, [loadOrder])
+  }, [loadOrder, order, orderNumber])
 
   useEffect(() => {
     fetch(getApiUrl(`/api/catalog/landing-page?locale=${language}`), {

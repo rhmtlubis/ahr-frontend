@@ -20,6 +20,8 @@ const STATUS_STEP_INDEX = {
 const PHASE_LABELS = {
   awaiting_payment: { id: 'Menunggu pembayaran', en: 'Awaiting payment' },
   awaiting_shipment: { id: 'Menunggu pengiriman', en: 'Awaiting shipment' },
+  preparing: { id: 'Disiapkan', en: 'Preparing' },
+  pickup: { id: 'Penjemputan kurir', en: 'Courier pickup' },
   in_transit: { id: 'Dalam perjalanan', en: 'In transit' },
   delivered: { id: 'Terkirim', en: 'Delivered' },
   cancelled: { id: 'Pengiriman dibatalkan', en: 'Shipment cancelled' },
@@ -44,6 +46,18 @@ export function getShipmentActiveStepIndex({ phase, biteshipStatus, paidAt, orde
 
   if (biteshipStatus && STATUS_STEP_INDEX[biteshipStatus] !== undefined) {
     return STATUS_STEP_INDEX[biteshipStatus]
+  }
+
+  if (phase === 'pickup') {
+    return 2
+  }
+
+  if (phase === 'preparing') {
+    return 1
+  }
+
+  if (phase === 'in_transit') {
+    return 3
   }
 
   if (phase === 'awaiting_shipment' || paidAt || orderStatus === 'confirmed' || orderStatus === 'processing') {

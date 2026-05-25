@@ -327,6 +327,33 @@ export async function fetchCustomerOrder(orderNumber) {
   }
 }
 
+export async function syncCustomerOrderShipment(orderNumber) {
+  await ensureCsrfCookie()
+
+  try {
+    const response = await apiClient.post(
+      `/api/customer/auth/orders/${encodeURIComponent(orderNumber)}/shipment/sync`,
+    )
+
+    return response.data?.data || null
+  } catch (error) {
+    if (isUnauthorizedError(error)) {
+      return retryCustomerRequest(
+        async () => {
+          const response = await apiClient.post(
+            `/api/customer/auth/orders/${encodeURIComponent(orderNumber)}/shipment/sync`,
+          )
+
+          return response.data?.data || null
+        },
+        'Gagal memperbarui status pengiriman',
+      )
+    }
+
+    throw new Error(resolveApiError(error, 'Gagal memperbarui status pengiriman'))
+  }
+}
+
 export async function createPaymentTransactionForCustomer(orderNumber) {
   await ensureCsrfCookie()
 

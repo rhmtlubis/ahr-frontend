@@ -46,6 +46,10 @@ export default function OrderShipmentTracking({
   const shipping = order.shipping
   const phase = shipment.phase || order.shipment_tracking?.phase || 'awaiting_shipment'
   const phaseLabel = getShipmentPhaseLabel(phase, language)
+  const statusHeadline =
+    shipment.biteship_status_label && shipment.biteship_status_label !== '-'
+      ? shipment.biteship_status_label
+      : phaseLabel
   const steps = getShipmentSteps(language)
   const activeStep = getShipmentActiveStepIndex({
     phase,
@@ -96,11 +100,11 @@ export default function OrderShipmentTracking({
         ) : null}
       </div>
 
-      {phaseLabel ? (
+      {statusHeadline ? (
         <div className={`customer-order-tracking-phase customer-order-tracking-phase-${phase}`}>
-          <span>{phaseLabel}</span>
-          {shipment.biteship_status_label && shipment.biteship_status_label !== '-' ? (
-            <strong>{shipment.biteship_status_label}</strong>
+          <strong>{statusHeadline}</strong>
+          {phaseLabel && shipment.biteship_status_label && shipment.biteship_status_label !== '-' && phaseLabel !== shipment.biteship_status_label ? (
+            <span>{phaseLabel}</span>
           ) : null}
         </div>
       ) : null}
