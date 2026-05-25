@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { ArrowLeft, CreditCard, LockKeyhole, Package, Wallet } from 'lucide-react'
+import { ArrowLeft, CreditCard, LockKeyhole, Package, Truck, Wallet } from 'lucide-react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import './App.css'
 import CookieConsentBanner from './components/layout/CookieConsentBanner'
@@ -275,6 +275,8 @@ function OrderDetailContent({ order, language, t, paymentStatus, isSnapReady, on
 
       <OrderPaymentInfo order={order} language={language} />
 
+      <OrderShipmentInfo order={order} language={language} />
+
       {order.can_pay ? (
         <div className="customer-order-pay">
           {!isSnapReady ? (
@@ -305,6 +307,67 @@ function OrderDetailContent({ order, language, t, paymentStatus, isSnapReady, on
         </div>
       ) : null}
     </>
+  )
+}
+
+function OrderShipmentInfo({ order, language }) {
+  const shipment = order.shipment
+
+  if (!shipment?.biteship_status && !shipment?.waybill_id && !shipment?.tracking_id) {
+    return null
+  }
+
+  return (
+    <section className="customer-order-payment-info">
+      <div className="customer-order-payment-info-head">
+        <Truck size={18} />
+        <div>
+          <strong>{language === 'en' ? 'Shipment status' : 'Status pengiriman'}</strong>
+          <p>
+            {language === 'en'
+              ? 'Updates from the courier after your order is paid and handed to shipping.'
+              : 'Pembaruan dari kurir setelah pesanan dibayar dan diserahkan ke pengiriman.'}
+          </p>
+        </div>
+      </div>
+
+      <div className="customer-order-payment-info-meta">
+        {shipment.biteship_status_label ? (
+          <span>
+            {language === 'en' ? 'Status' : 'Status'}: <strong>{shipment.biteship_status_label}</strong>
+          </span>
+        ) : null}
+        {shipment.waybill_id ? (
+          <span>
+            {language === 'en' ? 'Waybill' : 'Resi'}: <strong>{shipment.waybill_id}</strong>
+          </span>
+        ) : null}
+        {shipment.tracking_id ? (
+          <span>
+            {language === 'en' ? 'Tracking ID' : 'Tracking ID'}: <strong>{shipment.tracking_id}</strong>
+          </span>
+        ) : null}
+      </div>
+
+      {shipment.courier_tracking_url ? (
+        <p className="customer-order-payment-info-hint">
+          <a href={shipment.courier_tracking_url} target="_blank" rel="noreferrer">
+            {language === 'en' ? 'Open courier tracking' : 'Buka lacak paket kurir'}
+          </a>
+        </p>
+      ) : null}
+
+      {shipment.history?.length ? (
+        <ul className="customer-order-payment-info-list">
+          {[...shipment.history].reverse().slice(0, 5).map((entry) => (
+            <li key={`${entry.status}-${entry.at}`}>
+              <span>{entry.label || entry.status}</span>
+              <strong>{entry.at ? new Date(entry.at).toLocaleString(language === 'en' ? 'en-ID' : 'id-ID') : '-'}</strong>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+    </section>
   )
 }
 
