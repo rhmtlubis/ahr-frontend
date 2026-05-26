@@ -5750,8 +5750,15 @@ main {
   margin-bottom: 4px;
 }
 
-.customer-order-detail-header h2 {
+.customer-order-number {
   margin: 0;
+  color: var(--navy-900);
+  font-family: var(--font-body, inherit);
+  font-size: clamp(1rem, 2.4vw, 1.2rem);
+  font-weight: 700;
+  line-height: 1.35;
+  letter-spacing: 0.01em;
+  word-break: break-word;
 }
 
 .customer-order-status {
@@ -5797,19 +5804,122 @@ main {
 }
 
 .customer-order-item {
-  display: flex;
-  justify-content: space-between;
-  gap: 16px;
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
   padding: 14px 16px;
   border-radius: 14px;
   background: #fff;
   border: 1px solid rgba(15, 23, 42, 0.08);
 }
 
+.customer-order-item-thumb-wrap {
+  flex-shrink: 0;
+}
+
+.customer-order-item-thumb {
+  display: block;
+  width: 72px;
+  height: 72px;
+  object-fit: cover;
+  border-radius: 12px;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  background: #f3f5f8;
+}
+
+.customer-order-item-thumb-placeholder {
+  display: grid;
+  place-items: center;
+  color: #94a3b8;
+}
+
+.customer-order-item-body {
+  min-width: 0;
+}
+
+.customer-order-item-body strong {
+  display: block;
+  line-height: 1.35;
+}
+
+.customer-order-item-category {
+  margin: 2px 0 0;
+  color: var(--text-600);
+  font-size: 0.85rem;
+}
+
 .customer-order-item p {
   margin: 4px 0 0;
   color: var(--text-600);
   font-size: 0.92rem;
+}
+
+.customer-order-item-price {
+  font-weight: 600;
+  color: var(--navy-900);
+  white-space: nowrap;
+}
+
+.customer-order-fulfillment {
+  display: grid;
+  gap: 14px;
+  margin-bottom: 20px;
+  padding: 18px 20px;
+  border-radius: 18px;
+  background: rgba(239, 246, 255, 0.9);
+  border: 1px solid rgba(147, 197, 253, 0.45);
+}
+
+.customer-order-fulfillment-address {
+  display: grid;
+  gap: 6px;
+}
+
+.customer-order-fulfillment-label,
+.customer-order-tracking-destination-label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #1e40af;
+}
+
+.customer-order-fulfillment-address-line {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.45;
+  color: var(--navy-900);
+}
+
+.customer-order-fulfillment-region,
+.customer-order-fulfillment-courier,
+.customer-order-fulfillment-pickup,
+.customer-order-fulfillment-notes {
+  margin: 0;
+  color: var(--text-600);
+  font-size: 0.92rem;
+  line-height: 1.5;
+}
+
+.customer-order-fulfillment-notes span {
+  font-weight: 600;
+  color: var(--navy-900);
+}
+
+.customer-order-tracking-destination {
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.75);
+  border: 1px solid rgba(15, 23, 42, 0.06);
+}
+
+.customer-order-tracking-destination p {
+  margin: 6px 0 0;
+  font-size: 0.94rem;
+  line-height: 1.5;
+  color: var(--navy-900);
 }
 
 .customer-order-summary {
@@ -5834,6 +5944,16 @@ main {
 .customer-order-pay {
   display: grid;
   gap: 10px;
+}
+
+.customer-order-pay-button {
+  width: 100%;
+  justify-content: center;
+  text-align: center;
+}
+
+.customer-order-pay-button span {
+  text-align: center;
 }
 
 .customer-order-payment-info {
@@ -6281,10 +6401,161 @@ main {
   }
 
   .customer-order-detail-shell {
-    padding: 20px;
+    padding: 16px;
+    border-radius: 20px;
   }
 
   .account-page-layout {
     grid-template-columns: 1fr;
+  }
+
+  .cart-page .cart-heading h1 {
+    font-size: clamp(1.25rem, 5vw, 1.5rem);
+    line-height: 1.2;
+    letter-spacing: -0.02em;
+  }
+
+  .cart-page .cart-heading p {
+    font-size: 0.92rem;
+    line-height: 1.55;
+  }
+
+  .customer-order-detail-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+    padding-bottom: 14px;
+  }
+
+  .customer-order-number {
+    font-size: 0.98rem;
+    line-height: 1.4;
+  }
+
+  .customer-order-status {
+    align-self: flex-start;
+    max-width: 100%;
+    text-align: center;
+    line-height: 1.35;
+  }
+
+  .customer-order-item {
+    grid-template-columns: 56px minmax(0, 1fr);
+    grid-template-areas:
+      'thumb body'
+      'thumb price';
+    align-items: start;
+    gap: 10px 12px;
+    padding: 12px 14px;
+  }
+
+  .customer-order-item-thumb-wrap {
+    grid-area: thumb;
+  }
+
+  .customer-order-item-body {
+    grid-area: body;
+  }
+
+  .customer-order-item-thumb {
+    width: 56px;
+    height: 56px;
+  }
+
+  .customer-order-item-price {
+    grid-area: price;
+    justify-self: start;
+    white-space: normal;
+    font-size: 0.92rem;
+  }
+
+  .customer-order-item-body strong {
+    font-size: 0.95rem;
+  }
+
+  .customer-order-fulfillment,
+  .customer-order-payment-info,
+  .customer-order-tracking {
+    padding: 14px 16px;
+    border-radius: 16px;
+  }
+
+  .customer-order-fulfillment-address-line {
+    font-size: 0.94rem;
+  }
+
+  .customer-order-payment-info-head {
+    align-items: flex-start;
+  }
+
+  .customer-order-payment-info-meta {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .customer-order-payment-info-list li {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+
+  .customer-order-payment-info-list li strong {
+    width: 100%;
+    font-size: 0.88rem;
+    letter-spacing: 0.02em;
+    word-break: break-all;
+    line-height: 1.45;
+  }
+
+  .customer-order-tracking .customer-order-payment-info-head {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .customer-order-tracking-refresh {
+    margin-left: 0;
+    width: 100%;
+    justify-content: center;
+  }
+
+  .customer-order-tracking-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .customer-order-tracking-copy,
+  .customer-order-tracking-link {
+    width: 100%;
+    justify-content: center;
+    text-align: center;
+  }
+
+  .customer-order-grand-total strong {
+    font-size: 1rem;
+  }
+
+  .customer-order-expiry-note {
+    font-size: 0.86rem;
+    line-height: 1.45;
+  }
+
+  .customer-order-detail-shell .customer-account-notice .cta-button {
+    width: 100%;
+    justify-content: center;
+    text-align: center;
+  }
+}
+
+@media (max-width: 400px) {
+  .customer-order-number {
+    font-size: 0.9rem;
+  }
+
+  .customer-order-tracking-steps {
+    gap: 8px;
+  }
+
+  .customer-order-tracking-step-label {
+    font-size: 0.72rem;
   }
 }

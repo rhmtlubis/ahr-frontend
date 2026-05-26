@@ -3,6 +3,8 @@ import { createPaymentTransaction, createPaymentTransactionForCustomer } from '.
 
 const MIDTRANS_CLIENT_KEY = import.meta.env.VITE_MIDTRANS_CLIENT_KEY || ''
 const MIDTRANS_IS_PRODUCTION = import.meta.env.VITE_MIDTRANS_IS_PRODUCTION === 'true'
+/** @type {'id' | 'en'} */
+const MIDTRANS_SNAP_LANGUAGE = import.meta.env.VITE_MIDTRANS_SNAP_LANGUAGE === 'en' ? 'en' : 'id'
 const MIDTRANS_SNAP_URL = MIDTRANS_IS_PRODUCTION
   ? 'https://app.midtrans.com/snap/snap.js'
   : 'https://app.sandbox.midtrans.com/snap/snap.js'
@@ -84,7 +86,13 @@ export function useMidtransPayment() {
         throw new Error('Midtrans Snap belum dimuat. Silakan refresh halaman.')
       }
 
+      const snapLanguage =
+        transaction.snap_language === 'en' || transaction.snap_language === 'id'
+          ? transaction.snap_language
+          : MIDTRANS_SNAP_LANGUAGE
+
       snapRef.current.pay(transaction.snap_token, {
+        language: snapLanguage,
         onSuccess: (result) => {
           if (onSuccess) onSuccess(result)
         },

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { ArrowLeft, CreditCard, LockKeyhole, Package, Wallet } from 'lucide-react'
+import { ArrowLeft, CreditCard, LockKeyhole, MapPin, Package, Store, Wallet } from 'lucide-react'
 import OrderShipmentTracking from './components/orders/OrderShipmentTracking'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import './App.css'
@@ -263,9 +263,9 @@ function OrderDetailContent({
   return (
     <>
       <div className="customer-order-detail-header">
-        <div>
+        <div className="customer-order-detail-header-main">
           <span>{language === 'en' ? 'Order number' : 'Nomor order'}</span>
-          <h2>{order.order_number}</h2>
+          <p className="customer-order-number">{order.order_number}</p>
         </div>
         <OrderStatusBadge order={order} language={language} />
       </div>
@@ -273,17 +273,38 @@ function OrderDetailContent({
       <div className="customer-order-items">
         {order.items?.map((item) => (
           <article key={`${item.product_slug}-${item.product_size}`} className="customer-order-item">
-            <div>
+            <div className="customer-order-item-thumb-wrap">
+              {item.image_url ? (
+                <img
+                  className="customer-order-item-thumb"
+                  src={item.image_url}
+                  alt={item.product_name}
+                  loading="lazy"
+                />
+              ) : (
+                <div className="customer-order-item-thumb customer-order-item-thumb-placeholder" aria-hidden="true">
+                  <Package size={22} />
+                </div>
+              )}
+            </div>
+            <div className="customer-order-item-body">
               <strong>{item.product_name}</strong>
+              {item.product_category ? (
+                <p className="customer-order-item-category">{item.product_category}</p>
+              ) : null}
               <p>
                 {item.product_size ? `${item.product_size} · ` : ''}
                 {language === 'en' ? 'Qty' : 'Jml'}: {item.quantity}
               </p>
             </div>
-            <span>{formatOrderAmount(item.line_net_amount_minor, item.currency || order.currency)}</span>
+            <span className="customer-order-item-price">
+              {formatOrderAmount(item.line_net_amount_minor, item.currency || order.currency)}
+            </span>
           </article>
         ))}
       </div>
+
+      <OrderFulfillmentInfo order={order} language={language} />
 
       <div className="customer-order-summary">
         <div>
@@ -335,7 +356,7 @@ function OrderDetailContent({
             </p>
           ) : null}
           <button
-            className="cart-submit-button"
+            className="cart-submit-button customer-order-pay-button"
             type="button"
             disabled={paymentStatus.state === 'loading' || !isSnapReady}
             onClick={onPayAgain}
@@ -355,6 +376,67 @@ function OrderDetailContent({
         </div>
       ) : null}
     </>
+  )
+}
+
+function OrderFulfillmentInfo({ order, language }) {
+  const isDelivery = order.fulfillment_method === 'delivery'
+  const shipping = order.shipping
+
+  if (!isDelivery && order.fulfillment_method !== 'pickup') {
+    return null
+  }
+
+  const courierLine = [shipping?.courier_name, shipping?.service_name].filter(Boolean).join(' · ')
+  const regionParts = [shipping?.district, shipping?.city, shipping?.province].filter(Boolean)
+
+  return (
+    <section className="customer-order-fulfillment">
+      <div className="customer-order-payment-info-head">
+        {isDelivery ? <MapPin size={18} /> : <Store size={18} />}
+        <div>
+          <strong>{language === 'en' ? 'Fulfillment' : 'Pengiriman pesanan'}</strong>
+          <p>
+            {isDelivery
+              ? language === 'en'
+                ? 'Your order will be sent to this address after payment is confirmed.'
+                : 'Pesanan akan dikirim ke alamat berikut setelah pembayaran terkonfirmasi.'
+              : language === 'en'
+                ? 'Pick up your order at our workshop after payment is confirmed.'
+                : 'Pesanan dapat diambil di workshop kami setelah pembayaran terkonfirmasi.'}
+          </p>
+        </div>
+      </div>
+
+      {isDelivery ? (
+        <div className="customer-order-fulfillment-address">
+          <span className="customer-order-fulfillment-label">
+            {language === 'en' ? 'Ship to' : 'Dikirim ke'}
+          </span>
+          <p className="customer-order-fulfillment-address-line">
+            {shipping?.address_line || shipping?.address || '-'}
+          </p>
+          {regionParts.length > 0 ? (
+            <p className="customer-order-fulfillment-region">{regionParts.join(', ')}</p>
+          ) : null}
+          {courierLine ? (
+            <p className="customer-order-fulfillment-courier">
+              {language === 'en' ? 'Courier' : 'Kurir'}: <strong>{courierLine}</strong>
+            </p>
+          ) : null}
+        </div>
+      ) : (
+        <p className="customer-order-fulfillment-pickup">
+          {language === 'en' ? 'Pickup at AHR workshop' : 'Ambil di workshop AHR Corporation'}
+        </p>
+      )}
+
+      {order.customer_notes ? (
+        <p className="customer-order-fulfillment-notes">
+          <span>{language === 'en' ? 'Order notes' : 'Catatan order'}:</span> {order.customer_notes}
+        </p>
+      ) : null}
+    </section>
   )
 }
 

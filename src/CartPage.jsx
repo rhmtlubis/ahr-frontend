@@ -1134,6 +1134,13 @@ export default function CartPage() {
 
       savePendingPayment(savedOrder.order_number, savedOrder.payment_access_token)
 
+      clearCart()
+      setMixedSizeDrafts({})
+      setCheckoutForm((current) => ({
+        ...current,
+        notes: '',
+      }))
+
       setCheckoutStatus({
         state: 'loading',
         message: 'Membuka halaman pembayaran...',
@@ -1142,12 +1149,6 @@ export default function CartPage() {
       await payOrder(savedOrder.order_number, savedOrder.payment_access_token, {
         onSuccess: () => {
           clearPendingPayment()
-          clearCart()
-          setCheckoutForm((current) => ({
-            ...current,
-            notes: '',
-          }))
-          setMixedSizeDrafts({})
           navigate(`/payment/success?order=${savedOrder.order_number}`)
         },
         onPending: () => {

@@ -6,6 +6,7 @@ import CookieConsentBanner from './components/layout/CookieConsentBanner'
 import SiteFooter from './components/layout/SiteFooter'
 import SiteHeader from './components/layout/SiteHeader'
 import { getApiUrl } from './lib/api'
+import { useCart } from './lib/cart.jsx'
 import { useCustomer } from './lib/customer.jsx'
 import { getConsentPreferences, setConsentPreferences } from './lib/consent'
 import { useLanguage } from './lib/i18n.jsx'
@@ -19,6 +20,7 @@ export default function PaymentResultPage({ status }) {
   const { language, t } = useLanguage()
   const navigate = useNavigate()
   const { customer } = useCustomer()
+  const { clearCart } = useCart()
   const { payOrder, isSnapReady } = useMidtransPayment()
   const [searchParams] = useSearchParams()
   const orderNumber = searchParams.get('order')
@@ -61,6 +63,15 @@ export default function PaymentResultPage({ status }) {
       type: 'website',
     },
   )
+
+  useEffect(() => {
+    if (status === 'success') {
+      clearCart()
+      if (orderNumber) {
+        clearPendingPayment()
+      }
+    }
+  }, [status, orderNumber, clearCart])
 
   useEffect(() => {
     fetch(getApiUrl(`/api/catalog/landing-page?locale=${language}`), {

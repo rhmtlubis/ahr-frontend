@@ -124,6 +124,15 @@ export default function OrderShipmentTracking({
         </ol>
       ) : null}
 
+      {!compact && order.fulfillment_method === 'delivery' && shipping?.address ? (
+        <div className="customer-order-tracking-destination">
+          <span className="customer-order-tracking-destination-label">
+            {language === 'en' ? 'Destination' : 'Tujuan pengiriman'}
+          </span>
+          <p>{shipping.address}</p>
+        </div>
+      ) : null}
+
       {(shipping?.courier_name || shipping?.service_name) && !compact ? (
         <div className="customer-order-tracking-courier">
           <MapPin size={16} aria-hidden="true" />
