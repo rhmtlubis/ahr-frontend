@@ -28,45 +28,47 @@ export default function CartStepView({
         <p>{t('cart.body')}</p>
       </header>
 
-      <div className="cart-drawer-scroll-zone cart-drawer-scroll-zone-items">
-        <div className="cart-drawer-zone-head">
-          <h2>{t('cart.itemsTitle')}</h2>
-          <button className="cart-clear-button" type="button" onClick={clearCart}>
-            {t('cart.clearCart')}
-          </button>
+      <div className="cart-drawer-body">
+        <div className="cart-drawer-scroll-zone cart-drawer-scroll-zone-items">
+          <div className="cart-drawer-zone-head">
+            <h2>{t('cart.itemsTitle')}</h2>
+            <button className="cart-clear-button" type="button" onClick={clearCart}>
+              {t('cart.clearCart')}
+            </button>
+          </div>
+          <div className="cart-item-list cart-item-list-compact">
+            {items.map((item) => (
+              <Fragment key={item.id}>
+                {renderCartItemRow({
+                  item,
+                  language,
+                  t,
+                  compact: true,
+                  ...itemHandlers,
+                })}
+              </Fragment>
+            ))}
+          </div>
         </div>
-        <div className="cart-item-list cart-item-list-compact">
-          {items.map((item) => (
-            <Fragment key={item.id}>
-              {renderCartItemRow({
-                item,
-                language,
-                t,
-                compact: true,
-                ...itemHandlers,
-              })}
-            </Fragment>
-          ))}
-        </div>
-      </div>
 
-      <div className="cart-drawer-scroll-zone cart-drawer-scroll-zone-secondary">
-        <ul className="cart-drawer-trust">
-          <li>
-            <ShieldCheck size={16} aria-hidden="true" />
-            <span>{language === 'en' ? 'Secure payment' : 'Pembayaran aman'}</span>
-          </li>
-          <li>
-            <CreditCard size={16} aria-hidden="true" />
-            <span>{language === 'en' ? 'Midtrans gateway' : 'Gateway Midtrans'}</span>
-          </li>
-        </ul>
-        <div className="cart-drawer-continue">
-          <span>{language === 'en' ? 'Keep shopping' : 'Lanjut belanja'}</span>
-          <Link to="/all-products">
-            {t('cart.continueShopping')}
-            <ChevronRight size={16} />
-          </Link>
+        <div className="cart-drawer-scroll-zone cart-drawer-scroll-zone-secondary">
+          <ul className="cart-drawer-trust">
+            <li>
+              <ShieldCheck size={16} aria-hidden="true" />
+              <span>{language === 'en' ? 'Secure payment' : 'Pembayaran aman'}</span>
+            </li>
+            <li>
+              <CreditCard size={16} aria-hidden="true" />
+              <span>{language === 'en' ? 'Midtrans gateway' : 'Gateway Midtrans'}</span>
+            </li>
+          </ul>
+          <div className="cart-drawer-continue">
+            <span>{language === 'en' ? 'Keep shopping' : 'Lanjut belanja'}</span>
+            <Link to="/all-products">
+              {t('cart.continueShopping')}
+              <ChevronRight size={16} />
+            </Link>
+          </div>
         </div>
       </div>
 

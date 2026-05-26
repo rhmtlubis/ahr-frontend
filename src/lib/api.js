@@ -97,6 +97,34 @@ export async function saveCatalogOrder(payload) {
   }
 }
 
+export async function listCatalogVouchers({
+  items,
+  locale,
+  currency,
+  fulfillment,
+  shippingFeeAmountMinor,
+}) {
+  await ensureCsrfCookie()
+
+  try {
+    const response = await apiClient.post(
+      '/api/catalog/vouchers/available',
+      {
+        items,
+        locale,
+        currency,
+        fulfillment,
+        shipping_fee_amount_minor: shippingFeeAmountMinor,
+      },
+      { skipUnauthorizedHandler: true },
+    )
+
+    return response.data?.data || []
+  } catch (error) {
+    throw new Error(resolveApiError(error, 'Gagal memuat daftar voucher'))
+  }
+}
+
 export async function validateCatalogVoucher({
   voucherCode,
   items,

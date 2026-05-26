@@ -101,7 +101,7 @@ export default function CheckoutStepView({
 
               <VoucherCodeField
                 language={language}
-                locale={language}
+                locale={language === 'en' ? 'en' : 'id'}
                 currency={cartTotals?.currency || (language === 'en' ? 'USD' : 'IDR')}
                 fulfillment={checkoutForm.fulfillment}
                 shippingFeeAmountMinor={
@@ -128,39 +128,39 @@ export default function CheckoutStepView({
           />
 
           {customerSession ? (
-              <>
-                <CheckoutTermsAgreement
-                  checked={termsAccepted}
-                  onChange={(value) => {
-                    setTermsAccepted(value)
-                    if (value) {
-                      setTermsError('')
-                      setCheckoutStatus((current) =>
-                        current.state === 'error' ? { state: 'idle', message: '' } : current,
-                      )
-                    }
-                  }}
-                  language={language}
-                  disabled={checkoutStatus.state === 'loading'}
-                  error={termsError}
-                />
-                <button
-                  className="cart-drawer-checkout-btn checkout-confirm-submit"
-                  type="submit"
-                  disabled={checkoutStatus.state === 'loading' || !termsAccepted}
-                >
-                  <CreditCard size={18} />
-                  <span>
-                    {checkoutStatus.state === 'loading' ? t('common.submitting') : t('cart.checkoutPlaceOrder')}
-                  </span>
-                </button>
-                <p className="checkout-confirm-legal">
-                  {language === 'en'
-                    ? 'By placing an order you agree to the Terms & Conditions.'
-                    : 'Dengan memesan, Anda setuju dengan Syarat & Ketentuan.'}
-                </p>
-              </>
-            ) : null}
+            <div className="checkout-confirm-checkout-bar">
+              <CheckoutTermsAgreement
+                checked={termsAccepted}
+                onChange={(value) => {
+                  setTermsAccepted(value)
+                  if (value) {
+                    setTermsError('')
+                    setCheckoutStatus((current) =>
+                      current.state === 'error' ? { state: 'idle', message: '' } : current,
+                    )
+                  }
+                }}
+                language={language}
+                disabled={checkoutStatus.state === 'loading'}
+                error={termsError}
+              />
+              <button
+                className="cart-drawer-checkout-btn checkout-confirm-submit"
+                type="submit"
+                disabled={checkoutStatus.state === 'loading' || !termsAccepted}
+              >
+                <CreditCard size={18} />
+                <span>
+                  {checkoutStatus.state === 'loading' ? t('common.submitting') : t('cart.checkoutPlaceOrder')}
+                </span>
+              </button>
+              <p className="checkout-confirm-legal">
+                {language === 'en'
+                  ? 'By placing an order you agree to the Terms & Conditions.'
+                  : 'Dengan memesan, Anda setuju dengan Syarat & Ketentuan.'}
+              </p>
+            </div>
+          ) : null}
           {checkoutStatus.message ? (
             <p className={`cart-status ${checkoutStatus.state}`}>{checkoutStatus.message}</p>
           ) : null}

@@ -1658,7 +1658,9 @@ export default function CartPage() {
   }
 
   return (
-    <div className="app-shell">
+    <div
+      className={`app-shell${items.length > 0 ? ' app-shell--cart-flow' : ''}`}
+    >
       <SiteHeader
         brandHref="/"
         navGroups={pageContent.navGroups}
