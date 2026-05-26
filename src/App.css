@@ -4445,9 +4445,17 @@ main {
 
 .account-page-layout {
   display: grid;
-  grid-template-columns: minmax(300px, 0.9fr) minmax(0, 1.1fr);
+  grid-template-columns: minmax(0, 1fr);
   gap: 20px;
   align-items: start;
+  width: 100%;
+  max-width: 100%;
+}
+
+@media (min-width: 901px) {
+  .account-page-layout {
+    grid-template-columns: minmax(280px, 0.9fr) minmax(0, 1.1fr);
+  }
 }
 
 .cart-account-logout {
@@ -5252,10 +5260,6 @@ main {
   }
 
   .cart-form-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .account-page-layout {
     grid-template-columns: 1fr;
   }
 
@@ -6869,6 +6873,22 @@ main {
 
 .customer-account-page {
   padding-bottom: 56px;
+  overflow-x: clip;
+}
+
+.customer-account-page .cart-page {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: clip;
+}
+
+.customer-account-shell,
+.customer-account-sidebar,
+.customer-account-main,
+.customer-account-profile-panel,
+.customer-account-orders-panel {
+  min-width: 0;
+  max-width: 100%;
 }
 
 .customer-account-hero {
@@ -6922,6 +6942,11 @@ main {
   padding: 24px;
   background: #fff;
   border: 1px solid rgba(2, 37, 84, 0.08);
+  overflow: hidden;
+}
+
+.customer-account-profile-panel.cart-items-panel {
+  box-shadow: 0 18px 40px rgba(2, 37, 84, 0.06);
 }
 
 .customer-account-orders-panel .customer-section-heading {
@@ -6930,6 +6955,8 @@ main {
 
 .customer-orders-toolbar {
   margin-bottom: 16px;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .customer-orders-filters {
@@ -7048,6 +7075,113 @@ main {
   }
 }
 
+@media (max-width: 640px) {
+  .customer-account-hero {
+    padding-top: 28px;
+  }
+
+  .customer-account-profile-panel,
+  .customer-account-orders-panel,
+  .customer-account-sidebar .cart-auth-card {
+    padding: 16px;
+    border-radius: 18px;
+  }
+
+  .customer-section-heading h2 {
+    font-size: 1.28rem;
+  }
+
+  .customer-orders-count {
+    align-self: flex-start;
+    font-size: 0.78rem;
+    padding: 6px 10px;
+  }
+
+  .customer-orders-panel {
+    border-radius: 16px;
+  }
+
+  .customer-order-row {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      'order'
+      'status'
+      'amount'
+      'action';
+    gap: 8px;
+    padding: 14px 16px;
+  }
+
+  .customer-order-row-order strong {
+    font-size: 0.88rem;
+    line-height: 1.4;
+  }
+
+  .customer-order-row-tracking {
+    flex-wrap: wrap;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+
+  .customer-order-row .customer-order-status {
+    justify-self: start;
+    white-space: normal;
+    text-align: left;
+    line-height: 1.35;
+  }
+
+  .customer-order-row-amount {
+    justify-self: start;
+    font-size: 0.9rem;
+  }
+
+  .customer-order-row-action {
+    justify-self: stretch;
+    justify-content: space-between;
+    width: 100%;
+    padding-top: 8px;
+    margin-top: 2px;
+    border-top: 1px solid rgba(2, 37, 84, 0.06);
+  }
+
+  .customer-account-page .cart-checkout-form {
+    min-width: 0;
+  }
+
+  .customer-account-page .cart-form-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .customer-account-page .cart-form-field input,
+  .customer-account-page .cart-form-field select,
+  .customer-account-page .cart-form-field textarea {
+    max-width: 100%;
+  }
+
+  .customer-account-page .cart-submit-button {
+    width: 100%;
+  }
+
+  .customer-account-page .account-address-preview {
+    min-width: 0;
+  }
+
+  .customer-account-page .account-address-preview p {
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+
+  .cart-account-logout {
+    padding: 0 10px;
+    font-size: 0.78rem;
+  }
+
+  .cart-auth-heading {
+    flex-wrap: wrap;
+  }
+}
+
 .customer-order-detail-shell {
   max-width: 760px;
   margin: 0 auto;
@@ -7128,10 +7262,6 @@ main {
   .customer-order-detail-shell {
     padding: 16px;
     border-radius: 20px;
-  }
-
-  .account-page-layout {
-    grid-template-columns: 1fr;
   }
 
   .cart-page .cart-heading h1 {
