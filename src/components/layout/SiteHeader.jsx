@@ -448,10 +448,7 @@ export default function SiteHeader({
                   <span className="header-account-avatar" aria-hidden="true">
                     {customerInitials}
                   </span>
-                  <span className="header-account-copy">
-                    <span className="header-account-badge">{t('common.signedInBadge')}</span>
-                    <span className="header-account-name">{customerDisplayName}</span>
-                  </span>
+                  <span className="header-account-name">{customerDisplayName}</span>
                   <span className="header-account-signed-in-dot" aria-hidden="true" />
                 </>
               ) : (
