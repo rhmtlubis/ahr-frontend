@@ -61,29 +61,25 @@ export async function fetchCatalogPriceQuote({
   currency = getPreferredCurrency(locale),
   expectedTotalAmountMinor,
 }) {
-  const response = await fetch(getApiUrl('/api/catalog/pricing/quote'), {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Accept: 'application/json',
-    },
-    body: JSON.stringify({
-      product_slug: productSlug,
-      quantity,
-      locale,
-      currency,
-      expected_total_amount_minor: expectedTotalAmountMinor,
-    }),
-  })
+  await ensureCsrfCookie()
 
-  if (!response.ok) {
-    const payload = await response.json().catch(() => null)
-    throw new Error(payload?.message || 'Gagal memvalidasi amount produk')
+  try {
+    const response = await apiClient.post(
+      '/api/catalog/pricing/quote',
+      {
+        product_slug: productSlug,
+        quantity,
+        locale,
+        currency,
+        expected_total_amount_minor: expectedTotalAmountMinor,
+      },
+      { skipUnauthorizedHandler: true },
+    )
+
+    return response.data?.data || null
+  } catch (error) {
+    throw new Error(resolveApiError(error, 'Gagal memvalidasi amount produk'))
   }
-
-  const payload = await response.json()
-
-  return payload?.data || null
 }
 
 export async function saveCatalogOrder(payload) {
