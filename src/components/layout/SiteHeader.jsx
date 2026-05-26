@@ -12,6 +12,38 @@ function normalizeLinks(links = [], defaultHref = '/#products') {
   )
 }
 
+function getCustomerInitials(customer) {
+  const name = String(customer?.name || customer?.email || '').trim()
+
+  if (!name) {
+    return '?'
+  }
+
+  const parts = name.split(/\s+/).filter(Boolean)
+
+  if (parts.length === 1) {
+    return parts[0].slice(0, 2).toUpperCase()
+  }
+
+  return `${parts[0][0] || ''}${parts[parts.length - 1][0] || ''}`.toUpperCase()
+}
+
+function getCustomerDisplayName(customer) {
+  const name = String(customer?.name || '').trim()
+
+  if (name) {
+    return name.split(/\s+/)[0]
+  }
+
+  const email = String(customer?.email || '').trim()
+
+  if (email.includes('@')) {
+    return email.split('@')[0]
+  }
+
+  return email
+}
+
 export default function SiteHeader({
   brandHref = '/',
   navGroups = [],
@@ -26,7 +58,13 @@ export default function SiteHeader({
   onUtilityInteraction,
 }) {
   const { language, setLanguage, t } = useLanguage()
-  const { customer } = useCustomer()
+  const { customer, isLoading: customerLoading } = useCustomer()
+  const isSignedIn = Boolean(customer)
+  const customerInitials = isSignedIn ? getCustomerInitials(customer) : ''
+  const customerDisplayName = isSignedIn ? getCustomerDisplayName(customer) : ''
+  const accountAriaLabel = isSignedIn
+    ? t('common.signedInAs', { name: customer.name || customer.email })
+    : t('common.customerAccount')
   const [activeNav, setActiveNav] = useState(navGroups[0]?.id || '')
   const [menuOpen, setMenuOpen] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
@@ -272,6 +310,36 @@ export default function SiteHeader({
           </div>
 
           <div className="mobile-sidebar-body">
+            <Link
+              className={isSignedIn ? 'mobile-sidebar-account mobile-sidebar-account--signed-in' : 'mobile-sidebar-account'}
+              to="/akun"
+              onClick={() => handleMobileMenuClose('account')}
+            >
+              {isSignedIn ? (
+                <span className="header-account-avatar" aria-hidden="true">
+                  {customerInitials}
+                </span>
+              ) : (
+                <span className="mobile-sidebar-account-icon" aria-hidden="true">
+                  <UserRound size={18} />
+                </span>
+              )}
+              <span className="mobile-sidebar-account-copy">
+                {isSignedIn ? (
+                  <>
+                    <strong>{customerDisplayName}</strong>
+                    <span>{t('common.viewAccount')}</span>
+                  </>
+                ) : (
+                  <>
+                    <strong>{t('common.customerAccount')}</strong>
+                    <span>{t('common.signInAccount')}</span>
+                  </>
+                )}
+              </span>
+              <ChevronRight size={16} aria-hidden="true" />
+            </Link>
+
             <nav className="mobile-sidebar-nav">
               {navGroups.map((item) => (
                 <button
@@ -364,11 +432,31 @@ export default function SiteHeader({
 
           <div className="header-actions">
             <Link
-              className={customer ? 'header-account-button active' : 'header-account-button'}
+              className={
+                isSignedIn
+                  ? 'header-account-button header-account-button--signed-in'
+                  : 'header-account-button'
+              }
               to="/akun"
-              aria-label={t('common.customerAccount')}
+              aria-label={accountAriaLabel}
+              title={accountAriaLabel}
+              data-signed-in={isSignedIn ? 'true' : 'false'}
+              data-loading={customerLoading ? 'true' : 'false'}
             >
-              <UserRound size={18} />
+              {isSignedIn ? (
+                <>
+                  <span className="header-account-avatar" aria-hidden="true">
+                    {customerInitials}
+                  </span>
+                  <span className="header-account-copy">
+                    <span className="header-account-badge">{t('common.signedInBadge')}</span>
+                    <span className="header-account-name">{customerDisplayName}</span>
+                  </span>
+                  <span className="header-account-signed-in-dot" aria-hidden="true" />
+                </>
+              ) : (
+                <UserRound size={18} aria-hidden="true" />
+              )}
             </Link>
             <Link className="header-cart-button" to="/cart" aria-label={t('cart.openCart')}>
               <ShoppingCart size={18} />

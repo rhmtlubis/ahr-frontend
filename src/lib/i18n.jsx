@@ -58,6 +58,10 @@ const translations = {
       submitInquiry: 'Submit Inquiry',
       submitting: 'Mengirim...',
       customerAccount: 'Akun customer',
+      signedInBadge: 'Sudah masuk',
+      viewAccount: 'Lihat akun',
+      signInAccount: 'Masuk / daftar',
+      signedInAs: 'Masuk sebagai {{name}}',
     },
     cart: {
       openCart: 'Buka cart',
@@ -418,6 +422,10 @@ const translations = {
       submitInquiry: 'Submit Inquiry',
       submitting: 'Sending...',
       customerAccount: 'Customer account',
+      signedInBadge: 'Signed in',
+      viewAccount: 'View account',
+      signInAccount: 'Sign in',
+      signedInAs: 'Signed in as {{name}}',
     },
     cart: {
       openCart: 'Open cart',
