@@ -10,6 +10,7 @@ import { initializeAnalytics, sanitizeAnalyticsPath, trackPageView, updateConsen
 import { getBackendUrl } from './lib/api'
 import { captureMarketingAttribution } from './lib/attribution'
 import { getConsentPreferences } from './lib/consent'
+import RouteScrollManager from './components/routing/RouteScrollManager.jsx'
 
 const App = lazy(() => import('./App.jsx'))
 const AllProductsPage = lazy(() => import('./AllProductsPage.jsx'))
@@ -74,6 +75,7 @@ createRoot(document.getElementById('root')).render(
     <CustomerProvider>
       <CartProvider>
         <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+          <RouteScrollManager />
           <AnalyticsRouteTracker />
           <Suspense fallback={<RouteFallback />}>
             <Routes>

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { ArrowLeft, ChevronDown, MessageSquareMore, ShoppingCart } from 'lucide-react'
-import { Link, Navigate, useParams, useSearchParams } from 'react-router-dom'
+import { Link, Navigate, useLocation, useParams, useSearchParams } from 'react-router-dom'
 import './App.css'
 import CategoryFilterHeader from './components/landing/CategoryFilterHeader'
 import ProductPrice from './components/catalog/ProductPrice'
@@ -95,11 +95,10 @@ function buildCategoryNavigationItems(products = [], catalogCategories = [], all
 
 export default function CategoryPage() {
   const { language, t } = useLanguage()
+  const location = useLocation()
   const { categoryId = '' } = useParams()
   const { addCartItem, itemCount } = useCart()
   const rootRef = useRef(null)
-  const resultsRef = useRef(null)
-  const skipPaginationScrollRef = useRef(true)
   const gsapRef = useRef(null)
   const [searchParams, setSearchParams] = useSearchParams()
   const [listingContent, setListingContent] = useState({
@@ -192,13 +191,12 @@ export default function CategoryPage() {
   const activePage = Number.isFinite(requestedPage) && requestedPage > 0 ? requestedPage : 1
 
   useEffect(() => {
-    if (skipPaginationScrollRef.current) {
-      skipPaginationScrollRef.current = false
+    if (!listingReady) {
       return
     }
 
-    scrollToCatalogListingTopAfterPaint(resultsRef.current)
-  }, [activePage])
+    scrollToCatalogListingTopAfterPaint(null, { behavior: 'auto' })
+  }, [listingReady, location.key, categoryId])
 
   const visibleProducts = activeCategory
     ? listingContent.products.filter((product) => product.categoryId === activeCategory.id)
@@ -494,7 +492,6 @@ export default function CategoryPage() {
         </section>
 
         <section
-          ref={resultsRef}
           className="content-block section-soft all-products-results"
           id="catalog-results"
           aria-label={language === 'en' ? 'Product results' : 'Daftar produk'}

@@ -20,7 +20,6 @@ import { useLanguage } from './lib/i18n.jsx'
 import { getLandingChromeContent } from './lib/landingContent'
 import { clearPersonalizationData } from './lib/personalization'
 import { getCategoryRoute } from './lib/categorySeo.js'
-import { scrollToCatalogListingTopAfterPaint } from './lib/scrollToCatalogListing.js'
 import useDocumentTitle from './lib/useDocumentTitle'
 
 const PRODUCTS_PER_PAGE = 8
@@ -119,8 +118,6 @@ export default function AllProductsPage() {
   )
   const { addCartItem, itemCount } = useCart()
   const rootRef = useRef(null)
-  const resultsRef = useRef(null)
-  const skipPaginationScrollRef = useRef(true)
   const gsapRef = useRef(null)
   const [searchParams, setSearchParams] = useSearchParams()
   const [listingContent, setListingContent] = useState({
@@ -207,15 +204,6 @@ export default function AllProductsPage() {
     : 'all'
 
   const activePage = Number.isFinite(requestedPage) && requestedPage > 0 ? requestedPage : 1
-
-  useEffect(() => {
-    if (skipPaginationScrollRef.current) {
-      skipPaginationScrollRef.current = false
-      return
-    }
-
-    scrollToCatalogListingTopAfterPaint(resultsRef.current)
-  }, [activePage])
 
   useEffect(() => {
     if (requestedCategory === activeCatalogFilter && requestedPage === activePage) {
@@ -472,7 +460,6 @@ export default function AllProductsPage() {
         </section>
 
         <section
-          ref={resultsRef}
           className="content-block section-soft all-products-results"
           id="catalog-results"
           aria-label={language === 'en' ? 'Product results' : 'Daftar produk'}

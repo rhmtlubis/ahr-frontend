@@ -74,6 +74,7 @@ export default function CategoryFilterHeader({
                 to={categoryHref}
                 onClick={(event) => {
                   event.preventDefault()
+                  event.currentTarget.blur()
                   onCategorySelect?.(category.id)
                   navigate(categoryHref)
                 }}
