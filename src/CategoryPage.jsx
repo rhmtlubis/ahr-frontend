@@ -17,6 +17,7 @@ import { useLanguage } from './lib/i18n.jsx'
 import { getLandingChromeContent } from './lib/landingContent'
 import { clearPersonalizationData } from './lib/personalization'
 import { buildCategoryListingStructuredData } from './lib/structuredData'
+import { scrollToCatalogListingTopAfterPaint } from './lib/scrollToCatalogListing.js'
 import useDocumentTitle from './lib/useDocumentTitle'
 
 const PRODUCTS_PER_PAGE = 8
@@ -97,6 +98,8 @@ export default function CategoryPage() {
   const { categoryId = '' } = useParams()
   const { addCartItem, itemCount } = useCart()
   const rootRef = useRef(null)
+  const resultsRef = useRef(null)
+  const skipPaginationScrollRef = useRef(true)
   const gsapRef = useRef(null)
   const [searchParams, setSearchParams] = useSearchParams()
   const [listingContent, setListingContent] = useState({
@@ -187,6 +190,15 @@ export default function CategoryPage() {
 
   const requestedPage = Number.parseInt(searchParams.get('page') || '1', 10)
   const activePage = Number.isFinite(requestedPage) && requestedPage > 0 ? requestedPage : 1
+
+  useEffect(() => {
+    if (skipPaginationScrollRef.current) {
+      skipPaginationScrollRef.current = false
+      return
+    }
+
+    scrollToCatalogListingTopAfterPaint(resultsRef.current)
+  }, [activePage])
 
   const visibleProducts = activeCategory
     ? listingContent.products.filter((product) => product.categoryId === activeCategory.id)
@@ -310,7 +322,6 @@ export default function CategoryPage() {
       next_page: nextPage,
     })
     setSearchParams(nextSearchParams)
-    window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
   const handleProductOpen = (product) => {
@@ -482,7 +493,12 @@ export default function CategoryPage() {
           />
         </section>
 
-        <section className="content-block section-soft all-products-results">
+        <section
+          ref={resultsRef}
+          className="content-block section-soft all-products-results"
+          id="catalog-results"
+          aria-label={language === 'en' ? 'Product results' : 'Daftar produk'}
+        >
           <div className="all-products-toolbar" data-products-hero>
             <div className="all-products-toolbar-title">
               <p className="all-products-toolbar-kicker">
