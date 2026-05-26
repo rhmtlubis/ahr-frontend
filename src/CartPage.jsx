@@ -33,6 +33,9 @@ import { useMidtransPayment } from './lib/useMidtransPayment'
 import { clearPersonalizationData } from './lib/personalization'
 import { formatCurrencyAmount, getProductPriceDisplay } from './lib/price'
 import useDocumentTitle from './lib/useDocumentTitle'
+import CheckoutTermsAgreement from './components/checkout/CheckoutTermsAgreement'
+import VoucherCodeField from './components/checkout/VoucherCodeField'
+import { fetchCheckoutTerms } from './lib/checkoutTerms'
 
 const defaultCheckoutForm = {
   name: '',
@@ -263,22 +266,70 @@ function getSelectedShippingOption(shippingOptions, selectedShippingOptionKey) {
   return shippingOptions.find((option) => option.key === selectedShippingOptionKey) || null
 }
 
-function getCheckoutTotals(cartTotals, shippingOption, language) {
+function getVoucherDiscountParts(appliedVoucher) {
+  if (!appliedVoucher) {
+    return { orderDiscountAmount: 0, shippingDiscountAmount: 0 }
+  }
+
+  const orderDiscountAmount = Number.isFinite(appliedVoucher.order_discount_amount_minor)
+    ? appliedVoucher.order_discount_amount_minor
+    : appliedVoucher.benefit_type === 'order_discount' && Number.isFinite(appliedVoucher.discount_amount_minor)
+      ? appliedVoucher.discount_amount_minor
+      : 0
+
+  const shippingDiscountAmount = Number.isFinite(appliedVoucher.shipping_discount_amount_minor)
+    ? appliedVoucher.shipping_discount_amount_minor
+    : 0
+
+  return { orderDiscountAmount, shippingDiscountAmount }
+}
+
+function getCheckoutTotals(cartTotals, shippingOption, language, appliedVoucher) {
   const shippingAmount = Number.isFinite(shippingOption?.price) ? shippingOption.price : 0
   const shippingCurrency = shippingOption?.currency || cartTotals?.currency || (language === 'en' ? 'USD' : 'IDR')
+  const { orderDiscountAmount, shippingDiscountAmount } = getVoucherDiscountParts(appliedVoucher)
   const hasKnownCartTotal = Number.isFinite(cartTotals?.netAmount)
-  const grandTotalAmount = hasKnownCartTotal ? cartTotals.netAmount + shippingAmount : null
+  const netAfterVoucher = hasKnownCartTotal ? Math.max(cartTotals.netAmount - orderDiscountAmount, 0) : null
+  const shippingAfterVoucher = Math.max(shippingAmount - shippingDiscountAmount, 0)
+  const grandTotalAmount = netAfterVoucher !== null ? netAfterVoucher + shippingAfterVoucher : null
 
   return {
     currency: shippingCurrency,
     shippingAmount,
     shippingLabel: formatCurrencyAmount(shippingAmount, shippingCurrency, language),
+    orderVoucherDiscountAmount: orderDiscountAmount,
+    orderVoucherDiscountLabel:
+      orderDiscountAmount > 0
+        ? `−${formatCurrencyAmount(orderDiscountAmount, shippingCurrency, language)}`
+        : null,
+    shippingVoucherDiscountAmount: shippingDiscountAmount,
+    shippingVoucherDiscountLabel:
+      shippingDiscountAmount > 0
+        ? `−${formatCurrencyAmount(shippingDiscountAmount, shippingCurrency, language)}`
+        : null,
+    voucherDiscountAmount: orderDiscountAmount + shippingDiscountAmount,
+    voucherDiscountLabel:
+      orderDiscountAmount + shippingDiscountAmount > 0
+        ? `−${formatCurrencyAmount(orderDiscountAmount + shippingDiscountAmount, shippingCurrency, language)}`
+        : null,
     grandTotalAmount,
     grandTotalLabel:
       grandTotalAmount !== null
         ? formatCurrencyAmount(grandTotalAmount, shippingCurrency, language)
         : null,
   }
+}
+
+function buildVoucherValidateItems(items, language) {
+  return items.map((item) => {
+    const priceAmounts = getItemPriceAmounts(item, language)
+
+    return {
+      product_slug: item.product.slug,
+      quantity: item.quantity,
+      expected_unit_amount_minor: priceAmounts?.unitNetAmount ?? null,
+    }
+  })
 }
 
 function normalizeGoogleAdsConversionValue(amountMinor, currency) {
@@ -433,7 +484,15 @@ function buildCheckoutMessage(items, checkoutForm, language, cartTotals, locatio
     .join('\n')
 }
 
-function buildCheckoutPayload(items, checkoutForm, language, cartTotals, locationOptions) {
+function buildCheckoutPayload(
+  items,
+  checkoutForm,
+  language,
+  cartTotals,
+  locationOptions,
+  checkoutTermsVersion,
+  appliedVoucherCode,
+) {
   const firstItemCurrency = items.length > 0 ? getItemCurrency(items[0], language) : language === 'en' ? 'USD' : 'IDR'
   const formattedAddress = buildStructuredAddress(checkoutForm, locationOptions)
   const addressLine = stripTrailingRegionsFromAddressLine(
@@ -453,6 +512,9 @@ function buildCheckoutPayload(items, checkoutForm, language, cartTotals, locatio
     city_code: checkoutForm.cityCode || undefined,
     district_code: checkoutForm.districtCode || undefined,
     notes: checkoutForm.notes || undefined,
+    terms_accepted: true,
+    terms_version: checkoutTermsVersion || undefined,
+    voucher_code: appliedVoucherCode || undefined,
     locale: language,
     currency: cartTotals?.currency || firstItemCurrency,
     source_page: window.location.pathname,
@@ -588,6 +650,10 @@ export default function CartPage() {
   const [shippingOptions, setShippingOptions] = useState([])
   const [selectedShippingOptionKey, setSelectedShippingOptionKey] = useState('')
   const [shippingStatus, setShippingStatus] = useState({ state: 'idle', message: '' })
+  const [termsAccepted, setTermsAccepted] = useState(false)
+  const [checkoutTermsVersion, setCheckoutTermsVersion] = useState('')
+  const [termsError, setTermsError] = useState('')
+  const [appliedVoucher, setAppliedVoucher] = useState(null)
   const [locationLoading, setLocationLoading] = useState({
     provinces: false,
     cities: false,
@@ -601,8 +667,8 @@ export default function CartPage() {
     [shippingOptions, selectedShippingOptionKey],
   )
   const checkoutTotals = useMemo(
-    () => getCheckoutTotals(cartTotals, selectedShippingOption, language),
-    [cartTotals, selectedShippingOption, language],
+    () => getCheckoutTotals(cartTotals, selectedShippingOption, language, appliedVoucher),
+    [appliedVoucher, cartTotals, selectedShippingOption, language],
   )
 
   useEffect(() => {
@@ -627,6 +693,35 @@ export default function CartPage() {
         setPageContent(getLandingChromeContent({}, { hashPrefix: '/', locale: language }))
       })
   }, [language])
+
+  useEffect(() => {
+    fetchCheckoutTerms(language)
+      .then((data) => {
+        if (data?.version) {
+          setCheckoutTermsVersion(data.version)
+        }
+      })
+      .catch(() => {
+        setCheckoutTermsVersion('')
+      })
+  }, [language])
+
+  useEffect(() => {
+    setAppliedVoucher(null)
+  }, [items])
+
+  useEffect(() => {
+    setAppliedVoucher((current) => {
+      if (!current) {
+        return null
+      }
+
+      const isShippingVoucher =
+        current.benefit_type === 'shipping_discount' || current.benefit_type === 'free_shipping'
+
+      return isShippingVoucher ? null : current
+    })
+  }, [checkoutForm.fulfillment, selectedShippingOptionKey])
 
   const applyConsentPreferences = (nextPreferences) => {
     setConsentPreferences(nextPreferences)
@@ -1060,6 +1155,18 @@ export default function CartPage() {
       return
     }
 
+    if (!termsAccepted) {
+      const message =
+        language === 'en'
+          ? 'Please read and accept the Terms & Conditions before payment.'
+          : 'Silakan baca dan setujui Syarat & Ketentuan sebelum pembayaran.'
+      setTermsError(message)
+      setCheckoutStatus({ state: 'error', message })
+      return
+    }
+
+    setTermsError('')
+
     setCheckoutStatus({
       state: 'loading',
       message: t('cart.profileSyncing'),
@@ -1083,7 +1190,15 @@ export default function CartPage() {
       setCustomerSession(syncedCustomer)
       const savedOrder = await saveCatalogOrder(
         {
-          ...buildCheckoutPayload(checkoutItems, checkoutForm, language, cartTotals, locationOptions),
+          ...buildCheckoutPayload(
+            checkoutItems,
+            checkoutForm,
+            language,
+            cartTotals,
+            locationOptions,
+            checkoutTermsVersion,
+            appliedVoucher?.code,
+          ),
           shipping_option: selectedShippingOption
             ? {
                 provider: selectedShippingOption.provider,
@@ -1385,6 +1500,18 @@ export default function CartPage() {
                   <span>{t('cart.nettTotal')}</span>
                   <strong>{cartTotals?.netLabel || t('cart.subtotalManual')}</strong>
                 </div>
+                {checkoutTotals.orderVoucherDiscountLabel ? (
+                  <div className="cart-summary-row discount">
+                    <span>{language === 'en' ? 'Voucher (products)' : 'Voucher produk'}</span>
+                    <strong>{checkoutTotals.orderVoucherDiscountLabel}</strong>
+                  </div>
+                ) : null}
+                {checkoutTotals.shippingVoucherDiscountLabel ? (
+                  <div className="cart-summary-row discount">
+                    <span>{language === 'en' ? 'Voucher (shipping)' : 'Voucher ongkir'}</span>
+                    <strong>{checkoutTotals.shippingVoucherDiscountLabel}</strong>
+                  </div>
+                ) : null}
                 {checkoutForm.fulfillment === 'delivery' ? (
                   <div className="cart-summary-row">
                     <span>{language === 'en' ? 'Shipping' : 'Ongkir'}</span>
@@ -1717,7 +1844,47 @@ export default function CartPage() {
                   />
                 </div>
 
-                <button className="cart-submit-button" type="submit" disabled={checkoutStatus.state === 'loading'}>
+                {customerSession ? (
+                  <VoucherCodeField
+                    language={language}
+                    locale={language}
+                    currency={cartTotals?.currency || (language === 'en' ? 'USD' : 'IDR')}
+                    fulfillment={checkoutForm.fulfillment}
+                    shippingFeeAmountMinor={
+                      checkoutForm.fulfillment === 'delivery' && selectedShippingOption
+                        ? selectedShippingOption.price
+                        : 0
+                    }
+                    items={buildVoucherValidateItems(checkoutItems, language)}
+                    appliedVoucher={appliedVoucher}
+                    onApplied={setAppliedVoucher}
+                    onClear={() => setAppliedVoucher(null)}
+                    disabled={checkoutStatus.state === 'loading'}
+                  />
+                ) : null}
+
+                <CheckoutTermsAgreement
+                  checked={termsAccepted}
+                  onChange={(value) => {
+                    setTermsAccepted(value)
+                    if (value) {
+                      setTermsError('')
+                      setCheckoutStatus((current) =>
+                        current.state === 'error' ? { state: 'idle', message: '' } : current,
+                      )
+                    }
+                  }}
+                  language={language}
+                  termsVersion={checkoutTermsVersion}
+                  disabled={checkoutStatus.state === 'loading'}
+                  error={termsError}
+                />
+
+                <button
+                  className="cart-submit-button"
+                  type="submit"
+                  disabled={checkoutStatus.state === 'loading' || !termsAccepted}
+                >
                   <MessageCircleMore size={18} />
                   <span>{checkoutStatus.state === 'loading' ? t('common.submitting') : t('cart.checkoutPay')}</span>
                 </button>

@@ -13,6 +13,8 @@ import { useCustomer } from './lib/customer.jsx'
 import { useLanguage } from './lib/i18n.jsx'
 import { getLandingChromeContent } from './lib/landingContent'
 import { useMidtransPayment } from './lib/useMidtransPayment'
+import CheckoutTermsAgreement from './components/checkout/CheckoutTermsAgreement'
+import { fetchCheckoutTerms } from './lib/checkoutTerms'
 import { formatCurrencyAmount } from './lib/price'
 import { savePendingPayment } from './lib/pendingPayment'
 import useDocumentTitle from './lib/useDocumentTitle'
@@ -57,6 +59,9 @@ export default function CustomerOrderDetailPage() {
   const [loadError, setLoadError] = useState('')
   const [paymentStatus, setPaymentStatus] = useState({ state: 'idle', message: '' })
   const [isRefreshingTracking, setIsRefreshingTracking] = useState(false)
+  const [termsAccepted, setTermsAccepted] = useState(false)
+  const [checkoutTermsVersion, setCheckoutTermsVersion] = useState('')
+  const [termsError, setTermsError] = useState('')
   const [consentPreferences, setConsentPreferencesState] = useState(() => getConsentPreferences())
 
   useDocumentTitle(
@@ -154,10 +159,33 @@ export default function CustomerOrderDetailPage() {
     loadOrder()
   }, [customer, customerLoading, loadOrder])
 
+  useEffect(() => {
+    fetchCheckoutTerms(language)
+      .then((data) => {
+        if (data?.version) {
+          setCheckoutTermsVersion(data.version)
+        }
+      })
+      .catch(() => {
+        setCheckoutTermsVersion('')
+      })
+  }, [language])
+
   const handlePayAgain = async () => {
     if (!order?.can_pay || !order?.order_number) {
       return
     }
+
+    if (!termsAccepted) {
+      setTermsError(
+        language === 'en'
+          ? 'Please read and accept the Terms & Conditions before payment.'
+          : 'Silakan baca dan setujui Syarat & Ketentuan sebelum pembayaran.',
+      )
+      return
+    }
+
+    setTermsError('')
 
     setPaymentStatus({
       state: 'loading',
@@ -241,6 +269,15 @@ export default function CustomerOrderDetailPage() {
                 onPayAgain={handlePayAgain}
                 onRefreshTracking={handleRefreshTracking}
                 isRefreshingTracking={isRefreshingTracking}
+                termsAccepted={termsAccepted}
+                onTermsAcceptedChange={(value) => {
+                  setTermsAccepted(value)
+                  if (value) {
+                    setTermsError('')
+                  }
+                }}
+                checkoutTermsVersion={checkoutTermsVersion}
+                termsError={termsError}
               />
             )}
           </section>
@@ -259,6 +296,10 @@ function OrderDetailContent({
   onPayAgain,
   onRefreshTracking,
   isRefreshingTracking,
+  termsAccepted,
+  onTermsAcceptedChange,
+  checkoutTermsVersion,
+  termsError,
 }) {
   return (
     <>
@@ -314,6 +355,32 @@ function OrderDetailContent({
         {order.summary?.shipping_fee_amount_minor ? (
           <ShippingFeeRow order={order} language={language} />
         ) : null}
+        {order.summary?.voucher_discount_amount_minor || order.voucher_discount_amount_minor ? (
+          <div>
+            <span>
+              {language === 'en' ? 'Voucher (products)' : 'Voucher produk'} ({order.voucher_code || order.summary?.voucher_code})
+            </span>
+            <strong>
+              −
+              {formatOrderAmount(
+                order.summary?.voucher_discount_amount_minor ?? order.voucher_discount_amount_minor,
+                order.currency,
+              )}
+            </strong>
+          </div>
+        ) : null}
+        {order.summary?.voucher_shipping_discount_amount_minor || order.voucher_shipping_discount_amount_minor ? (
+          <div>
+            <span>{language === 'en' ? 'Voucher (shipping)' : 'Voucher ongkir'}</span>
+            <strong>
+              −
+              {formatOrderAmount(
+                order.summary?.voucher_shipping_discount_amount_minor ?? order.voucher_shipping_discount_amount_minor,
+                order.currency,
+              )}
+            </strong>
+          </div>
+        ) : null}
         <div className="customer-order-grand-total">
           <span>{language === 'en' ? 'Grand total' : 'Total bayar'}</span>
           <strong>
@@ -355,10 +422,18 @@ function OrderDetailContent({
                 : 'Pembayaran online belum siap. Muat ulang halaman atau hubungi kami jika masalah berlanjut.'}
             </p>
           ) : null}
+          <CheckoutTermsAgreement
+            checked={termsAccepted}
+            onChange={onTermsAcceptedChange}
+            language={language}
+            termsVersion={checkoutTermsVersion}
+            disabled={paymentStatus.state === 'loading'}
+            error={termsError}
+          />
           <button
             className="cart-submit-button customer-order-pay-button"
             type="button"
-            disabled={paymentStatus.state === 'loading' || !isSnapReady}
+            disabled={paymentStatus.state === 'loading' || !isSnapReady || !termsAccepted}
             onClick={onPayAgain}
           >
             <CreditCard size={18} />

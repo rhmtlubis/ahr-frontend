@@ -5956,6 +5956,196 @@ main {
   text-align: center;
 }
 
+.cart-voucher-field {
+  display: grid;
+  gap: 10px;
+}
+
+.cart-voucher-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.86rem;
+  font-weight: 700;
+  color: var(--navy-900);
+}
+
+.cart-voucher-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+}
+
+.cart-voucher-input {
+  width: 100%;
+  min-height: 46px;
+  padding: 0 14px;
+  border: 1px solid rgba(2, 37, 84, 0.14);
+  border-radius: 12px;
+  background: #fff;
+  font: inherit;
+  letter-spacing: 0.04em;
+}
+
+.cart-voucher-apply,
+.cart-voucher-remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 46px;
+  padding: 0 16px;
+  border-radius: 12px;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.cart-voucher-apply {
+  border: 1px solid var(--gold-500);
+  background: var(--gold-500);
+  color: var(--navy-900);
+}
+
+.cart-voucher-remove {
+  border: 1px solid rgba(2, 37, 84, 0.14);
+  background: #fff;
+  color: var(--navy-900);
+}
+
+.cart-voucher-applied-title {
+  margin: 0;
+  font-size: 0.84rem;
+  color: var(--text-700);
+}
+
+.cart-voucher-applied-type {
+  color: var(--text-600);
+  font-weight: 600;
+}
+
+.cart-voucher-hint {
+  margin: 0;
+  font-size: 0.82rem;
+  line-height: 1.45;
+  color: var(--text-600);
+}
+
+.cart-terms-agreement {
+  display: grid;
+  gap: 8px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  background: rgba(2, 37, 84, 0.03);
+  border: 1px solid rgba(2, 37, 84, 0.08);
+}
+
+.cart-terms-agreement-error {
+  border-color: rgba(180, 35, 24, 0.35);
+  background: rgba(180, 35, 24, 0.04);
+}
+
+.cart-terms-agreement-label {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  cursor: pointer;
+}
+
+.cart-terms-agreement-checkbox {
+  width: 18px;
+  height: 18px;
+  margin-top: 2px;
+  flex-shrink: 0;
+  accent-color: var(--gold-500);
+}
+
+.cart-terms-agreement-copy {
+  color: var(--navy-900);
+  font-size: 0.9rem;
+  line-height: 1.55;
+}
+
+.cart-terms-agreement-copy a {
+  color: var(--navy-900);
+  font-weight: 700;
+  text-underline-offset: 0.18em;
+}
+
+.cart-terms-agreement-hint {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 0;
+  padding-left: 30px;
+  color: var(--text-600);
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.cart-terms-agreement-version {
+  color: var(--text-500);
+}
+
+.terms-page .terms-document {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 28px;
+  border-radius: 24px;
+  background: #fff;
+  box-shadow: 0 18px 40px rgba(2, 37, 84, 0.06);
+}
+
+.terms-document-intro {
+  margin: 0 0 24px;
+  color: var(--text-700);
+  font-size: 1rem;
+  line-height: 1.75;
+}
+
+.terms-document-section {
+  padding-top: 20px;
+  margin-top: 20px;
+  border-top: 1px solid rgba(2, 37, 84, 0.08);
+}
+
+.terms-document-section:first-of-type {
+  border-top: 0;
+  margin-top: 0;
+  padding-top: 0;
+}
+
+.terms-document-section h2 {
+  margin: 0 0 12px;
+  font-size: 1.05rem;
+  line-height: 1.35;
+  letter-spacing: -0.02em;
+  color: var(--navy-900);
+}
+
+.terms-document-section p {
+  margin: 0 0 10px;
+  color: var(--text-700);
+  font-size: 0.94rem;
+  line-height: 1.7;
+}
+
+.terms-document-section p:last-child {
+  margin-bottom: 0;
+}
+
+@media (max-width: 768px) {
+  .terms-page .terms-document {
+    padding: 18px 16px;
+    border-radius: 20px;
+  }
+
+  .cart-terms-agreement-hint {
+    padding-left: 0;
+  }
+}
+
 .customer-order-payment-info {
   display: grid;
   gap: 14px;

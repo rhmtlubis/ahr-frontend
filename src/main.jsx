@@ -24,6 +24,7 @@ const ArticleDetailPage = lazy(() => import('./ArticleDetailPage.jsx'))
 const LinktreePage = lazy(() => import('./LinktreePage.jsx'))
 const ProductDetailPage = lazy(() => import('./ProductDetailPage.jsx'))
 const PaymentResultPage = lazy(() => import('./PaymentResultPage.jsx'))
+const TermsAndConditionsPage = lazy(() => import('./TermsAndConditionsPage.jsx'))
 
 function LegacyAdminRedirect() {
   useEffect(() => {
@@ -88,6 +89,8 @@ createRoot(document.getElementById('root')).render(
               <Route path="/kontak-kerja-sama" element={<B2BLandingPage />} />
               <Route path="/linktree" element={<LinktreePage />} />
               <Route path="/profil" element={<CompanyProfilePage />} />
+              <Route path="/syarat-ketentuan" element={<TermsAndConditionsPage />} />
+              <Route path="/terms-and-conditions" element={<TermsAndConditionsPage />} />
               <Route path="/produk/:productSlug" element={<ProductDetailPage />} />
               <Route path="/payment/success" element={<PaymentResultPage status="success" />} />
               <Route path="/payment/pending" element={<PaymentResultPage status="pending" />} />

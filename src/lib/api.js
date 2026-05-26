@@ -94,6 +94,32 @@ export async function saveCatalogOrder(payload) {
   }
 }
 
+export async function validateCatalogVoucher({
+  voucherCode,
+  items,
+  locale,
+  currency,
+  fulfillment,
+  shippingFeeAmountMinor,
+}) {
+  await ensureCsrfCookie()
+
+  try {
+    const response = await apiClient.post('/api/catalog/vouchers/validate', {
+      voucher_code: voucherCode,
+      items,
+      locale,
+      currency,
+      fulfillment,
+      shipping_fee_amount_minor: shippingFeeAmountMinor,
+    })
+
+    return response.data?.data || null
+  } catch (error) {
+    throw new Error(resolveApiError(error, 'Voucher tidak valid'))
+  }
+}
+
 export async function fetchCatalogShippingRates(payload) {
   await ensureCsrfCookie()
 
