@@ -23,7 +23,10 @@ export function setUnauthorizedHandler(handler) {
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error?.response?.status === 401) {
+    const status = error?.response?.status
+    const skipLogout = Boolean(error?.config?.skipUnauthorizedHandler)
+
+    if (status === 401 && !skipLogout) {
       unauthorizedHandler?.(error)
     }
 
@@ -105,14 +108,18 @@ export async function validateCatalogVoucher({
   await ensureCsrfCookie()
 
   try {
-    const response = await apiClient.post('/api/catalog/vouchers/validate', {
-      voucher_code: voucherCode,
-      items,
-      locale,
-      currency,
-      fulfillment,
-      shipping_fee_amount_minor: shippingFeeAmountMinor,
-    })
+    const response = await apiClient.post(
+      '/api/catalog/vouchers/validate',
+      {
+        voucher_code: voucherCode,
+        items,
+        locale,
+        currency,
+        fulfillment,
+        shipping_fee_amount_minor: shippingFeeAmountMinor,
+      },
+      { skipUnauthorizedHandler: true },
+    )
 
     return response.data?.data || null
   } catch (error) {
@@ -245,7 +252,7 @@ async function retryCustomerRequest(request, fallbackMessage) {
 
 export async function fetchCurrentCustomer() {
   try {
-    const response = await apiClient.get('/api/customer/auth/me')
+    const response = await apiClient.get('/api/customer/auth/me', { skipUnauthorizedHandler: true })
 
     return response.data?.data || null
   } catch (error) {
