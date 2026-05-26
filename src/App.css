@@ -6619,11 +6619,25 @@ main {
 }
 
 .customer-order-tracking-timeline {
+  position: relative;
   margin: 0;
   padding: 0;
   list-style: none;
   display: grid;
   gap: 0;
+}
+
+.customer-order-tracking-timeline::before {
+  content: '';
+  position: absolute;
+  left: calc(80px + 12px + 14px);
+  top: 7px;
+  bottom: 7px;
+  width: 2px;
+  transform: translateX(-50%);
+  background: rgba(2, 37, 84, 0.16);
+  z-index: 0;
+  pointer-events: none;
 }
 
 .customer-order-tracking-timeline-item {
@@ -6655,17 +6669,6 @@ main {
   padding-top: 1px;
 }
 
-.customer-order-tracking-timeline-item:not(:last-child) .customer-order-tracking-timeline-track::after {
-  content: '';
-  position: absolute;
-  top: 14px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 2px;
-  bottom: -20px;
-  background: rgba(2, 37, 84, 0.16);
-}
-
 .customer-order-tracking-timeline-marker {
   width: 12px;
   height: 12px;
@@ -6675,7 +6678,7 @@ main {
   box-sizing: border-box;
   flex-shrink: 0;
   position: relative;
-  z-index: 1;
+  z-index: 2;
 }
 
 .customer-order-tracking-timeline-item-latest .customer-order-tracking-timeline-marker {
@@ -7021,6 +7024,10 @@ main {
   .customer-order-tracking-timeline-item {
     grid-template-columns: 68px 24px minmax(0, 1fr);
     column-gap: 10px;
+  }
+
+  .customer-order-tracking-timeline::before {
+    left: calc(68px + 10px + 12px);
   }
 
   .customer-order-tracking-timeline-track {
