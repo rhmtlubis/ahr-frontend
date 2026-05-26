@@ -20,6 +20,7 @@ import { useLanguage } from './lib/i18n.jsx'
 import { getLandingChromeContent } from './lib/landingContent'
 import { clearPersonalizationData } from './lib/personalization'
 import { getCategoryRoute } from './lib/categorySeo.js'
+import { animateCatalogListingReveal } from './lib/gsapCatalogAnimations.js'
 import useDocumentTitle from './lib/useDocumentTitle'
 
 const PRODUCTS_PER_PAGE = 8
@@ -227,36 +228,6 @@ export default function AllProductsPage() {
     setSearchParams(nextSearchParams, { replace: true })
   }, [activeCatalogFilter, activePage, requestedCategory, requestedPage, searchParams, setSearchParams])
 
-  useEffect(() => {
-    if (!rootRef.current || !animationsReady || !gsapRef.current || window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-      return undefined
-    }
-
-    const gsap = gsapRef.current
-    const context = gsap.context(() => {
-      gsap.fromTo(
-        '[data-products-hero]',
-        { y: 30, opacity: 0 },
-        { y: 0, opacity: 1, duration: 0.75, ease: 'power3.out' },
-      )
-
-      gsap.fromTo(
-        '[data-products-card]',
-        { y: 28, opacity: 0 },
-        {
-          y: 0,
-          opacity: 1,
-          stagger: 0.06,
-          duration: 0.7,
-          ease: 'power3.out',
-          delay: 0.14,
-        },
-      )
-    }, rootRef)
-
-    return () => context.revert()
-  }, [activeCatalogFilter, activePage, animationsReady])
-
   const visibleProducts =
     activeCatalogFilter === 'all'
       ? listingContent.products
@@ -274,6 +245,19 @@ export default function AllProductsPage() {
 
   const activeCategory =
     categoryNavigationItems.find((category) => category.id === activeCatalogFilter) || categoryNavigationItems[0]
+
+  useEffect(() => {
+    if (!rootRef.current || !animationsReady || !gsapRef.current || window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      return undefined
+    }
+
+    const gsap = gsapRef.current
+    const context = gsap.context(() => {
+      animateCatalogListingReveal(gsap, rootRef.current)
+    }, rootRef)
+
+    return () => context.revert()
+  }, [activeCatalogFilter, activePage, animationsReady, paginatedProducts.length])
 
   useEffect(() => {
     if (activePage === currentPage) {

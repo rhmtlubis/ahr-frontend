@@ -17,6 +17,7 @@ import { useLanguage } from './lib/i18n.jsx'
 import { getLandingChromeContent } from './lib/landingContent'
 import { clearPersonalizationData } from './lib/personalization'
 import { buildCategoryListingStructuredData } from './lib/structuredData'
+import { animateCatalogListingReveal } from './lib/gsapCatalogAnimations.js'
 import { scrollToCatalogListingTopAfterPaint } from './lib/scrollToCatalogListing.js'
 import useDocumentTitle from './lib/useDocumentTitle'
 
@@ -236,34 +237,23 @@ export default function CategoryPage() {
   }, [activePage, currentPage, searchParams, setSearchParams])
 
   useEffect(() => {
-    if (!rootRef.current || !animationsReady || !gsapRef.current || window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    if (
+      !listingReady ||
+      !rootRef.current ||
+      !animationsReady ||
+      !gsapRef.current ||
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    ) {
       return undefined
     }
 
     const gsap = gsapRef.current
     const context = gsap.context(() => {
-      gsap.fromTo(
-        '[data-products-hero]',
-        { y: 30, opacity: 0 },
-        { y: 0, opacity: 1, duration: 0.75, ease: 'power3.out' },
-      )
-
-      gsap.fromTo(
-        '[data-products-card]',
-        { y: 28, opacity: 0 },
-        {
-          y: 0,
-          opacity: 1,
-          stagger: 0.06,
-          duration: 0.7,
-          ease: 'power3.out',
-          delay: 0.14,
-        },
-      )
+      animateCatalogListingReveal(gsap, rootRef.current)
     }, rootRef)
 
     return () => context.revert()
-  }, [categoryId, currentPage, animationsReady])
+  }, [categoryId, currentPage, animationsReady, listingReady, paginatedProducts.length])
 
   useDocumentTitle(
     seoContent.title,

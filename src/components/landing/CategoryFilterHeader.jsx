@@ -35,8 +35,14 @@ export default function CategoryFilterHeader({
       return undefined
     }
 
+    const categoryCards = rootRef.current.querySelectorAll('[data-category-card]')
+
+    if (categoryCards.length === 0) {
+      return undefined
+    }
+
     const context = gsap.context(() => {
-      gsap.from('[data-category-card]', {
+      gsap.from(categoryCards, {
         y: 24,
         opacity: 0,
         duration: 0.65,
