@@ -29,6 +29,16 @@ import { clearPersonalizationData } from './lib/personalization'
 import { formatCurrencyAmount } from './lib/price'
 import useDocumentTitle from './lib/useDocumentTitle'
 
+const ORDER_STATUS_FILTERS = [
+  { value: 'all', labelId: 'Semua', labelEn: 'All' },
+  { value: 'pending_whatsapp', labelId: 'Menunggu pembayaran', labelEn: 'Awaiting payment' },
+  { value: 'confirmed', labelId: 'Sudah dibayar', labelEn: 'Paid' },
+  { value: 'processing', labelId: 'Diproses', labelEn: 'Processing' },
+  { value: 'completed', labelId: 'Selesai', labelEn: 'Completed' },
+  { value: 'payment_expired', labelId: 'Kedaluwarsa', labelEn: 'Expired' },
+  { value: 'cancelled', labelId: 'Dibatalkan', labelEn: 'Cancelled' },
+]
+
 function getOrderStatusLabel(status, language) {
   const labels = {
     pending_whatsapp: language === 'en' ? 'Awaiting payment' : 'Menunggu pembayaran',
@@ -40,6 +50,10 @@ function getOrderStatusLabel(status, language) {
   }
 
   return labels[status] || status
+}
+
+function getOrderFilterLabel(filter, language) {
+  return language === 'en' ? filter.labelEn : filter.labelId
 }
 
 function formatOrderDate(isoDate, language) {
@@ -166,6 +180,7 @@ export default function CustomerAccountPage() {
   })
   const [orders, setOrders] = useState([])
   const [ordersStatus, setOrdersStatus] = useState({ state: 'idle', message: '' })
+  const [orderStatusFilter, setOrderStatusFilter] = useState('all')
 
   const handleGoogleAuthStatus = useCallback(
     (status) => {
@@ -403,6 +418,42 @@ export default function CustomerAccountPage() {
     })
   }
 
+  const orderStatusCounts = useMemo(() => {
+    const counts = { all: orders.length }
+
+    for (const order of orders) {
+      counts[order.status] = (counts[order.status] || 0) + 1
+    }
+
+    return counts
+  }, [orders])
+
+  const visibleOrderStatusFilters = useMemo(
+    () =>
+      ORDER_STATUS_FILTERS.filter(
+        (filter) => filter.value === 'all' || (orderStatusCounts[filter.value] || 0) > 0,
+      ),
+    [orderStatusCounts],
+  )
+
+  const filteredOrders = useMemo(() => {
+    if (orderStatusFilter === 'all') {
+      return orders
+    }
+
+    return orders.filter((order) => order.status === orderStatusFilter)
+  }, [orderStatusFilter, orders])
+
+  useEffect(() => {
+    if (orderStatusFilter === 'all') {
+      return
+    }
+
+    if ((orderStatusCounts[orderStatusFilter] || 0) === 0) {
+      setOrderStatusFilter('all')
+    }
+  }, [orderStatusCounts, orderStatusFilter])
+
   const profileSummary = useMemo(() => {
     if (profileForm.fulfillment !== 'delivery') {
       return ''
@@ -552,8 +603,8 @@ export default function CustomerAccountPage() {
         primaryActionLabel={t('cart.continueShopping')}
       />
 
-      <main className="cart-page">
-        <section className="content-block section-plain cart-hero">
+      <main className="cart-page customer-account-page">
+        <section className="content-block section-plain cart-hero customer-account-hero">
           <div className="all-products-breadcrumb">
             <Link to="/">
               <ArrowLeft size={16} />
@@ -561,69 +612,18 @@ export default function CustomerAccountPage() {
             </Link>
           </div>
 
-          <div className="section-heading heading-inline cart-heading">
+          <div className="section-heading heading-inline cart-heading customer-account-heading">
             <div>
               <span>{t('common.profileLabel')}</span>
               <h1>{language === 'en' ? 'Customer Account' : 'Akun Customer'}</h1>
+              <p>
+                {language === 'en'
+                  ? 'Log in first, then keep your email, phone number, and shipping address ready for faster checkout.'
+                  : 'Login lebih awal, lalu simpan email, no. telepon, dan alamat pengiriman agar checkout lebih cepat.'}
+              </p>
             </div>
-            <p>
-              {language === 'en'
-                ? 'Log in first, then keep your email, phone number, and shipping address ready for faster checkout.'
-                : 'Login lebih awal, lalu simpan email, no. telepon, dan alamat pengiriman agar checkout lebih cepat.'}
-            </p>
           </div>
         </section>
-
-        {customer ? (
-          <section className="content-block section-soft customer-orders-section">
-            <div className="customer-section-heading customer-section-heading-row">
-              <div>
-                <span>{language === 'en' ? 'Orders' : 'Pesanan'}</span>
-                <h2>{language === 'en' ? 'Recent orders' : 'Pesanan terbaru'}</h2>
-              </div>
-              {orders.length > 0 ? (
-                <p className="customer-orders-count">
-                  {orders.length} {language === 'en' ? 'orders' : 'pesanan'}
-                </p>
-              ) : null}
-            </div>
-
-            {ordersStatus.state === 'loading' ? (
-              <p className="cart-auth-copy">{t('cart.authLoading')}</p>
-            ) : ordersStatus.message ? (
-              <div className="customer-account-notice customer-account-notice-inline">
-                <p>{ordersStatus.message}</p>
-                {ordersStatus.message.toLowerCase().includes('login') ||
-                ordersStatus.message.toLowerCase().includes('sesi') ? (
-                  <button className="cart-auth-tab active" type="button" onClick={() => setCustomer(null)}>
-                    {language === 'en' ? 'Sign in again' : 'Login ulang'}
-                  </button>
-                ) : null}
-              </div>
-            ) : orders.length === 0 ? (
-              <div className="cart-empty-state customer-orders-empty">
-                <Package size={28} />
-                <p>{language === 'en' ? 'No orders yet.' : 'Belum ada pesanan.'}</p>
-              </div>
-            ) : (
-              <div className="customer-orders-panel">
-                <div className="customer-orders-table">
-                  <div className="customer-orders-table-head" aria-hidden="true">
-                    <span>{language === 'en' ? 'Order' : 'Pesanan'}</span>
-                    <span>{language === 'en' ? 'Status' : 'Status'}</span>
-                    <span>{language === 'en' ? 'Total' : 'Total'}</span>
-                    <span>{language === 'en' ? 'Action' : 'Aksi'}</span>
-                  </div>
-                  <div className="customer-orders-table-body">
-                    {orders.map((order) => (
-                      <CustomerOrderRow key={order.order_number} order={order} language={language} />
-                    ))}
-                  </div>
-                </div>
-              </div>
-            )}
-          </section>
-        ) : null}
 
         <section className="content-block section-soft account-page-layout customer-account-shell">
           <aside className="cart-summary-panel customer-account-sidebar">
@@ -759,15 +759,108 @@ export default function CustomerAccountPage() {
             )}
           </aside>
 
-          <section className="cart-items-panel customer-account-profile-panel">
-            <div className="customer-section-heading">
-              <div>
-                <span>{language === 'en' ? 'Profile' : 'Profil'}</span>
-                <h2>{language === 'en' ? 'Shipping Identity' : 'Identitas Pengiriman'}</h2>
-              </div>
-            </div>
-
+          <div className="customer-account-main">
             {customer ? (
+              <section className="customer-account-orders-panel">
+                <div className="customer-section-heading customer-section-heading-row">
+                  <div>
+                    <span>{language === 'en' ? 'Orders' : 'Pesanan'}</span>
+                    <h2>{language === 'en' ? 'Recent orders' : 'Pesanan terbaru'}</h2>
+                  </div>
+                  {orders.length > 0 ? (
+                    <p className="customer-orders-count">
+                      {orderStatusFilter === 'all'
+                        ? orders.length
+                        : `${filteredOrders.length} / ${orders.length}`}{' '}
+                      {language === 'en' ? 'orders' : 'pesanan'}
+                    </p>
+                  ) : null}
+                </div>
+
+                {orders.length > 0 && visibleOrderStatusFilters.length > 1 ? (
+                  <div className="customer-orders-toolbar">
+                    <div className="customer-orders-filters" role="tablist" aria-label={language === 'en' ? 'Filter by status' : 'Filter status pesanan'}>
+                      {visibleOrderStatusFilters.map((filter) => {
+                        const count =
+                          filter.value === 'all' ? orders.length : orderStatusCounts[filter.value] || 0
+                        const isActive = orderStatusFilter === filter.value
+
+                        return (
+                          <button
+                            key={filter.value}
+                            type="button"
+                            role="tab"
+                            aria-selected={isActive}
+                            className={isActive ? 'customer-orders-filter active' : 'customer-orders-filter'}
+                            onClick={() => setOrderStatusFilter(filter.value)}
+                          >
+                            <span>{getOrderFilterLabel(filter, language)}</span>
+                            <span className="customer-orders-filter-count">{count}</span>
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
+                ) : null}
+
+                {ordersStatus.state === 'loading' ? (
+                  <p className="cart-auth-copy">{t('cart.authLoading')}</p>
+                ) : ordersStatus.message ? (
+                  <div className="customer-account-notice customer-account-notice-inline">
+                    <p>{ordersStatus.message}</p>
+                    {ordersStatus.message.toLowerCase().includes('login') ||
+                    ordersStatus.message.toLowerCase().includes('sesi') ? (
+                      <button className="cart-auth-tab active" type="button" onClick={() => setCustomer(null)}>
+                        {language === 'en' ? 'Sign in again' : 'Login ulang'}
+                      </button>
+                    ) : null}
+                  </div>
+                ) : orders.length === 0 ? (
+                  <div className="cart-empty-state customer-orders-empty">
+                    <Package size={28} />
+                    <p>{language === 'en' ? 'No orders yet.' : 'Belum ada pesanan.'}</p>
+                  </div>
+                ) : filteredOrders.length === 0 ? (
+                  <div className="cart-empty-state customer-orders-empty">
+                    <Package size={28} />
+                    <p>
+                      {language === 'en'
+                        ? 'No orders match this status.'
+                        : 'Tidak ada pesanan dengan status ini.'}
+                    </p>
+                    <button className="cart-auth-tab active" type="button" onClick={() => setOrderStatusFilter('all')}>
+                      {language === 'en' ? 'Show all orders' : 'Tampilkan semua pesanan'}
+                    </button>
+                  </div>
+                ) : (
+                  <div className="customer-orders-panel">
+                    <div className="customer-orders-table">
+                      <div className="customer-orders-table-head" aria-hidden="true">
+                        <span>{language === 'en' ? 'Order' : 'Pesanan'}</span>
+                        <span>{language === 'en' ? 'Status' : 'Status'}</span>
+                        <span>{language === 'en' ? 'Total' : 'Total'}</span>
+                        <span>{language === 'en' ? 'Action' : 'Aksi'}</span>
+                      </div>
+                      <div className="customer-orders-table-body">
+                        {filteredOrders.map((order) => (
+                          <CustomerOrderRow key={order.order_number} order={order} language={language} />
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </section>
+            ) : null}
+
+            <section className="cart-items-panel customer-account-profile-panel">
+              <div className="customer-section-heading">
+                <div>
+                  <span>{language === 'en' ? 'Profile' : 'Profil'}</span>
+                  <h2>{language === 'en' ? 'Shipping Identity' : 'Identitas Pengiriman'}</h2>
+                </div>
+              </div>
+
+              {customer ? (
               <form className="cart-checkout-form" onSubmit={handleProfileSave}>
                 <div className="cart-form-grid">
                   <div className="cart-form-field">
@@ -926,17 +1019,18 @@ export default function CustomerAccountPage() {
                 </button>
                 {profileStatus.message ? <p className={`cart-status ${profileStatus.state}`}>{profileStatus.message}</p> : null}
               </form>
-            ) : (
-              <div className="cart-empty-state">
-                <Mail size={28} />
-                <h2>{language === 'en' ? 'Account first, checkout later' : 'Login dulu, checkout lebih cepat'}</h2>
-                <p>{t('cart.loginBody')}</p>
-                <Link className="cta-button cta-button-dark" to="/cart">
-                  {language === 'en' ? 'Open cart' : 'Buka cart'}
-                </Link>
-              </div>
-            )}
-          </section>
+              ) : (
+                <div className="cart-empty-state">
+                  <Mail size={28} />
+                  <h2>{language === 'en' ? 'Account first, checkout later' : 'Login dulu, checkout lebih cepat'}</h2>
+                  <p>{t('cart.loginBody')}</p>
+                  <Link className="cta-button cta-button-dark" to="/cart">
+                    {language === 'en' ? 'Open cart' : 'Buka cart'}
+                  </Link>
+                </div>
+              )}
+            </section>
+          </div>
         </section>
       </main>
 
