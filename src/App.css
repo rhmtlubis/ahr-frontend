@@ -6603,6 +6603,91 @@ main {
   color: #b91c1c;
 }
 
+.customer-order-tracking-timeline-wrap {
+  margin-top: 4px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border-200, #e8e4dc);
+}
+
+.customer-order-tracking-timeline-title {
+  margin: 0 0 12px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-700, #4b5563);
+}
+
+.customer-order-tracking-timeline {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 0;
+}
+
+.customer-order-tracking-timeline-item {
+  display: grid;
+  grid-template-columns: 76px 20px minmax(0, 1fr);
+  gap: 10px 12px;
+  align-items: start;
+  position: relative;
+  padding-bottom: 18px;
+}
+
+.customer-order-tracking-timeline-item:last-child {
+  padding-bottom: 0;
+}
+
+.customer-order-tracking-timeline-item:not(:last-child)::before {
+  content: '';
+  position: absolute;
+  left: calc(76px + 9px);
+  top: 18px;
+  bottom: 0;
+  width: 2px;
+  background: #c4b5fd;
+}
+
+.customer-order-tracking-timeline-time {
+  font-size: 0.76rem;
+  font-weight: 600;
+  line-height: 1.35;
+  color: var(--text-700, #6b7280);
+  text-align: right;
+  padding-top: 2px;
+}
+
+.customer-order-tracking-timeline-marker {
+  width: 12px;
+  height: 12px;
+  margin-top: 3px;
+  border-radius: 50%;
+  background: #7c3aed;
+  box-shadow: 0 0 0 4px #ede9fe;
+  justify-self: center;
+  position: relative;
+  z-index: 1;
+}
+
+.customer-order-tracking-timeline-body {
+  min-width: 0;
+}
+
+.customer-order-tracking-timeline-body strong {
+  display: block;
+  font-size: 0.92rem;
+  line-height: 1.35;
+  color: var(--text-900, #111827);
+}
+
+.customer-order-tracking-timeline-body p {
+  margin: 4px 0 0;
+  font-size: 0.82rem;
+  line-height: 1.45;
+  color: var(--text-700, #6b7280);
+}
+
 .customer-order-row-tracking {
   display: inline-flex;
   align-items: center;

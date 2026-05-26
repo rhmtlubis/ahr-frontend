@@ -119,14 +119,20 @@ export default function CustomerOrderDetailPage() {
         order?.shipment_tracking?.tracking_id
 
       if (hasBiteshipShipment) {
-        const synced = await syncCustomerOrderShipment(orderNumber)
+        try {
+          const synced = await syncCustomerOrderShipment(orderNumber)
 
-        if (synced) {
-          setOrder(synced)
+          if (synced) {
+            setOrder(synced)
+
+            return
+          }
+        } catch {
+          // Fall back to a normal reload (still auto-syncs when stale on the server).
         }
-      } else {
-        await loadOrder()
       }
+
+      await loadOrder()
     } catch (error) {
       setLoadError(error.message || '')
     } finally {

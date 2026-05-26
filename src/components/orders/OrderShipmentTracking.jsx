@@ -201,14 +201,28 @@ export default function OrderShipmentTracking({
       ) : null}
 
       {!compact && history.length > 0 ? (
-        <ul className="customer-order-payment-info-list customer-order-tracking-history">
-          {[...history].reverse().map((entry) => (
-            <li key={`${entry.status}-${entry.at}`}>
-              <span>{entry.label || entry.status}</span>
-              <strong>{formatTrackingDate(entry.at, language)}</strong>
-            </li>
-          ))}
-        </ul>
+        <div className="customer-order-tracking-timeline-wrap">
+          <h3 className="customer-order-tracking-timeline-title">
+            {language === 'en' ? 'Progress tracking' : 'Progress Tracking'}
+          </h3>
+          <ol className="customer-order-tracking-timeline" aria-label={language === 'en' ? 'Shipment history' : 'Riwayat pengiriman'}>
+            {history.map((entry, index) => (
+              <li key={`${entry.status}-${entry.at}-${index}`} className="customer-order-tracking-timeline-item">
+                <time className="customer-order-tracking-timeline-time" dateTime={entry.at || undefined}>
+                  {formatTrackingDate(entry.at, language)}
+                </time>
+                <span className="customer-order-tracking-timeline-marker" aria-hidden="true" />
+                <div className="customer-order-tracking-timeline-body">
+                  <strong>{entry.title || entry.label || entry.status}</strong>
+                  {entry.description ? <p>{entry.description}</p> : null}
+                  {!entry.description && entry.label && entry.title && entry.label !== entry.title ? (
+                    <p>{entry.label}</p>
+                  ) : null}
+                </div>
+              </li>
+            ))}
+          </ol>
+        </div>
       ) : null}
     </section>
   )
