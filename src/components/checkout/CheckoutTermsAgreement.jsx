@@ -5,7 +5,6 @@ export default function CheckoutTermsAgreement({
   checked,
   onChange,
   language,
-  termsVersion,
   disabled = false,
   error = '',
 }) {
@@ -48,14 +47,6 @@ export default function CheckoutTermsAgreement({
           {language === 'en'
             ? 'Payment cannot proceed without your agreement.'
             : 'Pembayaran tidak dapat dilanjutkan tanpa persetujuan Anda.'}
-          {termsVersion ? (
-            <>
-              {' '}
-              <span className="cart-terms-agreement-version">
-                ({language === 'en' ? 'Version' : 'Versi'} {termsVersion})
-              </span>
-            </>
-          ) : null}
         </span>
       </p>
       {error ? <p className="cart-status error">{error}</p> : null}

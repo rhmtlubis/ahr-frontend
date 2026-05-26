@@ -1,10 +1,9 @@
-import { useEffect, useMemo, useState, useCallback } from 'react'
-import { ArrowLeft, LockKeyhole, LogOut, Mail, MessageCircleMore, Minus, Plus, ShoppingBag, Trash2 } from 'lucide-react'
-import { Link, useNavigate } from 'react-router-dom'
+﻿import { useEffect, useMemo, useState, useCallback } from 'react'
+import { ArrowLeft, CreditCard, LockKeyhole, LogOut, Mail, Minus, Plus, ShoppingBag, Trash2, Truck } from 'lucide-react'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import './App.css'
 import CustomerGoogleAuthButton from './components/auth/CustomerGoogleAuthButton'
 import ShippingOptionPicker from './components/checkout/ShippingOptionPicker'
-import ProductPrice from './components/catalog/ProductPrice'
 import CookieConsentBanner from './components/layout/CookieConsentBanner'
 import SiteFooter from './components/layout/SiteFooter'
 import SiteHeader from './components/layout/SiteHeader'
@@ -33,9 +32,8 @@ import { useMidtransPayment } from './lib/useMidtransPayment'
 import { clearPersonalizationData } from './lib/personalization'
 import { formatCurrencyAmount, getProductPriceDisplay } from './lib/price'
 import useDocumentTitle from './lib/useDocumentTitle'
-import CheckoutTermsAgreement from './components/checkout/CheckoutTermsAgreement'
-import VoucherCodeField from './components/checkout/VoucherCodeField'
-import { fetchCheckoutTerms } from './lib/checkoutTerms'
+import CartStepView, { CartEmptyView } from './components/cart/CartStepView'
+import CheckoutStepView from './components/cart/CheckoutStepView'
 
 const defaultCheckoutForm = {
   name: '',
@@ -300,17 +298,17 @@ function getCheckoutTotals(cartTotals, shippingOption, language, appliedVoucher)
     orderVoucherDiscountAmount: orderDiscountAmount,
     orderVoucherDiscountLabel:
       orderDiscountAmount > 0
-        ? `−${formatCurrencyAmount(orderDiscountAmount, shippingCurrency, language)}`
+        ? `âˆ’${formatCurrencyAmount(orderDiscountAmount, shippingCurrency, language)}`
         : null,
     shippingVoucherDiscountAmount: shippingDiscountAmount,
     shippingVoucherDiscountLabel:
       shippingDiscountAmount > 0
-        ? `−${formatCurrencyAmount(shippingDiscountAmount, shippingCurrency, language)}`
+        ? `âˆ’${formatCurrencyAmount(shippingDiscountAmount, shippingCurrency, language)}`
         : null,
     voucherDiscountAmount: orderDiscountAmount + shippingDiscountAmount,
     voucherDiscountLabel:
       orderDiscountAmount + shippingDiscountAmount > 0
-        ? `−${formatCurrencyAmount(orderDiscountAmount + shippingDiscountAmount, shippingCurrency, language)}`
+        ? `âˆ’${formatCurrencyAmount(orderDiscountAmount + shippingDiscountAmount, shippingCurrency, language)}`
         : null,
     grandTotalAmount,
     grandTotalLabel:
@@ -484,15 +482,7 @@ function buildCheckoutMessage(items, checkoutForm, language, cartTotals, locatio
     .join('\n')
 }
 
-function buildCheckoutPayload(
-  items,
-  checkoutForm,
-  language,
-  cartTotals,
-  locationOptions,
-  checkoutTermsVersion,
-  appliedVoucherCode,
-) {
+function buildCheckoutPayload(items, checkoutForm, language, cartTotals, locationOptions, appliedVoucherCode) {
   const firstItemCurrency = items.length > 0 ? getItemCurrency(items[0], language) : language === 'en' ? 'USD' : 'IDR'
   const formattedAddress = buildStructuredAddress(checkoutForm, locationOptions)
   const addressLine = stripTrailingRegionsFromAddressLine(
@@ -513,7 +503,6 @@ function buildCheckoutPayload(
     district_code: checkoutForm.districtCode || undefined,
     notes: checkoutForm.notes || undefined,
     terms_accepted: true,
-    terms_version: checkoutTermsVersion || undefined,
     voucher_code: appliedVoucherCode || undefined,
     locale: language,
     currency: cartTotals?.currency || firstItemCurrency,
@@ -614,6 +603,8 @@ export default function CartPage() {
   const { language, t } = useLanguage()
   const { customer: customerSession, isLoading: customerLoading, setCustomer: setCustomerSession, refreshCustomer } = useCustomer()
   const navigate = useNavigate()
+  const location = useLocation()
+  const isCheckoutStep = location.pathname.includes('/cart/checkout')
   useDocumentTitle(
     language === 'en' ? 'Cart for Custom Jersey Orders' : 'Keranjang Belanja Jersey Custom',
     language === 'en'
@@ -651,7 +642,6 @@ export default function CartPage() {
   const [selectedShippingOptionKey, setSelectedShippingOptionKey] = useState('')
   const [shippingStatus, setShippingStatus] = useState({ state: 'idle', message: '' })
   const [termsAccepted, setTermsAccepted] = useState(false)
-  const [checkoutTermsVersion, setCheckoutTermsVersion] = useState('')
   const [termsError, setTermsError] = useState('')
   const [appliedVoucher, setAppliedVoucher] = useState(null)
   const [locationLoading, setLocationLoading] = useState({
@@ -691,18 +681,6 @@ export default function CartPage() {
       })
       .catch(() => {
         setPageContent(getLandingChromeContent({}, { hashPrefix: '/', locale: language }))
-      })
-  }, [language])
-
-  useEffect(() => {
-    fetchCheckoutTerms(language)
-      .then((data) => {
-        if (data?.version) {
-          setCheckoutTermsVersion(data.version)
-        }
-      })
-      .catch(() => {
-        setCheckoutTermsVersion('')
       })
   }, [language])
 
@@ -1196,7 +1174,6 @@ export default function CartPage() {
             language,
             cartTotals,
             locationOptions,
-            checkoutTermsVersion,
             appliedVoucher?.code,
           ),
           shipping_option: selectedShippingOption
@@ -1309,6 +1286,377 @@ export default function CartPage() {
     }
   }
 
+  const handleGoToCheckout = () => {
+    if (items.length === 0) {
+      return
+    }
+
+    navigate('/cart/checkout')
+  }
+
+  useEffect(() => {
+    if (isCheckoutStep && items.length === 0) {
+      navigate('/cart', { replace: true })
+    }
+  }, [isCheckoutStep, items.length, navigate])
+
+  const locationOptions = useMemo(
+    () => ({
+      provinces: provinceOptions,
+      cities: cityOptions,
+      districts: districtOptions,
+    }),
+    [provinceOptions, cityOptions, districtOptions],
+  )
+
+  const formattedDeliveryAddress = useMemo(() => {
+    if (checkoutForm.fulfillment !== 'delivery') {
+      return language === 'en' ? 'Pickup at AHR workshop' : 'Ambil di workshop AHR'
+    }
+
+    return buildStructuredAddress(checkoutForm, locationOptions) || checkoutForm.addressLine || 'â€”'
+  }, [checkoutForm, locationOptions, language])
+
+  const renderCheckoutForm = () => (
+    <div className="cart-checkout-form">
+      {customerLoading ? (
+        <div className="cart-auth-card">
+          <p className="cart-auth-copy">{t('cart.authLoading')}</p>
+        </div>
+      ) : !customerSession ? (
+        <div className="cart-auth-card">
+          <div className="cart-auth-heading">
+            <div>
+              <span>{t('cart.summaryEyebrow')}</span>
+              <h3>{t('cart.loginTitle')}</h3>
+            </div>
+            <LockKeyhole size={18} />
+          </div>
+          <p className="cart-auth-copy">{t('cart.loginBody')}</p>
+
+          <div className="cart-auth-tabs" role="tablist" aria-label={t('cart.loginTitle')}>
+            <button
+              className={authMode === 'login' ? 'cart-auth-tab active' : 'cart-auth-tab'}
+              type="button"
+              onClick={() => setAuthMode('login')}
+            >
+              {t('cart.loginTab')}
+            </button>
+            <button
+              className={authMode === 'register' ? 'cart-auth-tab active' : 'cart-auth-tab'}
+              type="button"
+              onClick={() => setAuthMode('register')}
+            >
+              {t('cart.registerTab')}
+            </button>
+          </div>
+
+          <CustomerGoogleAuthButton
+            returnPath="/cart/checkout"
+            disabled={authStatus.state === 'loading'}
+            label={t('cart.googleLoginCta')}
+          />
+
+          <div className="cart-auth-divider">
+            <span>{t('cart.authOrDivider')}</span>
+          </div>
+
+          {authMode === 'login' ? (
+            <div className="cart-auth-form">
+              <div className="cart-form-field">
+                <label htmlFor="customer-login-email">{t('cart.customerEmail')}</label>
+                <input
+                  id="customer-login-email"
+                  type="email"
+                  value={authForm.email}
+                  onChange={(event) => updateAuthForm('email', event.target.value)}
+                  required
+                />
+              </div>
+              <div className="cart-form-field">
+                <label htmlFor="customer-login-password">{t('cart.password')}</label>
+                <input
+                  id="customer-login-password"
+                  type="password"
+                  value={authForm.password}
+                  onChange={(event) => updateAuthForm('password', event.target.value)}
+                  required
+                />
+              </div>
+              <button
+                className="cart-submit-button"
+                type="button"
+                disabled={authStatus.state === 'loading'}
+                onClick={handleCustomerLogin}
+              >
+                <Mail size={18} />
+                <span>{authStatus.state === 'loading' ? t('common.submitting') : t('cart.loginCta')}</span>
+              </button>
+            </div>
+          ) : (
+            <div className="cart-auth-form">
+              <div className="cart-form-field">
+                <label htmlFor="customer-register-name">{t('cart.customerName')}</label>
+                <input
+                  id="customer-register-name"
+                  value={authForm.name}
+                  onChange={(event) => updateAuthForm('name', event.target.value)}
+                  required
+                />
+              </div>
+              <div className="cart-form-field">
+                <label htmlFor="customer-register-email">{t('cart.customerEmail')}</label>
+                <input
+                  id="customer-register-email"
+                  type="email"
+                  value={authForm.email}
+                  onChange={(event) => updateAuthForm('email', event.target.value)}
+                  required
+                />
+              </div>
+              <div className="cart-form-field">
+                <label htmlFor="customer-register-whatsapp">{t('cart.customerWhatsapp')}</label>
+                <input
+                  id="customer-register-whatsapp"
+                  value={authForm.whatsapp}
+                  onChange={(event) => updateAuthForm('whatsapp', event.target.value)}
+                  required
+                />
+              </div>
+              <div className="cart-form-grid">
+                <div className="cart-form-field">
+                  <label htmlFor="customer-register-password">{t('cart.password')}</label>
+                  <input
+                    id="customer-register-password"
+                    type="password"
+                    value={authForm.password}
+                    onChange={(event) => updateAuthForm('password', event.target.value)}
+                    required
+                  />
+                </div>
+                <div className="cart-form-field">
+                  <label htmlFor="customer-register-password-confirmation">{t('cart.passwordConfirmation')}</label>
+                  <input
+                    id="customer-register-password-confirmation"
+                    type="password"
+                    value={authForm.passwordConfirmation}
+                    onChange={(event) => updateAuthForm('passwordConfirmation', event.target.value)}
+                    required
+                  />
+                </div>
+              </div>
+              <button
+                className="cart-submit-button"
+                type="button"
+                disabled={authStatus.state === 'loading'}
+                onClick={handleCustomerRegister}
+              >
+                <Mail size={18} />
+                <span>{authStatus.state === 'loading' ? t('common.submitting') : t('cart.registerCta')}</span>
+              </button>
+            </div>
+          )}
+
+          {authStatus.message ? <p className={`cart-status ${authStatus.state}`}>{authStatus.message}</p> : null}
+        </div>
+      ) : (
+        <>
+          <div className="checkout-confirm-card">
+            <div className="checkout-confirm-card-head">
+              <h2>{language === 'en' ? 'Delivery details' : 'Detail alamat'}</h2>
+              <span className="checkout-confirm-card-badge">{t('cart.accountTitle')}</span>
+            </div>
+            <div className="checkout-confirm-address">
+              <strong>{checkoutForm.name || customerSession.name}</strong>
+              <span>{checkoutForm.whatsapp || customerSession.phone}</span>
+              <p>{formattedDeliveryAddress}</p>
+            </div>
+          </div>
+
+          <div className="cart-form-field">
+            <label htmlFor="cart-name">{t('cart.customerName')}</label>
+            <input
+              id="cart-name"
+              value={checkoutForm.name}
+              onChange={(event) => updateCheckoutForm('name', event.target.value)}
+              required
+            />
+          </div>
+
+          <div className="cart-form-field">
+            <label htmlFor="cart-email">{t('cart.customerEmail')}</label>
+            <input
+              id="cart-email"
+              type="email"
+              value={checkoutForm.email}
+              onChange={(event) => updateCheckoutForm('email', event.target.value)}
+              required
+            />
+          </div>
+
+          <div className="cart-form-field">
+            <label htmlFor="cart-whatsapp">{t('cart.customerWhatsapp')}</label>
+            <input
+              id="cart-whatsapp"
+              value={checkoutForm.whatsapp}
+              onChange={(event) => updateCheckoutForm('whatsapp', event.target.value)}
+              required
+            />
+          </div>
+
+          <div className="cart-form-field">
+            <label htmlFor="cart-fulfillment">{t('cart.fulfillment')}</label>
+            <select
+              id="cart-fulfillment"
+              value={checkoutForm.fulfillment}
+              onChange={(event) => updateCheckoutForm('fulfillment', event.target.value)}
+            >
+              <option value="delivery">{t('cart.delivery')}</option>
+              <option value="pickup">{t('cart.pickup')}</option>
+            </select>
+          </div>
+
+          {checkoutForm.fulfillment === 'delivery' ? (
+            <>
+              <div className="cart-form-grid">
+                <div className="cart-form-field">
+                  <label htmlFor="cart-province">{t('cart.province')}</label>
+                  <select
+                    id="cart-province"
+                    value={checkoutForm.provinceCode}
+                    onChange={(event) =>
+                      updateCheckoutFormFields({
+                        provinceCode: event.target.value,
+                        cityCode: '',
+                        districtCode: '',
+                      })
+                    }
+                    required
+                    disabled={locationLoading.provinces}
+                  >
+                    <option value="">{t('cart.selectProvince')}</option>
+                    {provinceOptions.map((province) => (
+                      <option key={province.code} value={province.code}>
+                        {province.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="cart-form-field">
+                  <label htmlFor="cart-city">{t('cart.city')}</label>
+                  <select
+                    id="cart-city"
+                    value={checkoutForm.cityCode}
+                    onChange={(event) =>
+                      updateCheckoutFormFields({
+                        cityCode: event.target.value,
+                        districtCode: '',
+                      })
+                    }
+                    required
+                    disabled={!checkoutForm.provinceCode || locationLoading.cities}
+                  >
+                    <option value="">{t('cart.selectCity')}</option>
+                    {cityOptions.map((city) => (
+                      <option key={city.code} value={city.code}>
+                        {city.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="cart-form-field">
+                <label htmlFor="cart-district">{t('cart.district')}</label>
+                <select
+                  id="cart-district"
+                  value={checkoutForm.districtCode}
+                  onChange={(event) => updateCheckoutForm('districtCode', event.target.value)}
+                  required
+                  disabled={!checkoutForm.cityCode || locationLoading.districts}
+                >
+                  <option value="">{t('cart.selectDistrict')}</option>
+                  {districtOptions.map((district) => (
+                    <option key={district.code} value={district.code}>
+                      {district.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {locationLoading.provinces || locationLoading.cities || locationLoading.districts ? (
+                <p className="cart-form-location-status">{t('cart.loadingLocations')}</p>
+              ) : null}
+
+              <div className="cart-form-field">
+                <label htmlFor="cart-address">{t('cart.addressDetail')}</label>
+                <textarea
+                  id="cart-address"
+                  rows="3"
+                  value={checkoutForm.addressLine}
+                  onChange={(event) => updateCheckoutForm('addressLine', event.target.value)}
+                  required
+                />
+              </div>
+
+              <div className="checkout-confirm-card checkout-confirm-card-interactive">
+                <div className="checkout-confirm-card-head">
+                  <h2>{language === 'en' ? 'Shipping method' : 'Metode pengiriman'}</h2>
+                  <Truck size={18} aria-hidden="true" />
+                </div>
+                <div className="cart-form-field cart-form-field-shipping">
+                  <ShippingOptionPicker
+                    options={shippingOptions}
+                    selectedKey={selectedShippingOptionKey}
+                    onSelect={setSelectedShippingOptionKey}
+                    loading={shippingStatus.state === 'loading'}
+                    disabled={shippingStatus.state === 'loading'}
+                    language={language}
+                    currency={checkoutTotals.currency}
+                  />
+                </div>
+                {shippingStatus.message ? (
+                  <p className={`cart-status ${shippingStatus.state}`}>{shippingStatus.message}</p>
+                ) : null}
+              </div>
+            </>
+          ) : null}
+
+          <div className="checkout-confirm-card">
+            <div className="checkout-confirm-card-head">
+              <h2>{language === 'en' ? 'Payment method' : 'Metode pembayaran'}</h2>
+              <CreditCard size={18} aria-hidden="true" />
+            </div>
+            <p className="checkout-confirm-payment-copy">
+              {language === 'en'
+                ? 'Pay securely online via Midtrans (bank transfer, e-wallet, QRIS, and more).'
+                : 'Bayar aman secara online via Midtrans (transfer bank, e-wallet, QRIS, dan lainnya).'}
+            </p>
+          </div>
+
+          <button className="cart-account-logout checkout-confirm-logout" type="button" onClick={handleCustomerLogout}>
+            <LogOut size={16} />
+            <span>{t('cart.logout')}</span>
+          </button>
+        </>
+      )}
+    </div>
+  )
+
+  const itemHandlers = {
+    mixedSizeDrafts,
+    getMixedSizeDraft,
+    toggleMixedSizeEditor,
+    updateMixedSizeDraft,
+    applyMixedSizes,
+    updateCartItemSize,
+    updateCartItemQuantity,
+    removeCartItem,
+    updateCheckoutForm,
+    buildVoucherValidateItems,
+  }
+
   return (
     <div className="app-shell">
       <SiteHeader
@@ -1325,577 +1673,45 @@ export default function CartPage() {
         primaryActionLabel={t('cart.continueShopping')}
       />
 
-      <main className="cart-page">
-        <section className="content-block section-plain cart-hero">
-          <div className="all-products-breadcrumb">
-            <Link to="/all-products">
-              <ArrowLeft size={16} />
-              <span>{t('cart.backToProducts')}</span>
-            </Link>
-          </div>
-
-          <div className="section-heading heading-inline cart-heading">
-            <div>
-              <span>{t('cart.eyebrow')}</span>
-              <h1>{t('cart.title')}</h1>
-            </div>
-            <p>{t('cart.body')}</p>
-          </div>
-        </section>
-
+      <main className={`cart-page ${isCheckoutStep ? 'cart-page--checkout' : 'cart-page--cart'}`}>
         {items.length === 0 ? (
-          <section className="content-block section-soft">
-            <div className="cart-empty-state">
-              <ShoppingBag size={28} />
-              <h2>{t('cart.emptyTitle')}</h2>
-              <p>{t('cart.emptyBody')}</p>
-              <Link className="cta-button cta-button-dark" to="/all-products">
-                {t('cart.continueShopping')}
-              </Link>
-            </div>
-          </section>
+          <CartEmptyView language={language} t={t} />
+        ) : isCheckoutStep ? (
+          <CheckoutStepView
+            language={language}
+            t={t}
+            items={items}
+            itemCount={itemCount}
+            cartTotals={cartTotals}
+            checkoutTotals={checkoutTotals}
+            checkoutForm={checkoutForm}
+            checkoutItems={checkoutItems}
+            customerSession={customerSession}
+            appliedVoucher={appliedVoucher}
+            setAppliedVoucher={setAppliedVoucher}
+            selectedShippingOption={selectedShippingOption}
+            termsAccepted={termsAccepted}
+            setTermsAccepted={setTermsAccepted}
+            termsError={termsError}
+            setTermsError={setTermsError}
+            checkoutStatus={checkoutStatus}
+            setCheckoutStatus={setCheckoutStatus}
+            handleCheckoutSubmit={handleCheckoutSubmit}
+            renderCheckoutForm={renderCheckoutForm}
+            itemHandlers={itemHandlers}
+          />
         ) : (
-          <section className="content-block section-soft cart-layout">
-            <div className="cart-items-panel">
-              <div className="cart-items-heading">
-                <div>
-                  <span>{t('cart.itemsEyebrow')}</span>
-                  <h2>{t('cart.itemsTitle')}</h2>
-                </div>
-                <button className="cart-clear-button" type="button" onClick={clearCart}>
-                  {t('cart.clearCart')}
-                </button>
-              </div>
-
-              <div className="cart-item-list">
-                {items.map((item) => (
-                  <article className="cart-item-card" key={item.id}>
-                    <Link className="cart-item-media" to={`/produk/${item.product.slug}`} state={{ product: item.product }}>
-                      <img
-                        src={item.product.image}
-                        alt={item.product.name}
-                        width="800"
-                        height="1000"
-                        loading="lazy"
-                        decoding="async"
-                        style={{ objectPosition: item.product.imagePosition || 'center center' }}
-                      />
-                    </Link>
-
-                    <div className="cart-item-copy">
-                      <span>{item.product.category || t('common.products')}</span>
-                      <h3>{item.product.name}</h3>
-                      <ProductPrice product={item.product} />
-                      <div className="cart-item-size-row">
-                        <label htmlFor={`cart-size-${item.id}`}>{t('common.size')}</label>
-                        <select
-                          id={`cart-size-${item.id}`}
-                          value={item.size}
-                          onChange={(event) => updateCartItemSize(item.id, event.target.value)}
-                        >
-                          {Array.from(new Set([...getProductSizeOptions(item.product), item.size])).map((size) => (
-                            <option key={`${item.id}-${size}`} value={size}>
-                              {size}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                      {item.quantity > 1 ? (
-                        <div className="cart-item-mixed-size">
-                          <button
-                            className="cart-item-mixed-size-trigger"
-                            type="button"
-                            onClick={() => toggleMixedSizeEditor(item)}
-                          >
-                            {t('cart.mixedSizeTrigger')}
-                          </button>
-                          {mixedSizeDrafts[item.id] ? (
-                            <div className="cart-item-mixed-size-editor">
-                              <strong>{t('cart.mixedSizeTitle')}</strong>
-                              <div className="cart-item-mixed-size-grid">
-                                {getMixedSizeDraft(item).map((selectedSize, index) => (
-                                  <label className="cart-item-mixed-size-field" key={`${item.id}-piece-${index + 1}`}>
-                                    <span>{t('cart.mixedSizePiece', { number: index + 1 })}</span>
-                                    <select
-                                      value={selectedSize}
-                                      onChange={(event) =>
-                                        updateMixedSizeDraft(item.id, index, event.target.value, item.quantity, item.size)
-                                      }
-                                    >
-                                      {Array.from(new Set([...getProductSizeOptions(item.product), item.size])).map((size) => (
-                                        <option key={`${item.id}-piece-${index + 1}-${size}`} value={size}>
-                                          {size}
-                                        </option>
-                                      ))}
-                                    </select>
-                                  </label>
-                                ))}
-                              </div>
-                              <button
-                                className="cart-item-mixed-size-apply"
-                                type="button"
-                                onClick={() => applyMixedSizes(item)}
-                              >
-                                {t('cart.mixedSizeApply')}
-                              </button>
-                            </div>
-                          ) : null}
-                        </div>
-                      ) : null}
-                    </div>
-
-                    <div className="cart-item-actions">
-                      <div className="cart-quantity-control" aria-label={t('cart.quantity')}>
-                        <button
-                          type="button"
-                          onClick={() => updateCartItemQuantity(item.id, item.quantity - 1)}
-                          aria-label={t('cart.decreaseQuantity')}
-                        >
-                          <Minus size={15} />
-                        </button>
-                        <span>{item.quantity}</span>
-                        <button
-                          type="button"
-                          onClick={() => updateCartItemQuantity(item.id, item.quantity + 1)}
-                          aria-label={t('cart.increaseQuantity')}
-                        >
-                          <Plus size={15} />
-                        </button>
-                      </div>
-                      <button
-                        className="cart-remove-button"
-                        type="button"
-                        onClick={() => removeCartItem(item.id)}
-                        aria-label={t('cart.removeItem')}
-                      >
-                        <Trash2 size={16} />
-                        <span>{t('cart.removeItem')}</span>
-                      </button>
-                    </div>
-                  </article>
-                ))}
-              </div>
-            </div>
-
-            <aside className="cart-summary-panel">
-              <div className="cart-summary-heading">
-                <span>{t('cart.summaryEyebrow')}</span>
-                <h2>{t('cart.summaryTitle')}</h2>
-              </div>
-
-              <div className="cart-summary-list">
-                <div className="cart-summary-row">
-                  <span>{t('cart.totalItems')}</span>
-                  <strong>{t('cart.itemsCount', { count: itemCount })}</strong>
-                </div>
-                <div className="cart-summary-row">
-                  <span>{t('cart.originalTotal')}</span>
-                  <strong>{cartTotals?.originalLabel || t('cart.subtotalManual')}</strong>
-                </div>
-                <div className="cart-summary-row discount">
-                  <span>{t('cart.promoTotal')}</span>
-                  <strong>{cartTotals?.discountDisplayLabel || t('cart.subtotalManual')}</strong>
-                </div>
-                <div className="cart-summary-row nett">
-                  <span>{t('cart.nettTotal')}</span>
-                  <strong>{cartTotals?.netLabel || t('cart.subtotalManual')}</strong>
-                </div>
-                {checkoutTotals.orderVoucherDiscountLabel ? (
-                  <div className="cart-summary-row discount">
-                    <span>{language === 'en' ? 'Voucher (products)' : 'Voucher produk'}</span>
-                    <strong>{checkoutTotals.orderVoucherDiscountLabel}</strong>
-                  </div>
-                ) : null}
-                {checkoutTotals.shippingVoucherDiscountLabel ? (
-                  <div className="cart-summary-row discount">
-                    <span>{language === 'en' ? 'Voucher (shipping)' : 'Voucher ongkir'}</span>
-                    <strong>{checkoutTotals.shippingVoucherDiscountLabel}</strong>
-                  </div>
-                ) : null}
-                {checkoutForm.fulfillment === 'delivery' ? (
-                  <div className="cart-summary-row">
-                    <span>{language === 'en' ? 'Shipping' : 'Ongkir'}</span>
-                    <strong>
-                      {selectedShippingOption ? checkoutTotals.shippingLabel : language === 'en' ? 'Choose courier' : 'Pilih kurir'}
-                    </strong>
-                  </div>
-                ) : null}
-                <div className="cart-summary-row nett">
-                  <span>{language === 'en' ? 'Grand total' : 'Total akhir'}</span>
-                  <strong>{checkoutTotals.grandTotalLabel || cartTotals?.netLabel || t('cart.subtotalManual')}</strong>
-                </div>
-              </div>
-
-              <form className="cart-checkout-form" onSubmit={handleCheckoutSubmit}>
-                {customerLoading ? (
-                  <div className="cart-auth-card">
-                    <p className="cart-auth-copy">{t('cart.authLoading')}</p>
-                  </div>
-                ) : !customerSession ? (
-                  <div className="cart-auth-card">
-                    <div className="cart-auth-heading">
-                      <div>
-                        <span>{t('cart.summaryEyebrow')}</span>
-                        <h3>{t('cart.loginTitle')}</h3>
-                      </div>
-                      <LockKeyhole size={18} />
-                    </div>
-                    <p className="cart-auth-copy">{t('cart.loginBody')}</p>
-
-                    <div className="cart-auth-tabs" role="tablist" aria-label={t('cart.loginTitle')}>
-                      <button
-                        className={authMode === 'login' ? 'cart-auth-tab active' : 'cart-auth-tab'}
-                        type="button"
-                        onClick={() => setAuthMode('login')}
-                      >
-                        {t('cart.loginTab')}
-                      </button>
-                      <button
-                        className={authMode === 'register' ? 'cart-auth-tab active' : 'cart-auth-tab'}
-                        type="button"
-                        onClick={() => setAuthMode('register')}
-                      >
-                        {t('cart.registerTab')}
-                      </button>
-                    </div>
-
-                    <CustomerGoogleAuthButton
-                      returnPath="/cart"
-                      disabled={authStatus.state === 'loading'}
-                      label={t('cart.googleLoginCta')}
-                    />
-
-                    <div className="cart-auth-divider">
-                      <span>{t('cart.authOrDivider')}</span>
-                    </div>
-
-                    {authMode === 'login' ? (
-                      <div className="cart-auth-form">
-                        <div className="cart-form-field">
-                          <label htmlFor="customer-login-email">{t('cart.customerEmail')}</label>
-                          <input
-                            id="customer-login-email"
-                            type="email"
-                            value={authForm.email}
-                            onChange={(event) => updateAuthForm('email', event.target.value)}
-                            required
-                          />
-                        </div>
-                        <div className="cart-form-field">
-                          <label htmlFor="customer-login-password">{t('cart.password')}</label>
-                          <input
-                            id="customer-login-password"
-                            type="password"
-                            value={authForm.password}
-                            onChange={(event) => updateAuthForm('password', event.target.value)}
-                            required
-                          />
-                        </div>
-                        <button
-                          className="cart-submit-button"
-                          type="button"
-                          disabled={authStatus.state === 'loading'}
-                          onClick={handleCustomerLogin}
-                        >
-                          <Mail size={18} />
-                          <span>{authStatus.state === 'loading' ? t('common.submitting') : t('cart.loginCta')}</span>
-                        </button>
-                      </div>
-                    ) : (
-                      <div className="cart-auth-form">
-                        <div className="cart-form-field">
-                          <label htmlFor="customer-register-name">{t('cart.customerName')}</label>
-                          <input
-                            id="customer-register-name"
-                            value={authForm.name}
-                            onChange={(event) => updateAuthForm('name', event.target.value)}
-                            required
-                          />
-                        </div>
-                        <div className="cart-form-field">
-                          <label htmlFor="customer-register-email">{t('cart.customerEmail')}</label>
-                          <input
-                            id="customer-register-email"
-                            type="email"
-                            value={authForm.email}
-                            onChange={(event) => updateAuthForm('email', event.target.value)}
-                            required
-                          />
-                        </div>
-                        <div className="cart-form-field">
-                          <label htmlFor="customer-register-whatsapp">{t('cart.customerWhatsapp')}</label>
-                          <input
-                            id="customer-register-whatsapp"
-                            value={authForm.whatsapp}
-                            onChange={(event) => updateAuthForm('whatsapp', event.target.value)}
-                            required
-                          />
-                        </div>
-                        <div className="cart-form-grid">
-                          <div className="cart-form-field">
-                            <label htmlFor="customer-register-password">{t('cart.password')}</label>
-                            <input
-                              id="customer-register-password"
-                              type="password"
-                              value={authForm.password}
-                              onChange={(event) => updateAuthForm('password', event.target.value)}
-                              required
-                            />
-                          </div>
-                          <div className="cart-form-field">
-                            <label htmlFor="customer-register-password-confirmation">{t('cart.passwordConfirmation')}</label>
-                            <input
-                              id="customer-register-password-confirmation"
-                              type="password"
-                              value={authForm.passwordConfirmation}
-                              onChange={(event) => updateAuthForm('passwordConfirmation', event.target.value)}
-                              required
-                            />
-                          </div>
-                        </div>
-                        <button
-                          className="cart-submit-button"
-                          type="button"
-                          disabled={authStatus.state === 'loading'}
-                          onClick={handleCustomerRegister}
-                        >
-                          <Mail size={18} />
-                          <span>{authStatus.state === 'loading' ? t('common.submitting') : t('cart.registerCta')}</span>
-                        </button>
-                      </div>
-                    )}
-
-                    {authStatus.message ? <p className={`cart-status ${authStatus.state}`}>{authStatus.message}</p> : null}
-                  </div>
-                ) : (
-                  <div className="cart-auth-card customer-account-card">
-                    <div className="cart-auth-heading">
-                      <div>
-                        <span>{t('cart.summaryEyebrow')}</span>
-                        <h3>{t('cart.accountTitle')}</h3>
-                      </div>
-                      <button className="cart-account-logout" type="button" onClick={handleCustomerLogout}>
-                        <LogOut size={16} />
-                        <span>{t('cart.logout')}</span>
-                      </button>
-                    </div>
-                    <p className="cart-auth-copy">{t('cart.accountBody')}</p>
-                    <div className="cart-account-meta">
-                      <strong>{customerSession.name}</strong>
-                      <span>{customerSession.email}</span>
-                    </div>
-                  </div>
-                )}
-
-                {!customerSession ? null : (
-                  <>
-                <div className="cart-form-field">
-                  <label htmlFor="cart-name">{t('cart.customerName')}</label>
-                  <input
-                    id="cart-name"
-                    value={checkoutForm.name}
-                    onChange={(event) => updateCheckoutForm('name', event.target.value)}
-                    required
-                  />
-                </div>
-
-                <div className="cart-form-field">
-                  <label htmlFor="cart-email">{t('cart.customerEmail')}</label>
-                  <input
-                    id="cart-email"
-                    type="email"
-                    value={checkoutForm.email}
-                    onChange={(event) => updateCheckoutForm('email', event.target.value)}
-                    required
-                  />
-                </div>
-
-                <div className="cart-form-field">
-                  <label htmlFor="cart-whatsapp">{t('cart.customerWhatsapp')}</label>
-                  <input
-                    id="cart-whatsapp"
-                    value={checkoutForm.whatsapp}
-                    onChange={(event) => updateCheckoutForm('whatsapp', event.target.value)}
-                    required
-                  />
-                </div>
-
-                <div className="cart-form-field">
-                  <label htmlFor="cart-fulfillment">{t('cart.fulfillment')}</label>
-                  <select
-                    id="cart-fulfillment"
-                    value={checkoutForm.fulfillment}
-                    onChange={(event) => updateCheckoutForm('fulfillment', event.target.value)}
-                  >
-                    <option value="delivery">{t('cart.delivery')}</option>
-                    <option value="pickup">{t('cart.pickup')}</option>
-                  </select>
-                </div>
-
-                {checkoutForm.fulfillment === 'delivery' ? (
-                  <>
-                    <div className="cart-form-grid">
-                      <div className="cart-form-field">
-                        <label htmlFor="cart-province">{t('cart.province')}</label>
-                        <select
-                          id="cart-province"
-                          value={checkoutForm.provinceCode}
-                          onChange={(event) =>
-                            updateCheckoutFormFields({
-                              provinceCode: event.target.value,
-                              cityCode: '',
-                              districtCode: '',
-                            })
-                          }
-                          required
-                          disabled={locationLoading.provinces}
-                        >
-                          <option value="">{t('cart.selectProvince')}</option>
-                          {provinceOptions.map((province) => (
-                            <option key={province.code} value={province.code}>
-                              {province.name}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-
-                      <div className="cart-form-field">
-                        <label htmlFor="cart-city">{t('cart.city')}</label>
-                        <select
-                          id="cart-city"
-                          value={checkoutForm.cityCode}
-                          onChange={(event) =>
-                            updateCheckoutFormFields({
-                              cityCode: event.target.value,
-                              districtCode: '',
-                            })
-                          }
-                          required
-                          disabled={!checkoutForm.provinceCode || locationLoading.cities}
-                        >
-                          <option value="">{t('cart.selectCity')}</option>
-                          {cityOptions.map((city) => (
-                            <option key={city.code} value={city.code}>
-                              {city.name}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                    </div>
-
-                    <div className="cart-form-field">
-                      <label htmlFor="cart-district">{t('cart.district')}</label>
-                      <select
-                        id="cart-district"
-                        value={checkoutForm.districtCode}
-                        onChange={(event) => updateCheckoutForm('districtCode', event.target.value)}
-                        required
-                        disabled={!checkoutForm.cityCode || locationLoading.districts}
-                      >
-                        <option value="">{t('cart.selectDistrict')}</option>
-                        {districtOptions.map((district) => (
-                          <option key={district.code} value={district.code}>
-                            {district.name}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-
-                    {locationLoading.provinces || locationLoading.cities || locationLoading.districts ? (
-                      <p className="cart-form-location-status">{t('cart.loadingLocations')}</p>
-                    ) : null}
-
-                    <div className="cart-form-field">
-                      <label htmlFor="cart-address">{t('cart.addressDetail')}</label>
-                      <textarea
-                        id="cart-address"
-                        rows="3"
-                        value={checkoutForm.addressLine}
-                        onChange={(event) => updateCheckoutForm('addressLine', event.target.value)}
-                        required
-                      />
-                    </div>
-
-                    <div className="cart-form-field cart-form-field-shipping">
-                      <ShippingOptionPicker
-                        options={shippingOptions}
-                        selectedKey={selectedShippingOptionKey}
-                        onSelect={setSelectedShippingOptionKey}
-                        loading={shippingStatus.state === 'loading'}
-                        disabled={shippingStatus.state === 'loading'}
-                        language={language}
-                        currency={checkoutTotals.currency}
-                      />
-                    </div>
-
-                    {shippingStatus.message ? (
-                      <p className={`cart-status ${shippingStatus.state}`}>{shippingStatus.message}</p>
-                    ) : null}
-                  </>
-                ) : null}
-
-                <div className="cart-form-field">
-                  <label htmlFor="cart-notes">{t('cart.notes')}</label>
-                  <textarea
-                    id="cart-notes"
-                    rows="3"
-                    value={checkoutForm.notes}
-                    onChange={(event) => updateCheckoutForm('notes', event.target.value)}
-                  />
-                </div>
-
-                {customerSession ? (
-                  <VoucherCodeField
-                    language={language}
-                    locale={language}
-                    currency={cartTotals?.currency || (language === 'en' ? 'USD' : 'IDR')}
-                    fulfillment={checkoutForm.fulfillment}
-                    shippingFeeAmountMinor={
-                      checkoutForm.fulfillment === 'delivery' && selectedShippingOption
-                        ? selectedShippingOption.price
-                        : 0
-                    }
-                    items={buildVoucherValidateItems(checkoutItems, language)}
-                    appliedVoucher={appliedVoucher}
-                    onApplied={setAppliedVoucher}
-                    onClear={() => setAppliedVoucher(null)}
-                    disabled={checkoutStatus.state === 'loading'}
-                  />
-                ) : null}
-
-                <CheckoutTermsAgreement
-                  checked={termsAccepted}
-                  onChange={(value) => {
-                    setTermsAccepted(value)
-                    if (value) {
-                      setTermsError('')
-                      setCheckoutStatus((current) =>
-                        current.state === 'error' ? { state: 'idle', message: '' } : current,
-                      )
-                    }
-                  }}
-                  language={language}
-                  termsVersion={checkoutTermsVersion}
-                  disabled={checkoutStatus.state === 'loading'}
-                  error={termsError}
-                />
-
-                <button
-                  className="cart-submit-button"
-                  type="submit"
-                  disabled={checkoutStatus.state === 'loading' || !termsAccepted}
-                >
-                  <MessageCircleMore size={18} />
-                  <span>{checkoutStatus.state === 'loading' ? t('common.submitting') : t('cart.checkoutPay')}</span>
-                </button>
-                {checkoutStatus.message ? (
-                  <p className={`cart-status ${checkoutStatus.state}`}>{checkoutStatus.message}</p>
-                ) : null}
-                  </>
-                )}
-              </form>
-            </aside>
-          </section>
+          <CartStepView
+            language={language}
+            t={t}
+            items={items}
+            itemCount={itemCount}
+            cartTotals={cartTotals}
+            checkoutTotals={checkoutTotals}
+            clearCart={clearCart}
+            onCheckout={handleGoToCheckout}
+            itemHandlers={itemHandlers}
+          />
         )}
       </main>
 

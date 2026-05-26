@@ -94,7 +94,6 @@ export default function TermsAndConditionsPage() {
             {terms?.updated_at ? (
               <p>
                 {language === 'en' ? 'Last updated' : 'Diperbarui'}: {terms.updated_at}
-                {terms.version ? ` · v${terms.version}` : ''}
               </p>
             ) : null}
           </div>

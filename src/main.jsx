@@ -80,7 +80,7 @@ createRoot(document.getElementById('root')).render(
               <Route path="/admin/*" element={<LegacyAdminRedirect />} />
               <Route path="/all-products" element={<AllProductsPage />} />
               <Route path="/kategori/:categoryId" element={<CategoryPage />} />
-              <Route path="/cart" element={<CartPage />} />
+              <Route path="/cart/*" element={<CartPage />} />
               <Route path="/akun" element={<CustomerAccountPage />} />
               <Route path="/akun/pesanan/:orderNumber" element={<CustomerOrderDetailPage />} />
               <Route path="/artikel" element={<ArticlesPage />} />

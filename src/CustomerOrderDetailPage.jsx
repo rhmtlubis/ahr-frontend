@@ -14,7 +14,6 @@ import { useLanguage } from './lib/i18n.jsx'
 import { getLandingChromeContent } from './lib/landingContent'
 import { useMidtransPayment } from './lib/useMidtransPayment'
 import CheckoutTermsAgreement from './components/checkout/CheckoutTermsAgreement'
-import { fetchCheckoutTerms } from './lib/checkoutTerms'
 import { formatCurrencyAmount } from './lib/price'
 import { savePendingPayment } from './lib/pendingPayment'
 import useDocumentTitle from './lib/useDocumentTitle'
@@ -60,7 +59,6 @@ export default function CustomerOrderDetailPage() {
   const [paymentStatus, setPaymentStatus] = useState({ state: 'idle', message: '' })
   const [isRefreshingTracking, setIsRefreshingTracking] = useState(false)
   const [termsAccepted, setTermsAccepted] = useState(false)
-  const [checkoutTermsVersion, setCheckoutTermsVersion] = useState('')
   const [termsError, setTermsError] = useState('')
   const [consentPreferences, setConsentPreferencesState] = useState(() => getConsentPreferences())
 
@@ -158,18 +156,6 @@ export default function CustomerOrderDetailPage() {
 
     loadOrder()
   }, [customer, customerLoading, loadOrder])
-
-  useEffect(() => {
-    fetchCheckoutTerms(language)
-      .then((data) => {
-        if (data?.version) {
-          setCheckoutTermsVersion(data.version)
-        }
-      })
-      .catch(() => {
-        setCheckoutTermsVersion('')
-      })
-  }, [language])
 
   const handlePayAgain = async () => {
     if (!order?.can_pay || !order?.order_number) {
@@ -276,7 +262,6 @@ export default function CustomerOrderDetailPage() {
                     setTermsError('')
                   }
                 }}
-                checkoutTermsVersion={checkoutTermsVersion}
                 termsError={termsError}
               />
             )}
@@ -298,7 +283,6 @@ function OrderDetailContent({
   isRefreshingTracking,
   termsAccepted,
   onTermsAcceptedChange,
-  checkoutTermsVersion,
   termsError,
 }) {
   return (
@@ -426,7 +410,6 @@ function OrderDetailContent({
             checked={termsAccepted}
             onChange={onTermsAcceptedChange}
             language={language}
-            termsVersion={checkoutTermsVersion}
             disabled={paymentStatus.state === 'loading'}
             error={termsError}
           />
