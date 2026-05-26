@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState, useCallback } from 'react'
+﻿import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ArrowLeft, CreditCard, LockKeyhole, LogOut, Mail, Minus, Plus, ShoppingBag, Trash2, Truck } from 'lucide-react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import './App.css'
@@ -19,6 +19,7 @@ import {
   registerCustomer,
   saveCatalogOrder,
   updateCustomerProfile,
+  validateCatalogVoucher,
 } from './lib/api'
 import { getAttributionParams } from './lib/attribution'
 import { getProductSizeOptions, useCart } from './lib/cart.jsx'
@@ -298,17 +299,17 @@ function getCheckoutTotals(cartTotals, shippingOption, language, appliedVoucher)
     orderVoucherDiscountAmount: orderDiscountAmount,
     orderVoucherDiscountLabel:
       orderDiscountAmount > 0
-        ? `âˆ’${formatCurrencyAmount(orderDiscountAmount, shippingCurrency, language)}`
+        ? `-${formatCurrencyAmount(orderDiscountAmount, shippingCurrency, language)}`
         : null,
     shippingVoucherDiscountAmount: shippingDiscountAmount,
     shippingVoucherDiscountLabel:
       shippingDiscountAmount > 0
-        ? `âˆ’${formatCurrencyAmount(shippingDiscountAmount, shippingCurrency, language)}`
+        ? `-${formatCurrencyAmount(shippingDiscountAmount, shippingCurrency, language)}`
         : null,
     voucherDiscountAmount: orderDiscountAmount + shippingDiscountAmount,
     voucherDiscountLabel:
       orderDiscountAmount + shippingDiscountAmount > 0
-        ? `âˆ’${formatCurrencyAmount(orderDiscountAmount + shippingDiscountAmount, shippingCurrency, language)}`
+        ? `-${formatCurrencyAmount(orderDiscountAmount + shippingDiscountAmount, shippingCurrency, language)}`
         : null,
     grandTotalAmount,
     grandTotalLabel:
@@ -644,6 +645,7 @@ export default function CartPage() {
   const [termsAccepted, setTermsAccepted] = useState(false)
   const [termsError, setTermsError] = useState('')
   const [appliedVoucher, setAppliedVoucher] = useState(null)
+  const appliedVoucherRef = useRef(null)
   const [locationLoading, setLocationLoading] = useState({
     provinces: false,
     cities: false,
@@ -685,21 +687,75 @@ export default function CartPage() {
   }, [language])
 
   useEffect(() => {
+    appliedVoucherRef.current = appliedVoucher
+  }, [appliedVoucher])
+
+  useEffect(() => {
     setAppliedVoucher(null)
   }, [items])
 
   useEffect(() => {
-    setAppliedVoucher((current) => {
-      if (!current) {
-        return null
+    const voucher = appliedVoucherRef.current
+
+    if (!voucher?.code) {
+      return undefined
+    }
+
+    let cancelled = false
+    const isShippingVoucher =
+      voucher.benefit_type === 'shipping_discount' || voucher.benefit_type === 'free_shipping'
+    const shippingFeeAmountMinor =
+      checkoutForm.fulfillment === 'delivery' && selectedShippingOption
+        ? Number(selectedShippingOption.price) || 0
+        : 0
+
+    if (checkoutForm.fulfillment !== 'delivery') {
+      if (isShippingVoucher) {
+        setAppliedVoucher(null)
       }
 
-      const isShippingVoucher =
-        current.benefit_type === 'shipping_discount' || current.benefit_type === 'free_shipping'
+      return undefined
+    }
 
-      return isShippingVoucher ? null : current
-    })
-  }, [checkoutForm.fulfillment, selectedShippingOptionKey])
+    if (isShippingVoucher && shippingFeeAmountMinor <= 0) {
+      setAppliedVoucher(null)
+      return undefined
+    }
+
+    const syncVoucher = async () => {
+      try {
+        const preview = await validateCatalogVoucher({
+          voucherCode: voucher.code,
+          items: buildVoucherValidateItems(checkoutItems, language),
+          locale: language === 'en' ? 'en' : 'id',
+          currency: cartTotals?.currency || (language === 'en' ? 'USD' : 'IDR'),
+          fulfillment: checkoutForm.fulfillment,
+          shippingFeeAmountMinor,
+        })
+
+        if (!cancelled) {
+          setAppliedVoucher(preview)
+        }
+      } catch {
+        if (!cancelled) {
+          setAppliedVoucher(null)
+        }
+      }
+    }
+
+    syncVoucher()
+
+    return () => {
+      cancelled = true
+    }
+  }, [
+    cartTotals?.currency,
+    checkoutForm.fulfillment,
+    checkoutItems,
+    language,
+    selectedShippingOption,
+    selectedShippingOptionKey,
+  ])
 
   const applyConsentPreferences = (nextPreferences) => {
     setConsentPreferences(nextPreferences)

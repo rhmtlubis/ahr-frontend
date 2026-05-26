@@ -345,7 +345,7 @@ function OrderDetailContent({
               {language === 'en' ? 'Voucher (products)' : 'Voucher produk'} ({order.voucher_code || order.summary?.voucher_code})
             </span>
             <strong>
-              −
+              -
               {formatOrderAmount(
                 order.summary?.voucher_discount_amount_minor ?? order.voucher_discount_amount_minor,
                 order.currency,
@@ -357,7 +357,7 @@ function OrderDetailContent({
           <div>
             <span>{language === 'en' ? 'Voucher (shipping)' : 'Voucher ongkir'}</span>
             <strong>
-              −
+              -
               {formatOrderAmount(
                 order.summary?.voucher_shipping_discount_amount_minor ?? order.voucher_shipping_discount_amount_minor,
                 order.currency,

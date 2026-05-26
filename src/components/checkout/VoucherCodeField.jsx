@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { ChevronRight, Tag, X } from 'lucide-react'
 import { listCatalogVouchers, validateCatalogVoucher } from '../../lib/api'
 import { formatCurrencyAmount } from '../../lib/price'
@@ -9,21 +9,21 @@ function formatVoucherSuccessMessage(preview, language) {
   if (preview.order_discount_amount_minor > 0) {
     parts.push(
       language === 'en'
-        ? `product −${formatCurrencyAmount(preview.order_discount_amount_minor, preview.currency, language)}`
-        : `produk −${formatCurrencyAmount(preview.order_discount_amount_minor, preview.currency, language)}`,
+        ? `product -${formatCurrencyAmount(preview.order_discount_amount_minor, preview.currency, language)}`
+        : `produk -${formatCurrencyAmount(preview.order_discount_amount_minor, preview.currency, language)}`,
     )
   }
 
   if (preview.shipping_discount_amount_minor > 0) {
     parts.push(
       language === 'en'
-        ? `shipping −${formatCurrencyAmount(preview.shipping_discount_amount_minor, preview.currency, language)}`
-        : `ongkir −${formatCurrencyAmount(preview.shipping_discount_amount_minor, preview.currency, language)}`,
+        ? `shipping -${formatCurrencyAmount(preview.shipping_discount_amount_minor, preview.currency, language)}`
+        : `ongkir -${formatCurrencyAmount(preview.shipping_discount_amount_minor, preview.currency, language)}`,
     )
   }
 
   if (parts.length === 0 && preview.discount_amount_minor > 0) {
-    parts.push(`−${formatCurrencyAmount(preview.discount_amount_minor, preview.currency, language)}`)
+    parts.push(`-${formatCurrencyAmount(preview.discount_amount_minor, preview.currency, language)}`)
   }
 
   const detail = parts.length > 0 ? parts.join(', ') : preview.benefit_type_label || ''
@@ -131,7 +131,7 @@ export default function VoucherCodeField({
     setStatus({ state: 'idle', message: '' })
   }
 
-  const loadVoucherList = async () => {
+  const loadVoucherList = useCallback(async () => {
     setListState('loading')
 
     try {
@@ -145,7 +145,7 @@ export default function VoucherCodeField({
       setListState('error')
       setStatus({ state: 'error', message: error.message })
     }
-  }
+  }, [currency, fulfillment, items, locale, shippingFeeAmountMinor])
 
   const openSheet = () => {
     if (disabled) {
@@ -155,6 +155,14 @@ export default function VoucherCodeField({
     setSheetOpen(true)
     loadVoucherList()
   }
+
+  useEffect(() => {
+    if (!sheetOpen) {
+      return
+    }
+
+    loadVoucherList()
+  }, [loadVoucherList, sheetOpen])
 
   const closeSheet = () => {
     setSheetOpen(false)
