@@ -207,11 +207,18 @@ export default function OrderShipmentTracking({
           </h3>
           <ol className="customer-order-tracking-timeline" aria-label={language === 'en' ? 'Shipment history' : 'Riwayat pengiriman'}>
             {history.map((entry, index) => (
-              <li key={`${entry.status}-${entry.at}-${index}`} className="customer-order-tracking-timeline-item">
+              <li
+                key={`${entry.status}-${entry.at}-${index}`}
+                className={`customer-order-tracking-timeline-item${
+                  index === history.length - 1 ? ' customer-order-tracking-timeline-item-latest' : ''
+                }`}
+              >
                 <time className="customer-order-tracking-timeline-time" dateTime={entry.at || undefined}>
                   {formatTrackingDate(entry.at, language)}
                 </time>
-                <span className="customer-order-tracking-timeline-marker" aria-hidden="true" />
+                <div className="customer-order-tracking-timeline-track">
+                  <span className="customer-order-tracking-timeline-marker" aria-hidden="true" />
+                </div>
                 <div className="customer-order-tracking-timeline-body">
                   <strong>{entry.title || entry.label || entry.status}</strong>
                   {entry.description ? <p>{entry.description}</p> : null}
