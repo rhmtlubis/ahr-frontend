@@ -33,16 +33,29 @@ $remoteScript = @'
 set -euo pipefail
 cd __REMOTE_REPO__
 
+MIDTRANS_CLIENT_KEY=""
+if docker ps --format '{{.Names}}' | grep -qx 'ahr-backend'; then
+  MIDTRANS_CLIENT_KEY="$(docker exec ahr-backend sh -lc 'grep -E "^MIDTRANS_CLIENT_KEY=" /var/www/html/.env 2>/dev/null | tail -n 1 | cut -d= -f2-' || true)"
+fi
+if [ -z "$MIDTRANS_CLIENT_KEY" ] && [ -r /opt/ahrcorporation/backend/.env ]; then
+  MIDTRANS_CLIENT_KEY="$(grep -E '^MIDTRANS_CLIENT_KEY=' /opt/ahrcorporation/backend/.env | tail -n 1 | cut -d= -f2-)"
+fi
+
 git stash push -m "auto-deploy backup $(date -u +%Y%m%dT%H%M%SZ)" >/dev/null || true
 
 git pull --ff-only origin __BRANCH__
-cat > .env.production <<'EOF'
+cat > .env.production <<EOF
 VITE_API_BASE_URL=https://api.ahrcorporation.id
 VITE_PRERENDER_API_BASE_URL=https://api.ahrcorporation.id
 VITE_SITE_URL=https://ahrcorporation.id
+VITE_MIDTRANS_CLIENT_KEY=${MIDTRANS_CLIENT_KEY}
+VITE_MIDTRANS_IS_PRODUCTION=true
+VITE_MIDTRANS_SNAP_LANGUAGE=id
+VITE_GOOGLE_AUTH_ENABLED=true
 EOF
 cd __DEPLOY_DIR__
 docker compose up -d --build frontend
+cd __REMOTE_REPO__
 git stash pop --index >/dev/null 2>&1 || true
 '@
 
