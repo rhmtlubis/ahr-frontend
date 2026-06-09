@@ -34,7 +34,10 @@ set -euo pipefail
 cd __REMOTE_REPO__
 
 MIDTRANS_CLIENT_KEY=""
-if [ -f /opt/ahrcorporation/backend/.env ]; then
+if docker ps --format '{{.Names}}' | grep -qx 'ahr-backend'; then
+  MIDTRANS_CLIENT_KEY="$(docker exec ahr-backend sh -lc 'grep -E "^MIDTRANS_CLIENT_KEY=" /var/www/html/.env 2>/dev/null | tail -n 1 | cut -d= -f2-' || true)"
+fi
+if [ -z "$MIDTRANS_CLIENT_KEY" ] && [ -r /opt/ahrcorporation/backend/.env ]; then
   MIDTRANS_CLIENT_KEY="$(grep -E '^MIDTRANS_CLIENT_KEY=' /opt/ahrcorporation/backend/.env | tail -n 1 | cut -d= -f2-)"
 fi
 
