@@ -1969,6 +1969,9 @@ export default function CartPage() {
               onChange={(event) => updateCheckoutForm('whatsapp', event.target.value)}
               required
             />
+            {isInternationalCountry(checkoutForm.countryCode) ? (
+              <p className="cart-field-hint">{t('cart.whatsappInternationalHint')}</p>
+            ) : null}
           </div>
 
           <div className="cart-form-field">
@@ -2147,7 +2150,12 @@ export default function CartPage() {
               </div>
 
               {isInternationalCountry(checkoutForm.countryCode) ? (
-                <p className="checkout-confirm-payment-note">{t('cart.internationalShippingNote')}</p>
+                <p className="checkout-confirm-payment-note">
+                  {t('cart.internationalShippingNote')}{' '}
+                  <Link to="/pengiriman-internasional" target="_blank" rel="noopener noreferrer">
+                    {t('cart.internationalShippingPolicyLink')}
+                  </Link>
+                </p>
               ) : null}
 
               <div className="checkout-confirm-card checkout-confirm-card-interactive">

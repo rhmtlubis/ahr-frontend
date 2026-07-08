@@ -162,6 +162,53 @@ const translations = {
         'Kartu internasional diterima. Bank Anda bisa menampilkan nominal dalam mata uang lokal, tetapi pembayaran diproses dalam Rupiah (IDR).',
       internationalShippingNote:
         'Pengiriman internasional diproses dari Indonesia. Estimasi sudah termasuk produksi; waktu transit bisa berbeda tergantung bea cukai negara tujuan.',
+      internationalShippingPolicyLink: 'Baca kebijakan pengiriman internasional',
+      whatsappInternationalHint: 'Gunakan format internasional, contoh: +65 9123 4567 atau +1 415 555 0100.',
+      freeShippingDomesticOnly: 'Promo gratis ongkir hanya berlaku untuk pengiriman dalam Indonesia.',
+    },
+    internationalShippingPolicy: {
+      title: 'Kebijakan Pengiriman Internasional',
+      metaDescription:
+        'Kebijakan pengiriman internasional CS Studio / AHR: tarif zona, pembayaran IDR, bea cukai, dan estimasi waktu kirim dari Indonesia.',
+      intro:
+        'Kami mengirim pesanan custom apparel dari Indonesia ke negara yang tercantum di checkout. Halaman ini menjelaskan cara kerja ongkir, pembayaran, dan tanggung jawab bea cukai.',
+      sections: [
+        {
+          title: 'Negara tujuan & tarif',
+          paragraphs: [
+            'Pilih negara pengiriman di checkout. Tarif ongkir internasional dihitung per zona (Asia Tenggara, Asia Pasifik, Eropa, Amerika, dan wilayah lainnya) berdasarkan jumlah item.',
+            'Estimasi di keranjang (mode English) menggunakan contoh destinasi Singapura. Tarif final ditentukan saat checkout setelah alamat lengkap diisi.',
+          ],
+        },
+        {
+          title: 'Pembayaran',
+          paragraphs: [
+            'Harga produk dapat ditampilkan dalam USD sebagai referensi, tetapi pembayaran selalu diproses dalam Rupiah (IDR) melalui Midtrans.',
+            'Kartu kredit/debit internasional umumnya diterima. Bank atau penerbit kartu Anda dapat menampilkan konversi valuta dan biaya tambahan di luar kendali kami.',
+          ],
+        },
+        {
+          title: 'Produksi & waktu transit',
+          paragraphs: [
+            'Estimasi pengiriman mencakup waktu produksi custom apparel. Setelah produksi selesai, paket dikirim via layanan internasional economy atau express (sesuai pilihan di checkout).',
+            'Waktu transit aktual dapat berubah karena proses bea cukai, hari libur, atau force majeure di negara tujuan.',
+          ],
+        },
+        {
+          title: 'Bea cukai & pajak impor',
+          paragraphs: [
+            'Biaya bea cukai, pajak impor (VAT/GST), atau biaya clearance di negara tujuan biasanya menjadi tanggung jawab penerima paket, kecuali dinyatakan lain oleh hukum setempat.',
+            'Kami tidak dapat memprediksi atau membayarkan duties atas nama customer. Jika paket ditahan customs, customer perlu menyelesaikan dokumen atau biaya yang diminta otoritas setempat.',
+          ],
+        },
+        {
+          title: 'Pelacakan & bantuan',
+          paragraphs: [
+            'Setelah pesanan dibayar dan dikirim, nomor resi internasional akan diperbarui di halaman detail pesanan Anda.',
+            'Untuk pertanyaan pengiriman internasional, hubungi tim kami via WhatsApp atau email yang tercantum di situs.',
+          ],
+        },
+      ],
     },
     cookie: {
       ariaLabel: 'Izin cookies',
@@ -550,6 +597,53 @@ const translations = {
         'International cards are accepted. Your bank may show an amount in your local currency, but payment is processed in Indonesian Rupiah (IDR).',
       internationalShippingNote:
         'International delivery ships from Indonesia. Estimates include production time; final transit may vary due to customs in the destination country.',
+      internationalShippingPolicyLink: 'Read international shipping policy',
+      whatsappInternationalHint: 'Use international format, e.g. +65 9123 4567 or +1 415 555 0100.',
+      freeShippingDomesticOnly: 'Free shipping promos apply to Indonesia delivery only.',
+    },
+    internationalShippingPolicy: {
+      title: 'International Shipping Policy',
+      metaDescription:
+        'International shipping policy for CS Studio / AHR: zone rates, IDR payment, customs duties, and delivery estimates from Indonesia.',
+      intro:
+        'We ship custom apparel orders from Indonesia to countries available at checkout. This page explains shipping rates, payment, and customs responsibilities.',
+      sections: [
+        {
+          title: 'Destination countries & rates',
+          paragraphs: [
+            'Select your shipping country at checkout. International rates are calculated by zone (Southeast Asia, Asia Pacific, Europe, Americas, and other regions) based on item quantity.',
+            'Cart estimates in English mode use Singapore as a sample destination. Final rates are confirmed at checkout once your full address is entered.',
+          ],
+        },
+        {
+          title: 'Payment',
+          paragraphs: [
+            'Product prices may be shown in USD for reference, but checkout payment is always processed in Indonesian Rupiah (IDR) via Midtrans.',
+            'International credit/debit cards are generally accepted. Your bank may show currency conversion and additional fees beyond our control.',
+          ],
+        },
+        {
+          title: 'Production & transit time',
+          paragraphs: [
+            'Delivery estimates include custom production time. After production, parcels ship via international economy or express services (as selected at checkout).',
+            'Actual transit time may change due to customs processing, public holidays, or force majeure in the destination country.',
+          ],
+        },
+        {
+          title: 'Customs & import duties',
+          paragraphs: [
+            'Import duties, VAT/GST, or clearance fees in the destination country are usually the recipient\'s responsibility unless local law states otherwise.',
+            'We cannot predict or prepay duties on your behalf. If a parcel is held by customs, you may need to complete documents or pay fees requested by local authorities.',
+          ],
+        },
+        {
+          title: 'Tracking & support',
+          paragraphs: [
+            'After your order is paid and shipped, international tracking numbers are updated on your order detail page.',
+            'For international shipping questions, contact our team via WhatsApp or the email listed on this site.',
+          ],
+        },
+      ],
     },
     cookie: {
       ariaLabel: 'Cookie permissions',

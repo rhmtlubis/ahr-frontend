@@ -955,9 +955,11 @@ export default function CustomerAccountPage() {
                     </p>
                   ) : (
                     <p className="cart-field-hint">
-                      {language === 'en'
-                        ? 'Use the same number for order updates via WhatsApp.'
-                        : 'Gunakan nomor yang sama untuk update pesanan via WhatsApp.'}
+                      {isInternationalCountry(profileForm.countryCode)
+                        ? t('cart.whatsappInternationalHint')
+                        : language === 'en'
+                          ? 'Use the same number for order updates via WhatsApp.'
+                          : 'Gunakan nomor yang sama untuk update pesanan via WhatsApp.'}
                     </p>
                   )}
                 </div>

@@ -39,8 +39,8 @@ export default function FreeShippingProgressBar({
         )}
         <span>
           {language === 'en'
-            ? `Delivery orders · target ${thresholdLabel}`
-            : `Pengiriman · target ${thresholdLabel}`}
+            ? `Indonesia delivery only · target ${thresholdLabel}`
+            : `Hanya pengiriman Indonesia · target ${thresholdLabel}`}
         </span>
       </div>
 

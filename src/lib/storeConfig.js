@@ -118,6 +118,7 @@ export function getRetailFooterContent(locale = 'id') {
         title: isEnglish ? 'Information' : 'Informasi',
         links: [
           { label: isEnglish ? 'Terms & Conditions' : 'Syarat & Ketentuan', href: '/syarat-ketentuan' },
+          { label: isEnglish ? 'International Shipping' : 'Pengiriman Internasional', href: '/pengiriman-internasional' },
           { label: 'AHR Corporation', href: `${MAIN_SITE_URL}/` },
         ],
       },
