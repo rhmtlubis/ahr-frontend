@@ -1969,9 +1969,6 @@ export default function CartPage() {
               onChange={(event) => updateCheckoutForm('whatsapp', event.target.value)}
               required
             />
-            {isInternationalCountry(checkoutForm.countryCode) ? (
-              <p className="cart-field-hint">{t('cart.whatsappInternationalHint')}</p>
-            ) : null}
           </div>
 
           <div className="cart-form-field">
@@ -2025,6 +2022,9 @@ export default function CartPage() {
                     </>
                   )}
                 </select>
+                {isInternationalCountry(checkoutForm.countryCode) ? (
+                  <p className="cart-field-hint">{t('cart.whatsappInternationalHint')}</p>
+                ) : null}
               </div>
 
               {isInternationalCountry(checkoutForm.countryCode) ? (

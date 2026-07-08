@@ -88,6 +88,51 @@ function appendArticleFooterGroup(groups = [], locale = 'id') {
   ]
 }
 
+function appendInternationalShippingFooterLink(groups = [], locale = 'id') {
+  if (isCssStore()) {
+    return groups
+  }
+
+  const href = locale === 'en' ? '/international-shipping' : '/pengiriman-internasional'
+  const label = locale === 'en' ? 'International Shipping' : 'Pengiriman Internasional'
+  const infoKeywords = locale === 'en' ? ['information', 'info', 'legal'] : ['informasi', 'info', 'legal']
+  const hasLink = groups.some((group) =>
+    (group.links || []).some((link) => {
+      const linkHref = String(link?.href || '')
+      return linkHref.includes('pengiriman-internasional') || linkHref.includes('international-shipping')
+    }),
+  )
+
+  if (hasLink) {
+    return groups
+  }
+
+  const infoGroupIndex = groups.findIndex((group) =>
+    infoKeywords.some((keyword) => String(group?.title || '').toLowerCase().includes(keyword)),
+  )
+
+  if (infoGroupIndex >= 0) {
+    const group = groups[infoGroupIndex]
+
+    return groups.map((entry, index) =>
+      index === infoGroupIndex
+        ? {
+            ...entry,
+            links: [...(group.links || []), { label, href }],
+          }
+        : entry,
+    )
+  }
+
+  return [
+    ...groups,
+    {
+      title: locale === 'en' ? 'Information' : 'Informasi',
+      links: [{ label, href }],
+    },
+  ]
+}
+
 function normalizeNavGroups(groups = [], hashPrefix = '') {
   return groups
     .filter((group) => group?.id && group?.label)
@@ -167,7 +212,10 @@ export function getLandingChromeContent(payload = {}, options = {}) {
     utilityLinks: isCssStore()
       ? []
       : appendArticleShortcut(normalizedUtilityLinks, locale),
-    footerGroups: appendArticleFooterGroup(normalizedFooterGroups, locale),
+    footerGroups: appendInternationalShippingFooterLink(
+      appendArticleFooterGroup(normalizedFooterGroups, locale),
+      locale,
+    ),
     navGroups: isCssStore()
       ? []
       : Array.isArray(payload.nav_groups) && payload.nav_groups.length > 0
