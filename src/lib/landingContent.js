@@ -1,4 +1,12 @@
 import { normalizeCategoryHref } from './categorySeo.js'
+import {
+  filterB2cNavGroups,
+  filterB2cStoreLinks,
+  getStoreBrandName,
+  isB2cOnlyStore,
+  isCssStore,
+} from './storeConfig.js'
+import { CSS_WHATSAPP_NUMBER } from './cssStoreConfig.js'
 
 const localeDefaults = {
   id: {
@@ -116,28 +124,57 @@ export function normalizeCompanyProfile(profile = {}) {
 export function getLandingChromeContent(payload = {}, options = {}) {
   const { hashPrefix = '', locale = 'id' } = options
   const defaults = localeDefaults[locale] || localeDefaults.id
-  const normalizedUtilityLinks = normalizeLinks(
-    Array.isArray(payload.utility_links) && payload.utility_links.length > 0 ? payload.utility_links : [],
-    hashPrefix,
+  const normalizedUtilityLinks = filterB2cStoreLinks(
+    normalizeLinks(
+      Array.isArray(payload.utility_links) && payload.utility_links.length > 0 ? payload.utility_links : [],
+      hashPrefix,
+    ),
   )
   const normalizedFooterGroups =
     Array.isArray(payload.footer_groups) && payload.footer_groups.length > 0
-      ? normalizeFooterGroups(payload.footer_groups, hashPrefix)
+      ? normalizeFooterGroups(payload.footer_groups, hashPrefix).map((group) => ({
+          ...group,
+          links: filterB2cStoreLinks(group.links),
+        }))
       : []
+
+  const brandDefaults = {
+    ...defaults.brand,
+    ...(isCssStore()
+      ? {
+          name: getStoreBrandName(),
+          lockup: getStoreBrandName(),
+          tagline: isB2cOnlyStore()
+            ? 'Streetwear & apparel fantasy — pesan online di CS Studio.'
+            : defaults.brand.tagline,
+          whatsapp_number: CSS_WHATSAPP_NUMBER,
+        }
+      : {}),
+  }
 
   return {
     brand: {
-      ...defaults.brand,
+      ...brandDefaults,
       ...(payload.brand || {}),
+      ...(isCssStore()
+        ? {
+            name: getStoreBrandName(),
+            lockup: getStoreBrandName(),
+            whatsapp_number: CSS_WHATSAPP_NUMBER,
+          }
+        : {}),
     },
-    utilityLinks: appendArticleShortcut(normalizedUtilityLinks, locale),
+    utilityLinks: isCssStore()
+      ? []
+      : appendArticleShortcut(normalizedUtilityLinks, locale),
     footerGroups: appendArticleFooterGroup(normalizedFooterGroups, locale),
-    navGroups:
-      Array.isArray(payload.nav_groups) && payload.nav_groups.length > 0
-        ? normalizeNavGroups(payload.nav_groups, hashPrefix)
+    navGroups: isCssStore()
+      ? []
+      : Array.isArray(payload.nav_groups) && payload.nav_groups.length > 0
+        ? filterB2cNavGroups(normalizeNavGroups(payload.nav_groups, hashPrefix))
         : [],
-    utilityMessage: payload.utility_message || '',
-    ticker: payload.ticker || '',
+    utilityMessage: isCssStore() ? '' : payload.utility_message || '',
+    ticker: isCssStore() ? '' : payload.ticker || '',
     companyProfile: normalizeCompanyProfile(payload.company_profile || {}),
     decorativeMedia: payload.decorative_media || {},
     sectionContent: payload.section_content || {},

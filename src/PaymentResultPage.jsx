@@ -5,14 +5,21 @@ import './App.css'
 import CookieConsentBanner from './components/layout/CookieConsentBanner'
 import SiteFooter from './components/layout/SiteFooter'
 import SiteHeader from './components/layout/SiteHeader'
-import { getApiUrl } from './lib/api'
+import { fetchCatalogLandingPage, getApiUrl, fetchOrderConversionContext } from './lib/api'
 import { useCart } from './lib/cart.jsx'
 import { useCustomer } from './lib/customer.jsx'
 import { getConsentPreferences, setConsentPreferences } from './lib/consent'
 import { useLanguage } from './lib/i18n.jsx'
 import { getLandingChromeContent } from './lib/landingContent'
+import PostPurchaseReviewPrompt from './components/cart/PostPurchaseReviewPrompt'
 import { clearPendingPayment, getPendingPayment } from './lib/pendingPayment'
-import { updateConsent } from './lib/analytics'
+import {
+  getPurchaseContext,
+  isPurchaseTracked,
+  markPurchaseTracked,
+  resolvePurchaseContext,
+} from './lib/checkoutConversion'
+import { initializeAnalyticsAndTrackCurrentPage, setEnhancedConversionUserData, trackPurchaseConversion, updateConsent } from './lib/analytics'
 import { useMidtransPayment } from './lib/useMidtransPayment'
 import useDocumentTitle from './lib/useDocumentTitle'
 
@@ -65,6 +72,36 @@ export default function PaymentResultPage({ status }) {
   )
 
   useEffect(() => {
+    if (status !== 'success' || !orderNumber || isPurchaseTracked(orderNumber)) {
+      return
+    }
+
+    let cancelled = false
+
+    void (async () => {
+      initializeAnalyticsAndTrackCurrentPage(`/payment/success?order=${encodeURIComponent(orderNumber)}`)
+
+      const purchaseContext = await resolvePurchaseContext(orderNumber, {
+        getStoredContext: getPurchaseContext,
+        getPaymentToken: (currentOrderNumber) => getPendingPayment(currentOrderNumber)?.paymentAccessToken || null,
+        fetchConversionContext: fetchOrderConversionContext,
+      })
+
+      if (cancelled || !purchaseContext) {
+        return
+      }
+
+      await setEnhancedConversionUserData(purchaseContext.customer)
+      trackPurchaseConversion(purchaseContext)
+      markPurchaseTracked(orderNumber)
+    })()
+
+    return () => {
+      cancelled = true
+    }
+  }, [status, orderNumber])
+
+  useEffect(() => {
     if (status === 'success') {
       clearCart()
       if (orderNumber) {
@@ -74,17 +111,7 @@ export default function PaymentResultPage({ status }) {
   }, [status, orderNumber, clearCart])
 
   useEffect(() => {
-    fetch(getApiUrl(`/api/catalog/landing-page?locale=${language}`), {
-      headers: {
-        Accept: 'application/json',
-      },
-    })
-      .then((response) => {
-        if (!response.ok) {
-          throw new Error('Gagal memuat konten')
-        }
-        return response.json()
-      })
+    fetchCatalogLandingPage(language)
       .then((payload) => {
         if (payload?.data) {
           setPageContent(getLandingChromeContent(payload.data, { hashPrefix: '/', locale: language }))
@@ -191,7 +218,7 @@ export default function PaymentResultPage({ status }) {
                 : 'Pembayaran ditutup. Anda bisa mencoba lagi kapan saja.',
           })
         },
-      })
+      }, { paymentSource: 'payment_result' })
     } catch (error) {
       setPaymentStatus({ state: 'error', message: error.message })
     }
@@ -284,6 +311,13 @@ export default function PaymentResultPage({ status }) {
               <p className={`cart-status ${paymentStatus.state === 'error' ? 'error' : 'success'}`}>{paymentStatus.message}</p>
             ) : null}
           </div>
+
+          {status === 'success' ? (
+            <PostPurchaseReviewPrompt
+              orderNumber={orderNumber}
+              paymentAccessToken={paymentAccessToken}
+            />
+          ) : null}
         </section>
       </main>
 

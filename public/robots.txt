@@ -2,3 +2,7 @@ User-agent: *
 Allow: /
 
 Sitemap: https://ahrcorporation.id/sitemap.xml
+
+# AI / LLM context (https://llmstxt.org/)
+# https://ahrcorporation.id/llms.txt
+# https://ahrcorporation.id/llms-full.txt

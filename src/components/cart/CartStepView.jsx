@@ -1,7 +1,11 @@
 import { Fragment } from 'react'
 import { Link } from 'react-router-dom'
-import { ArrowLeft, ChevronRight, ShieldCheck, ShoppingBag, CreditCard } from 'lucide-react'
-import CheckoutPriceBreakdown from '../checkout/CheckoutPriceBreakdown'
+import { ChevronRight, ShoppingBag } from 'lucide-react'
+import CartTrustShippingPanel from './CartTrustShippingPanel'
+import FreeShippingProgressBar from './FreeShippingProgressBar'
+import CheckoutFlowSteps from './CheckoutFlowSteps'
+import MarketplacePageTopbar from './MarketplacePageTopbar'
+import CartMarketplaceFooter from './CartMarketplaceFooter'
 import renderCartItemRow from './renderCartItemRow'
 
 export default function CartStepView({
@@ -14,24 +18,31 @@ export default function CartStepView({
   clearCart,
   onCheckout,
   itemHandlers,
+  shippingEstimate,
+  shippingEstimateLoading,
+  storePromo,
+  promoCartTotals = null,
 }) {
+  const totalLabel = checkoutTotals?.grandTotalLabel || cartTotals?.netLabel || '—'
+
   return (
     <div className="cart-drawer-page">
       <header className="cart-drawer-header">
-        <div className="all-products-breadcrumb">
-          <Link to="/all-products">
-            <ArrowLeft size={16} />
-            <span>{t('cart.backToProducts')}</span>
-          </Link>
-        </div>
-        <h1>{t('cart.cartDrawerTitle')}</h1>
-        <p>{t('cart.body')}</p>
+        <MarketplacePageTopbar
+          backTo="/all-products"
+          backLabel={t('cart.backToProducts')}
+          title={t('cart.cartDrawerTitle')}
+        />
+        <CheckoutFlowSteps language={language} currentStep="cart" />
       </header>
 
       <div className="cart-drawer-body">
         <div className="cart-drawer-scroll-zone cart-drawer-scroll-zone-items">
           <div className="cart-drawer-zone-head">
-            <h2>{t('cart.itemsTitle')}</h2>
+            <div>
+              <h2>{t('cart.itemsTitle')}</h2>
+              <p className="cart-drawer-zone-hint">{t('cart.itemsSectionHint')}</p>
+            </div>
             <button className="cart-clear-button" type="button" onClick={clearCart}>
               {t('cart.clearCart')}
             </button>
@@ -51,42 +62,32 @@ export default function CartStepView({
           </div>
         </div>
 
+        <div className="cart-drawer-scroll-zone cart-drawer-scroll-zone-promo">
+          <CartTrustShippingPanel
+            compact
+            shippingEstimate={shippingEstimate}
+            shippingEstimateLoading={shippingEstimateLoading}
+          />
+          <FreeShippingProgressBar storePromo={storePromo} cartTotals={cartTotals} promoCartTotals={promoCartTotals} />
+        </div>
+
         <div className="cart-drawer-scroll-zone cart-drawer-scroll-zone-secondary">
-          <ul className="cart-drawer-trust">
-            <li>
-              <ShieldCheck size={16} aria-hidden="true" />
-              <span>{language === 'en' ? 'Secure payment' : 'Pembayaran aman'}</span>
-            </li>
-            <li>
-              <CreditCard size={16} aria-hidden="true" />
-              <span>{language === 'en' ? 'Midtrans gateway' : 'Gateway Midtrans'}</span>
-            </li>
-          </ul>
-          <div className="cart-drawer-continue">
-            <span>{language === 'en' ? 'Keep shopping' : 'Lanjut belanja'}</span>
-            <Link to="/all-products">
+          <div className="cart-drawer-secondary-bar">
+            <Link className="cart-drawer-continue-link" to="/all-products">
               {t('cart.continueShopping')}
-              <ChevronRight size={16} />
+              <ChevronRight size={15} />
             </Link>
           </div>
         </div>
       </div>
 
-      <footer className="cart-drawer-footer">
-        <CheckoutPriceBreakdown
-          language={language}
-          itemCount={itemCount}
-          cartTotals={cartTotals}
-          checkoutTotals={checkoutTotals}
-          fulfillment="delivery"
-          hasShippingSelection={false}
-          compact
-        />
-        <button className="cart-drawer-checkout-btn" type="button" onClick={onCheckout}>
-          <span>{language === 'en' ? 'Checkout' : 'Checkout'}</span>
-          <ChevronRight size={18} />
-        </button>
-      </footer>
+      <CartMarketplaceFooter
+        language={language}
+        totalLabel={totalLabel}
+        itemCount={itemCount}
+        buttonLabel={t('cart.checkoutCta')}
+        onClick={onCheckout}
+      />
     </div>
   )
 }

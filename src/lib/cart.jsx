@@ -1,5 +1,8 @@
 /* eslint-disable react-refresh/only-export-components */
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
+import CartAddFeedback from '../components/cart/CartAddFeedback.jsx'
+
+import { resolveMediaUrl } from './mediaUrl'
 
 const CART_STORAGE_KEY = 'ahr-cart-v1'
 const DEFAULT_PRODUCT_SIZES = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL']
@@ -31,7 +34,7 @@ function normalizeProductSnapshot(product = {}) {
     name: product.name || 'Produk AHR',
     category: product.category || '',
     audience: product.audience || '',
-    image: product.image || product.gallery?.[0] || '',
+    image: resolveMediaUrl(product.image || product.gallery?.[0] || ''),
     imagePosition: product.imagePosition || 'center center',
     price: product.price || '',
     originalPrice: product.originalPrice || null,
@@ -101,6 +104,7 @@ const CartContext = createContext(null)
 
 export function CartProvider({ children }) {
   const [items, setItems] = useState(() => readStoredCart())
+  const [addFeedback, setAddFeedback] = useState(null)
 
   useEffect(() => {
     try {
@@ -117,6 +121,8 @@ export function CartProvider({ children }) {
       return null
     }
 
+    let mergedItem = nextItem
+
     setItems((currentItems) => {
       const existingItemIndex = currentItems.findIndex((item) => item.id === nextItem.id)
 
@@ -124,19 +130,27 @@ export function CartProvider({ children }) {
         return [nextItem, ...currentItems]
       }
 
-      return currentItems.map((item, index) =>
-        index === existingItemIndex
-          ? {
-              ...item,
-              product: nextItem.product,
-              quantity: normalizeQuantity(item.quantity + nextItem.quantity),
-              addedAt: nextItem.addedAt,
-            }
-          : item,
-      )
+      mergedItem = {
+        ...currentItems[existingItemIndex],
+        product: nextItem.product,
+        quantity: normalizeQuantity(currentItems[existingItemIndex].quantity + nextItem.quantity),
+        addedAt: nextItem.addedAt,
+      }
+
+      return currentItems.map((item, index) => (index === existingItemIndex ? mergedItem : item))
     })
 
-    return nextItem
+    if (options.feedback !== false) {
+      const sourceRect = options.feedback?.sourceRect || null
+
+      setAddFeedback({
+        id: Date.now(),
+        item: mergedItem,
+        sourceRect,
+      })
+    }
+
+    return mergedItem
   }, [])
 
   const updateCartItemQuantity = useCallback((itemId, quantity) => {
@@ -259,22 +273,43 @@ export function CartProvider({ children }) {
     setItems([])
   }, [])
 
+  const dismissAddFeedback = useCallback(() => {
+    setAddFeedback(null)
+  }, [])
+
   const value = useMemo(
     () => ({
       items,
       itemCount: items.reduce((total, item) => total + item.quantity, 0),
       uniqueItemCount: items.length,
+      addFeedback,
       addCartItem,
       updateCartItemQuantity,
       updateCartItemSize,
       distributeCartItemSizes,
       removeCartItem,
       clearCart,
+      dismissAddFeedback,
     }),
-    [addCartItem, clearCart, distributeCartItemSizes, items, removeCartItem, updateCartItemQuantity, updateCartItemSize],
+    [
+      addCartItem,
+      addFeedback,
+      clearCart,
+      dismissAddFeedback,
+      distributeCartItemSizes,
+      items,
+      removeCartItem,
+      updateCartItemQuantity,
+      updateCartItemSize,
+    ],
   )
 
-  return <CartContext.Provider value={value}>{children}</CartContext.Provider>
+  return (
+    <CartContext.Provider value={value}>
+      {children}
+      <CartAddFeedback />
+    </CartContext.Provider>
+  )
 }
 
 export function useCart() {

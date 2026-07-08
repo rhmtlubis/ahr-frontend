@@ -1,5 +1,6 @@
 /* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useEffect, useMemo, useState } from 'react'
+import { detectInitialLanguage } from './currency.js'
 
 const LANGUAGE_STORAGE_KEY = 'ahr-language'
 const DEFAULT_LANGUAGE = 'id'
@@ -62,23 +63,29 @@ const translations = {
       signInAccount: 'Masuk / daftar',
       signedInAs: 'Masuk sebagai {{name}}',
     },
+    catalog: {
+      featuredBadge: 'Unggulan',
+    },
     cart: {
-      openCart: 'Buka cart',
-      addToCart: 'Tambah ke Cart',
+      openCart: 'Keranjang',
+      addToCart: 'Tambah ke keranjang',
       addShort: 'Tambah',
-      viewCart: 'Lihat Cart',
-      addedNotice: '{{quantity}} pcs {{name}} ukuran {{size}} sudah masuk cart.',
-      eyebrow: 'Checkout Cart',
-      title: 'Cart order AHR',
-      body:
-        'Kumpulkan produk dulu, isi data checkout, lalu bayar aman lewat pembayaran online.',
-      backToProducts: 'Kembali ke produk',
+      viewCart: 'Lihat keranjang',
+      addedToastTitle: 'Masuk keranjang',
+      addedToastMeta: '{{quantity}} pcs {{name}} · ukuran {{size}}',
+      addedNotice: '{{quantity}} pcs {{name}} ukuran {{size}} sudah masuk keranjang.',
+      eyebrow: 'Belanja online',
+      title: 'Keranjang belanja',
+      body: 'Cek produk kamu, lalu lanjut checkout seperti di marketplace.',
+      backToProducts: 'Belanja lagi',
+      backToCart: 'Keranjang',
       continueShopping: 'Lanjut belanja',
-      emptyTitle: 'Cart masih kosong',
-      emptyBody: 'Pilih produk dari katalog, lalu tambahkan ke cart sebelum checkout dan pembayaran.',
-      itemsEyebrow: 'Item terpilih',
-      itemsTitle: 'Produk di cart',
-      clearCart: 'Kosongkan cart',
+      emptyTitle: 'Keranjang masih kosong',
+      emptyBody: 'Yuk pilih produk dulu, lalu tambahkan ke keranjang sebelum checkout.',
+      itemsEyebrow: 'Produk kamu',
+      itemsTitle: 'Produk dipesan',
+      itemsSectionHint: 'Ubah ukuran atau jumlah di sini sebelum checkout.',
+      clearCart: 'Hapus semua',
       itemMeta: 'Ukuran {{size}}',
       mixedSizeTrigger: 'Atur size campuran',
       mixedSizeTitle: 'Pilih size per pcs',
@@ -102,6 +109,9 @@ const translations = {
       customerWhatsapp: 'Nomor WhatsApp',
       loginTitle: 'Login customer dulu sebelum checkout',
       loginBody: 'Masuk dengan email agar data pengiriman dan pembayaran tersimpan rapi.',
+      guestCheckoutCta: 'Checkout tanpa daftar',
+      guestCheckoutHint: 'Isi nama, email, dan WhatsApp — tidak perlu password. Kami buatkan profil pesanan otomatis.',
+      guestCheckoutBadge: 'Guest checkout',
       loginTab: 'Login',
       registerTab: 'Daftar',
       googleLoginCta: 'Lanjutkan dengan Google',
@@ -125,20 +135,33 @@ const translations = {
       province: 'Provinsi',
       city: 'Kabupaten / Kota',
       district: 'Kecamatan',
+      country: 'Negara',
+      cityName: 'Kota',
+      stateRegion: 'Provinsi / State',
+      postalCode: 'Kode pos',
       selectProvince: 'Pilih provinsi',
       selectCity: 'Pilih kabupaten / kota',
       selectDistrict: 'Pilih kecamatan',
       address: 'Alamat pengiriman',
       addressDetail: 'Detail alamat',
       loadingLocations: 'Memuat data wilayah...',
-      notes: 'Catatan order',
-      cartDrawerTitle: 'Keranjang saya',
-      checkoutConfirmTitle: 'Konfirmasi pembayaran',
-      checkoutPlaceOrder: 'Pesan sekarang',
+      deliveryDetails: 'Alamat pengiriman',
+      shippingMethod: 'Pilih kurir',
+      paymentMethod: 'Metode pembayaran',
+      orderSummary: 'Ringkasan pesanan',
+      notes: 'Catatan pesanan',
+      cartDrawerTitle: 'Keranjang',
+      checkoutCta: 'Checkout',
+      checkoutConfirmTitle: 'Checkout',
+      checkoutPlaceOrder: 'Buat pesanan',
       checkoutPay: 'Bayar sekarang',
       checkoutSaving: 'Menyimpan order...',
       checkoutSaved: 'Order {{orderNumber}} tersimpan. Membuka halaman pembayaran...',
       checkoutFallback: 'Checkout gagal. Periksa data Anda lalu coba lagi.',
+      internationalPaymentNote:
+        'Kartu internasional diterima. Bank Anda bisa menampilkan nominal dalam mata uang lokal, tetapi pembayaran diproses dalam Rupiah (IDR).',
+      internationalShippingNote:
+        'Pengiriman internasional diproses dari Indonesia. Estimasi sudah termasuk produksi; waktu transit bisa berbeda tergantung bea cukai negara tujuan.',
     },
     cookie: {
       ariaLabel: 'Izin cookies',
@@ -348,6 +371,8 @@ const translations = {
         zoomOut: 'Klik gambar untuk kembali ke ukuran normal.',
       },
       footerMessage: 'Halo AHR, saya ingin order {{name}} ukuran {{size}}.',
+      relatedEyebrow: 'Lihat juga',
+      relatedTitle: 'Produk terkait',
     },
     profile: {
       utilityAction: 'Hubungi tim',
@@ -425,23 +450,30 @@ const translations = {
       signInAccount: 'Sign in',
       signedInAs: 'Signed in as {{name}}',
     },
+    catalog: {
+      featuredBadge: 'Featured',
+    },
     cart: {
       openCart: 'Open cart',
       addToCart: 'Add to Cart',
       addShort: 'Add',
       viewCart: 'View Cart',
+      addedToastTitle: 'Added to cart',
+      addedToastMeta: '{{quantity}} pcs {{name}} · size {{size}}',
       addedNotice: '{{quantity}} pcs of {{name}} size {{size}} has been added to cart.',
       eyebrow: 'Cart Checkout',
       title: 'AHR order cart',
       body:
         'Collect products first, fill in checkout details, then pay securely online.',
       backToProducts: 'Back to products',
+      backToCart: 'Cart',
       continueShopping: 'Continue shopping',
       emptyTitle: 'Your cart is empty',
-      emptyBody: 'Choose products from the catalog, then add them to cart before checkout and payment.',
-      itemsEyebrow: 'Selected items',
-      itemsTitle: 'Products in cart',
-      clearCart: 'Clear cart',
+      emptyBody: 'Browse products and add them to your cart before checkout.',
+      itemsEyebrow: 'Your items',
+      itemsTitle: 'Order items',
+      itemsSectionHint: 'Update size or quantity here before checkout.',
+      clearCart: 'Remove all',
       itemMeta: 'Size {{size}}',
       mixedSizeTrigger: 'Set mixed sizes',
       mixedSizeTitle: 'Choose size per piece',
@@ -465,6 +497,9 @@ const translations = {
       customerWhatsapp: 'WhatsApp number',
       loginTitle: 'Log in before checkout',
       loginBody: 'Sign in with email so shipping and payment details stay organized.',
+      guestCheckoutCta: 'Checkout as guest',
+      guestCheckoutHint: 'Enter your name, email, and WhatsApp — no password needed. We create an order profile automatically.',
+      guestCheckoutBadge: 'Guest checkout',
       loginTab: 'Log in',
       registerTab: 'Register',
       googleLoginCta: 'Continue with Google',
@@ -488,20 +523,33 @@ const translations = {
       province: 'Province',
       city: 'City / Regency',
       district: 'District',
+      country: 'Country',
+      cityName: 'City',
+      stateRegion: 'State / Province',
+      postalCode: 'Postal code',
       selectProvince: 'Select province',
       selectCity: 'Select city / regency',
       selectDistrict: 'Select district',
       address: 'Delivery address',
       addressDetail: 'Street address',
       loadingLocations: 'Loading location data...',
+      deliveryDetails: 'Shipping address',
+      shippingMethod: 'Choose courier',
+      paymentMethod: 'Payment method',
+      orderSummary: 'Order summary',
       notes: 'Order notes',
-      cartDrawerTitle: 'My cart',
+      cartDrawerTitle: 'Cart',
+      checkoutCta: 'Checkout',
       checkoutConfirmTitle: 'Checkout',
       checkoutPlaceOrder: 'Place order',
       checkoutPay: 'Pay now',
       checkoutSaving: 'Saving order...',
       checkoutSaved: 'Order {{orderNumber}} saved. Opening payment...',
       checkoutFallback: 'Checkout failed. Please review your details and try again.',
+      internationalPaymentNote:
+        'International cards are accepted. Your bank may show an amount in your local currency, but payment is processed in Indonesian Rupiah (IDR).',
+      internationalShippingNote:
+        'International delivery ships from Indonesia. Estimates include production time; final transit may vary due to customs in the destination country.',
     },
     cookie: {
       ariaLabel: 'Cookie permissions',
@@ -709,6 +757,8 @@ const translations = {
         zoomOut: 'Click image to return to normal size.',
       },
       footerMessage: 'Hello AHR, I would like to order {{name}} in size {{size}}.',
+      relatedEyebrow: 'You may also like',
+      relatedTitle: 'Related products',
     },
     profile: {
       utilityAction: 'Contact team',
@@ -746,11 +796,7 @@ const LanguageContext = createContext({
 })
 
 export function LanguageProvider({ children }) {
-  const [language, setLanguage] = useState(() => {
-    const storedLanguage = window.localStorage.getItem(LANGUAGE_STORAGE_KEY)
-
-    return SUPPORTED_LANGUAGES.includes(storedLanguage) ? storedLanguage : DEFAULT_LANGUAGE
-  })
+  const [language, setLanguage] = useState(() => detectInitialLanguage())
 
   useEffect(() => {
     window.localStorage.setItem(LANGUAGE_STORAGE_KEY, language)

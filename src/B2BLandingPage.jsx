@@ -5,7 +5,7 @@ import './B2BLandingPage.css'
 import CookieConsentBanner from './components/layout/CookieConsentBanner'
 import SiteFooter from './components/layout/SiteFooter'
 import SiteHeader from './components/layout/SiteHeader'
-import { getApiUrl } from './lib/api'
+import { getApiUrl, saveB2BLead } from './lib/api'
 import { captureMarketingAttribution, getAttributionParams } from './lib/attribution'
 import { initializeAnalyticsAndTrackCurrentPage, trackEvent, updateConsent } from './lib/analytics'
 import { getConsentPreferences, setConsentPreferences } from './lib/consent'
@@ -111,29 +111,6 @@ function buildWhatsAppUrl(phoneNumber, message, ctaContext) {
   ].join('\n\n')
 
   return `https://wa.me/${phoneNumber}?text=${encodeURIComponent(body)}`
-}
-
-async function submitB2BLead(payload) {
-  const response = await fetch(getApiUrl('/api/b2b/leads'), {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Accept: 'application/json',
-    },
-    body: JSON.stringify(payload),
-  })
-
-  const data = await response.json().catch(() => null)
-
-  if (!response.ok) {
-    throw new Error(
-      data?.message ||
-        Object.values(data?.errors || {}).flat()[0] ||
-        'Gagal menyimpan lead B2B',
-    )
-  }
-
-  return data?.data || null
 }
 
 export default function B2BLandingPage() {
@@ -274,7 +251,7 @@ export default function B2BLandingPage() {
     }
 
     try {
-      await submitB2BLead(payload)
+      await saveB2BLead(payload)
       trackEvent('b2b_landing_lead_submitted', {
         button_location: 'b2b-landing-form',
         buyer_type: form.buyer_type,

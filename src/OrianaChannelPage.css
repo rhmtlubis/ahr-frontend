@@ -1,0 +1,194 @@
+.oriana-channel-shell {
+  position: relative;
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: 24px 16px 32px;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 20% 0%, rgba(197, 160, 112, 0.18), transparent 34%),
+    radial-gradient(circle at 80% 100%, rgba(211, 47, 47, 0.12), transparent 30%),
+    linear-gradient(180deg, #121a33 0%, #1a2340 48%, #0f1628 100%);
+  color: #f5f5f0;
+}
+
+.oriana-channel-background {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.oriana-channel-orb {
+  position: absolute;
+  border-radius: 999px;
+  filter: blur(18px);
+}
+
+.oriana-channel-orb-one {
+  top: -40px;
+  right: -60px;
+  width: 220px;
+  height: 220px;
+  background: rgba(197, 160, 112, 0.22);
+}
+
+.oriana-channel-orb-two {
+  left: -80px;
+  bottom: 80px;
+  width: 260px;
+  height: 260px;
+  background: rgba(45, 74, 140, 0.35);
+}
+
+.oriana-channel-stripe {
+  position: absolute;
+  inset: auto 0 0;
+  height: 120px;
+  background: repeating-linear-gradient(
+    90deg,
+    rgba(211, 47, 47, 0.14) 0,
+    rgba(211, 47, 47, 0.14) 18px,
+    rgba(245, 245, 240, 0.06) 18px,
+    rgba(245, 245, 240, 0.06) 36px
+  );
+  mask-image: linear-gradient(180deg, transparent, #000 80%);
+}
+
+.oriana-channel-card {
+  position: relative;
+  z-index: 1;
+  width: min(100%, 420px);
+  display: grid;
+  gap: 22px;
+}
+
+.oriana-channel-brand {
+  text-align: center;
+}
+
+.oriana-channel-logo-wrap {
+  width: min(72vw, 220px);
+  margin: 0 auto 14px;
+  filter: drop-shadow(0 18px 36px rgba(0, 0, 0, 0.35));
+}
+
+.oriana-channel-logo {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.oriana-channel-tagline {
+  margin: 0;
+  color: rgba(245, 245, 240, 0.82);
+  font-size: 0.92rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.oriana-channel-links {
+  display: grid;
+  gap: 12px;
+}
+
+.oriana-channel-link {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+  border: 1px solid rgba(245, 245, 240, 0.14);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.96);
+  color: #1a2340;
+  text-decoration: none;
+  box-shadow: 0 14px 32px rgba(0, 0, 0, 0.18);
+  transition:
+    transform 180ms ease,
+    box-shadow 180ms ease,
+    border-color 180ms ease;
+}
+
+.oriana-channel-link:hover {
+  transform: translateY(-2px);
+  border-color: rgba(197, 160, 112, 0.45);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.24);
+}
+
+.oriana-channel-link-icon {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 14px;
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.accent-shopee .oriana-channel-link-icon {
+  background: linear-gradient(135deg, #ff7a00, #ee4d2d);
+}
+
+.accent-whatsapp .oriana-channel-link-icon {
+  background: linear-gradient(135deg, #25d366, #128c7e);
+}
+
+.accent-instagram .oriana-channel-link-icon {
+  background: linear-gradient(135deg, #fd5949, #d6249f 65%, #285aeb);
+}
+
+.oriana-channel-link-copy {
+  display: grid;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+}
+
+.oriana-channel-link-copy strong {
+  font-size: 1rem;
+  line-height: 1.2;
+}
+
+.oriana-channel-link-copy span {
+  color: #4b5565;
+  font-size: 0.86rem;
+}
+
+.oriana-channel-link-arrow {
+  flex-shrink: 0;
+  color: #1a2340;
+  opacity: 0.55;
+}
+
+.oriana-channel-footer {
+  text-align: center;
+}
+
+.oriana-channel-footer p {
+  margin: 0;
+  color: rgba(245, 245, 240, 0.55);
+  font-size: 0.76rem;
+  letter-spacing: 0.04em;
+}
+
+@media (max-width: 480px) {
+  .oriana-channel-shell {
+    padding: 18px 12px 24px;
+  }
+
+  .oriana-channel-logo-wrap {
+    width: min(68vw, 190px);
+  }
+
+  .oriana-channel-link {
+    padding: 12px 14px;
+    gap: 12px;
+  }
+
+  .oriana-channel-link-icon {
+    width: 38px;
+    height: 38px;
+    border-radius: 12px;
+  }
+}

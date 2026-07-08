@@ -1,0 +1,19 @@
+# AHR Corporation
+
+> AHR melayani jersey custom sublimasi, seragam printing, apparel olahraga, dan kebutuhan konveksi custom untuk tim, komunitas, sekolah, dan perusahaan.
+
+AHR Corporation (AHR) melayani jersey custom sublimasi, seragam printing, dan apparel olahraga untuk tim, komunitas, sekolah, event, dan perusahaan di Indonesia.
+
+## Halaman utama
+- [Beranda](https://ahrcorporation.id/): Landing utama, produk unggulan, dan FAQ
+- [Katalog Produk](https://ahrcorporation.id/all-products): Semua jersey dan apparel custom
+- [B2B & Kerja Sama](https://ahrcorporation.id/b2b): Form penawaran untuk tim, sekolah, korporat, dan EO
+- [Artikel](https://ahrcorporation.id/artikel): Tips jersey custom dan sublimasi
+- [Profil Perusahaan](https://ahrcorporation.id/profil): Tentang AHR Corporation
+
+## Toko CS Studio (World Cup Fantasy)
+- [CS Studio Storefront](https://css.ahrcorporation.id): Toko retail jersey World Cup Fantasy series
+
+## Optional
+Dokumentasi lengkap untuk sistem AI: [llms-full.txt](https://ahrcorporation.id/llms-full.txt)
+Peta situs: https://ahrcorporation.id/sitemap.xml

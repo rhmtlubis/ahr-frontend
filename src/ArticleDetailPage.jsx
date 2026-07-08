@@ -5,11 +5,12 @@ import './App.css'
 import './ArticlePage.css'
 import SiteFooter from './components/layout/SiteFooter'
 import SiteHeader from './components/layout/SiteHeader'
-import { getApiUrl } from './lib/api'
+import { fetchCatalogLandingPage } from './lib/api'
 import { fetchArticle, fetchArticles } from './lib/articles.js'
 import { useCart } from './lib/cart.jsx'
 import { useLanguage } from './lib/i18n.jsx'
 import { getLandingChromeContent } from './lib/landingContent'
+import { getRetailHeaderActions, isCssStore } from './lib/storeConfig'
 import { buildArticleStructuredData } from './lib/structuredData.js'
 import useDocumentTitle from './lib/useDocumentTitle'
 
@@ -58,18 +59,7 @@ function ArticleDetailPage() {
       }
     })
 
-    fetch(getApiUrl(`/api/catalog/landing-page?locale=${language}`), {
-      headers: {
-        Accept: 'application/json',
-      },
-    })
-      .then((response) => {
-        if (!response.ok) {
-          throw new Error('Failed to load article detail chrome content')
-        }
-
-        return response.json()
-      })
+    fetchCatalogLandingPage(language)
       .then((payload) => {
         if (payload?.data) {
           setPageContent(getLandingChromeContent(payload.data, { hashPrefix: '/', locale: language }))
@@ -121,10 +111,12 @@ function ArticleDetailPage() {
         utilityLinks={utilityLinks}
         utilityMessage={utilityMessage}
         cartItemCount={itemCount}
-        onPrimaryAction={() => {
-          window.location.href = '/#contact'
-        }}
-        primaryActionLabel={t('common.chatWhatsApp')}
+        {...getRetailHeaderActions({
+          primaryActionLabel: t('common.chatWhatsApp'),
+          onPrimaryAction: () => {
+            window.location.href = '/#contact'
+          },
+        })}
       />
 
       <main className="article-main article-detail-main">
@@ -191,23 +183,35 @@ function ArticleDetailPage() {
                 ) : null}
 
                 <section className="article-cta-card">
-                  <h2>Butuh konsultasi order jersey custom?</h2>
+                  <h2>
+                    {isCssStore()
+                      ? 'Siap tambah jersey World Cup Series ke keranjang?'
+                      : 'Butuh konsultasi order jersey custom?'}
+                  </h2>
                   <p>
-                    Tim AHR bisa bantu dari pilihan bahan, penyesuaian desain, sampai alur produksi untuk
-                    komunitas, sekolah, event, dan perusahaan.
+                    {isCssStore()
+                      ? 'Jelajahi koleksi World Cup Series Fantasy di CS Studio — pilih negara favoritmu, tentukan ukuran, dan checkout online.'
+                      : 'Tim AHR bisa bantu dari pilihan bahan, penyesuaian desain, sampai alur produksi untuk komunitas, sekolah, event, dan perusahaan.'}
                   </p>
                   <div className="article-cta-actions">
-                    <a
-                      className="article-link-button"
-                      href={`https://wa.me/${brand.whatsapp_number}?text=${encodeURIComponent('Halo AHR, saya ingin konsultasi order jersey custom.')}`}
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      Konsultasi via WhatsApp
-                      <ArrowRight size={16} />
-                    </a>
+                    {isCssStore() ? (
+                      <Link className="article-link-button" to="/all-products">
+                        Lihat koleksi jersey
+                        <ArrowRight size={16} />
+                      </Link>
+                    ) : (
+                      <a
+                        className="article-link-button"
+                        href={`https://wa.me/${brand.whatsapp_number}?text=${encodeURIComponent('Halo AHR, saya ingin konsultasi order jersey custom.')}`}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        Konsultasi via WhatsApp
+                        <ArrowRight size={16} />
+                      </a>
+                    )}
                     <Link className="article-link-inline" to="/all-products">
-                      Lihat katalog produk
+                      {isCssStore() ? 'Buka katalog produk' : 'Lihat katalog produk'}
                       <ArrowRight size={16} />
                     </Link>
                   </div>

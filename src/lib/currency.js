@@ -1,0 +1,174 @@
+export const PAYMENT_CURRENCY = 'IDR'
+
+export function getDisplayCurrency(locale = 'id') {
+  return locale === 'en' ? 'USD' : 'IDR'
+}
+
+export function getPaymentCurrency() {
+  return PAYMENT_CURRENCY
+}
+
+/** @deprecated use getDisplayCurrency */
+export function getPreferredCurrency(locale = 'id') {
+  return getDisplayCurrency(locale)
+}
+
+export function buildCatalogQuery(locale = 'id', currency) {
+  const params = new URLSearchParams({ locale })
+  params.set('currency', currency || getDisplayCurrency(locale))
+
+  return params.toString()
+}
+
+export function getCatalogLandingPageUrl(locale = 'id', currency) {
+  return `/api/catalog/landing-page?${buildCatalogQuery(locale, currency)}`
+}
+
+export function getCatalogProductUrl(productSlug, locale = 'id', currency) {
+  return `/api/catalog/products/${productSlug}?${buildCatalogQuery(locale, currency)}`
+}
+
+export function getCatalogRelatedProductsUrl(productSlug, locale = 'id', currency) {
+  return `/api/catalog/products/${productSlug}/related?${buildCatalogQuery(locale, currency)}`
+}
+
+export function detectInitialLanguage() {
+  const storedLanguage = window.localStorage.getItem('ahr-language')
+
+  if (storedLanguage === 'id' || storedLanguage === 'en') {
+    return storedLanguage
+  }
+
+  const browserLanguage = String(navigator.language || 'id').toLowerCase()
+
+  return browserLanguage.startsWith('id') ? 'id' : 'en'
+}
+
+export function getItemDisplayCurrency(pricing = {}, locale = 'id') {
+  const displayCurrency = getDisplayCurrency(locale)
+
+  if (displayCurrency === 'USD' && pricing.currency === 'USD' && !pricing.is_estimated) {
+    return 'USD'
+  }
+
+  return pricing.source_currency || pricing.currency || displayCurrency
+}
+
+export function formatExchangeRateNote(exchangeRate, locale = 'id') {
+  if (!exchangeRate?.value) {
+    return null
+  }
+
+  const rate = Number(exchangeRate.value)
+
+  if (!Number.isFinite(rate) || rate <= 0) {
+    return null
+  }
+
+  const formattedRate = new Intl.NumberFormat(locale === 'en' ? 'en-US' : 'id-ID', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(rate)
+
+  return locale === 'en'
+    ? `USD prices are estimates converted from IDR at Rp ${formattedRate} / USD (Bank Indonesia reference). You pay in IDR at checkout.`
+    : `Harga USD adalah estimasi konversi dari IDR dengan kurs Rp ${formattedRate} / USD (referensi Bank Indonesia). Pembayaran tetap dalam Rupiah.`
+}
+
+function resolveRateMinor(exchangeRate) {
+  const rateMinor = Number(exchangeRate?.rate_minor)
+
+  if (Number.isFinite(rateMinor) && rateMinor > 0) {
+    return rateMinor
+  }
+
+  const rate = Number(exchangeRate?.value)
+
+  if (!Number.isFinite(rate) || rate <= 0) {
+    return null
+  }
+
+  return Math.round(rate * 100)
+}
+
+/** Convert IDR minor units to USD cents using the same rounding as the backend PriceService. */
+export function convertIdrMinorToUsdMinor(amountIdr, exchangeRate) {
+  const normalizedAmount = Number(amountIdr)
+
+  if (!Number.isFinite(normalizedAmount) || normalizedAmount <= 0) {
+    return 0
+  }
+
+  const rateMinor = resolveRateMinor(exchangeRate)
+
+  if (!rateMinor) {
+    return 0
+  }
+
+  return Math.floor(((normalizedAmount * 100 * 100) + (rateMinor / 2)) / rateMinor)
+}
+
+export function convertAmountMinorForDisplay(amountMinor, fromCurrency, toCurrency, exchangeRate) {
+  const normalizedAmount = Number(amountMinor)
+
+  if (!Number.isFinite(normalizedAmount) || normalizedAmount <= 0) {
+    return 0
+  }
+
+  if (fromCurrency === toCurrency) {
+    return normalizedAmount
+  }
+
+  if (fromCurrency === 'IDR' && toCurrency === 'USD') {
+    return convertIdrMinorToUsdMinor(normalizedAmount, exchangeRate)
+  }
+
+  return normalizedAmount
+}
+
+export function getItemDisplayAmounts(pricing = {}, locale = 'id', exchangeRate = null) {
+  const displayCurrency = getDisplayCurrency(locale)
+  const currency = getItemDisplayCurrency(pricing, locale)
+  const resolvedExchangeRate = pricing.exchange_rate || exchangeRate
+
+  if (currency === 'USD' && pricing.currency === 'USD' && !pricing.is_estimated) {
+    return {
+      currency: 'USD',
+      unitNetAmount: pricing.final_amount_minor ?? null,
+      unitOriginalAmount: pricing.original_amount_minor ?? pricing.final_amount_minor ?? null,
+    }
+  }
+
+  const sourceFinal = pricing.source_final_amount_minor ?? pricing.final_amount_minor ?? null
+  const sourceOriginal =
+    pricing.source_original_amount_minor ?? pricing.original_amount_minor ?? sourceFinal ?? null
+
+  if (displayCurrency === 'USD' && resolvedExchangeRate) {
+    return {
+      currency: 'USD',
+      unitNetAmount:
+        sourceFinal !== null ? convertIdrMinorToUsdMinor(sourceFinal, resolvedExchangeRate) : null,
+      unitOriginalAmount:
+        sourceOriginal !== null ? convertIdrMinorToUsdMinor(sourceOriginal, resolvedExchangeRate) : null,
+    }
+  }
+
+  return {
+    currency: 'IDR',
+    unitNetAmount: sourceFinal,
+    unitOriginalAmount: sourceOriginal,
+  }
+}
+
+/** Amounts sent to checkout API — always IDR minor units for Midtrans. */
+export function getItemPaymentAmounts(pricing = {}) {
+  return {
+    currency: PAYMENT_CURRENCY,
+    unitNetAmount: pricing.source_final_amount_minor ?? pricing.final_amount_minor ?? null,
+    unitOriginalAmount:
+      pricing.source_original_amount_minor ??
+      pricing.original_amount_minor ??
+      pricing.source_final_amount_minor ??
+      null,
+  }
+}

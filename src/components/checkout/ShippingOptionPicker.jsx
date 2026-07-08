@@ -1,4 +1,5 @@
 import { Check, Clock3, LoaderCircle, Truck } from 'lucide-react'
+import { convertAmountMinorForDisplay, getPaymentCurrency } from '../../lib/currency'
 import { formatCurrencyAmount } from '../../lib/price'
 
 function getShippingOptionTitle(option) {
@@ -20,12 +21,22 @@ export default function ShippingOptionPicker({
   disabled = false,
   language = 'id',
   currency = 'IDR',
+  exchangeRate = null,
 }) {
+  const productionBufferDays = Math.max(Number(options[0]?.production_buffer_days ?? 1), 0)
+
   const labels = {
     title: language === 'en' ? 'Courier service' : 'Layanan pengiriman',
     loading: language === 'en' ? 'Loading shipping options...' : 'Memuat opsi pengiriman...',
     empty: language === 'en' ? 'Select destination to see couriers' : 'Lengkapi alamat untuk melihat kurir',
-    hint: language === 'en' ? 'Choose the service that fits your schedule' : 'Pilih layanan yang sesuai jadwal Anda',
+    hint:
+      productionBufferDays > 0
+        ? language === 'en'
+          ? `Estimates include ${productionBufferDays} production day${productionBufferDays === 1 ? '' : 's'} before courier pickup`
+          : `Estimasi sudah termasuk ${productionBufferDays} hari proses produksi sebelum kurir mengambil paket`
+        : language === 'en'
+          ? 'Estimates show courier transit time only'
+          : 'Estimasi menampilkan durasi transit kurir saja',
   }
 
   if (loading) {
@@ -73,7 +84,14 @@ export default function ShippingOptionPicker({
       <div className="cart-shipping-picker-list" role="radiogroup" aria-label={labels.title}>
         {options.map((option) => {
           const isSelected = option.key === selectedKey
-          const priceLabel = formatCurrencyAmount(option.price, option.currency || currency, language)
+          const optionCurrency = option.currency || getPaymentCurrency()
+          const displayAmount = convertAmountMinorForDisplay(
+            option.price,
+            optionCurrency,
+            currency,
+            exchangeRate,
+          )
+          const priceLabel = formatCurrencyAmount(displayAmount, currency, language)
 
           return (
             <label

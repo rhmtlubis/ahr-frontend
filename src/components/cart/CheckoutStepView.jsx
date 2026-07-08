@@ -1,10 +1,15 @@
 import { Fragment, useState } from 'react'
-import { Link } from 'react-router-dom'
-import { ArrowLeft, ChevronRight, CreditCard } from 'lucide-react'
+import { ChevronRight, CreditCard } from 'lucide-react'
 import CheckoutPriceBreakdown from '../checkout/CheckoutPriceBreakdown'
+import CartTrustShippingPanel from './CartTrustShippingPanel'
+import FreeShippingProgressBar from './FreeShippingProgressBar'
+import CheckoutFlowSteps from './CheckoutFlowSteps'
+import MarketplacePageTopbar from './MarketplacePageTopbar'
+import CartMarketplaceFooter from './CartMarketplaceFooter'
 import CheckoutTermsAgreement from '../checkout/CheckoutTermsAgreement'
 import VoucherCodeField from '../checkout/VoucherCodeField'
 import ProductPrice from '../catalog/ProductPrice'
+import { getPaymentCurrency } from '../../lib/currency.js'
 import renderCartItemRow from './renderCartItemRow'
 
 export default function CheckoutStepView({
@@ -14,9 +19,12 @@ export default function CheckoutStepView({
   itemCount,
   cartTotals,
   checkoutTotals,
+  checkoutChargeTotals,
+  exchangeRateNote,
   checkoutForm,
   checkoutItems,
   customerSession,
+  canPlaceOrder = false,
   appliedVoucher,
   setAppliedVoucher,
   selectedShippingOption,
@@ -29,27 +37,55 @@ export default function CheckoutStepView({
   handleCheckoutSubmit,
   renderCheckoutForm,
   itemHandlers,
+  shippingEstimate,
+  shippingEstimateLoading,
+  storePromo,
+  promoCartTotals = null,
+  fulfillment = 'delivery',
 }) {
   const [showAllItems, setShowAllItems] = useState(false)
   const previewItems = showAllItems ? items : items.slice(0, 2)
+  const shippingEstimateLabel =
+    shippingEstimate?.state === 'ready' && shippingEstimate.priceLabel
+      ? language === 'en'
+        ? `From ${shippingEstimate.priceLabel}`
+        : `Mulai ${shippingEstimate.priceLabel}`
+      : null
+  const totalLabel = checkoutTotals?.grandTotalLabel || cartTotals?.netLabel || '—'
+  const showPaymentCurrencyNote = Boolean(
+    exchangeRateNote || (language === 'en' && checkoutTotals?.currency === 'USD'),
+  )
+  const isSubmitting = checkoutStatus.state === 'loading'
 
   return (
-    <form className="checkout-confirm-page" onSubmit={handleCheckoutSubmit}>
+    <form className="checkout-confirm-page checkout-confirm-page--marketplace" onSubmit={handleCheckoutSubmit}>
       <header className="checkout-confirm-topbar">
-        <Link className="checkout-confirm-back" to="/cart">
-          <ArrowLeft size={18} />
-          <span>{language === 'en' ? 'Back to cart' : 'Kembali ke keranjang'}</span>
-        </Link>
-        <h1>{t('cart.checkoutConfirmTitle')}</h1>
+        <MarketplacePageTopbar
+          backTo="/cart"
+          backLabel={t('cart.backToCart')}
+          title={t('cart.checkoutConfirmTitle')}
+        />
+        <CheckoutFlowSteps language={language} currentStep="checkout" />
       </header>
 
       <div className="checkout-confirm-layout">
         <div className="checkout-confirm-main">{renderCheckoutForm()}</div>
 
         <aside className="checkout-confirm-sidebar">
+          <CartTrustShippingPanel
+            compact
+            shippingEstimate={shippingEstimate}
+            shippingEstimateLoading={shippingEstimateLoading}
+          />
+          <FreeShippingProgressBar
+            storePromo={storePromo}
+            cartTotals={cartTotals}
+            promoCartTotals={promoCartTotals}
+            fulfillment={fulfillment}
+          />
           <section className="checkout-confirm-card">
             <div className="checkout-confirm-card-head">
-              <h2>{language === 'en' ? 'Order summary' : 'Ringkasan pesanan'}</h2>
+              <h2>{t('cart.orderSummary')}</h2>
               <span>{t('cart.itemsCount', { count: itemCount })}</span>
             </div>
             <ul className="checkout-confirm-item-list">
@@ -84,7 +120,7 @@ export default function CheckoutStepView({
             ) : null}
           </section>
 
-          {customerSession ? (
+          {canPlaceOrder ? (
             <>
               <div className="cart-form-field">
                 <label htmlFor="cart-notes-sidebar">{t('cart.notes')}</label>
@@ -102,14 +138,14 @@ export default function CheckoutStepView({
               <VoucherCodeField
                 language={language}
                 locale={language === 'en' ? 'en' : 'id'}
-                currency={cartTotals?.currency || (language === 'en' ? 'USD' : 'IDR')}
+                currency={getPaymentCurrency()}
                 fulfillment={checkoutForm.fulfillment}
                 shippingFeeAmountMinor={
                   checkoutForm.fulfillment === 'delivery' && selectedShippingOption
                     ? selectedShippingOption.price
                     : 0
                 }
-                items={itemHandlers.buildVoucherValidateItems(checkoutItems, language)}
+                items={itemHandlers.buildVoucherValidateItems(checkoutItems)}
                 appliedVoucher={appliedVoucher}
                 onApplied={setAppliedVoucher}
                 onClear={() => setAppliedVoucher(null)}
@@ -125,10 +161,17 @@ export default function CheckoutStepView({
             checkoutTotals={checkoutTotals}
             fulfillment={checkoutForm.fulfillment}
             hasShippingSelection={Boolean(selectedShippingOption)}
+            shippingEstimateLabel={selectedShippingOption ? null : shippingEstimateLabel}
           />
 
-          {customerSession ? (
-            <div className="checkout-confirm-checkout-bar">
+          {showPaymentCurrencyNote ? (
+            <p className="checkout-confirm-payment-note checkout-confirm-payment-note--sidebar">
+              {exchangeRateNote || t('cart.internationalPaymentNote')}
+            </p>
+          ) : null}
+
+          {canPlaceOrder ? (
+            <div className="checkout-confirm-checkout-bar checkout-confirm-checkout-bar--desktop">
               <CheckoutTermsAgreement
                 checked={termsAccepted}
                 onChange={(value) => {
@@ -154,6 +197,11 @@ export default function CheckoutStepView({
                   {checkoutStatus.state === 'loading' ? t('common.submitting') : t('cart.checkoutPlaceOrder')}
                 </span>
               </button>
+              <p className="checkout-confirm-payment-window">
+                {language === 'en'
+                  ? 'Complete payment within 24 hours after placing your order.'
+                  : 'Selesaikan pembayaran dalam 24 jam setelah order dibuat.'}
+              </p>
               <p className="checkout-confirm-legal">
                 {language === 'en'
                   ? 'By placing an order you agree to the Terms & Conditions.'
@@ -182,6 +230,43 @@ export default function CheckoutStepView({
                 })}
               </Fragment>
             ))}
+          </div>
+        </div>
+      ) : null}
+
+      {canPlaceOrder ? (
+        <div className="checkout-confirm-mobile-actions">
+          <div className="checkout-confirm-mobile-actions-inner">
+            {showPaymentCurrencyNote ? (
+              <p className="checkout-confirm-payment-note checkout-confirm-payment-note--mobile">
+                {exchangeRateNote || t('cart.internationalPaymentNote')}
+              </p>
+            ) : null}
+            <CheckoutTermsAgreement
+              checked={termsAccepted}
+              onChange={(value) => {
+                setTermsAccepted(value)
+                if (value) {
+                  setTermsError('')
+                  setCheckoutStatus((current) =>
+                    current.state === 'error' ? { state: 'idle', message: '' } : current,
+                  )
+                }
+              }}
+              language={language}
+              disabled={isSubmitting}
+              error={termsError}
+            />
+            <CartMarketplaceFooter
+              language={language}
+              totalLabel={totalLabel}
+              itemCount={itemCount}
+              buttonLabel={isSubmitting ? t('common.submitting') : t('cart.checkoutPlaceOrder')}
+              type="submit"
+              disabled={!termsAccepted}
+              loading={isSubmitting}
+              icon={CreditCard}
+            />
           </div>
         </div>
       ) : null}

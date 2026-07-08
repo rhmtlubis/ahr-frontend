@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useLanguage } from '../../lib/i18n.jsx'
 
 export default function CookieConsentBanner({
@@ -10,7 +11,11 @@ export default function CookieConsentBanner({
   const { t } = useLanguage()
   const [showPreferences, setShowPreferences] = useState(false)
 
-  return (
+  if (typeof document === 'undefined') {
+    return null
+  }
+
+  return createPortal(
     <div className="cookie-consent-overlay">
       <div
         className="cookie-consent-banner"
@@ -63,6 +68,7 @@ export default function CookieConsentBanner({
           </div>
         ) : null}
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }

@@ -3,7 +3,7 @@ import { ArrowRight, MapPin, MessageCircleMore } from 'lucide-react'
 import './App.css'
 import SiteFooter from './components/layout/SiteFooter'
 import SiteHeader from './components/layout/SiteHeader'
-import { getApiUrl } from './lib/api'
+import { fetchCatalogLandingPage } from './lib/api'
 import { useCart } from './lib/cart.jsx'
 import { companyProfilePlaceholderImage } from './lib/cmsContent.js'
 import { useLanguage } from './lib/i18n.jsx'
@@ -39,18 +39,7 @@ function CompanyProfilePage() {
   )
 
   useEffect(() => {
-    fetch(getApiUrl(`/api/catalog/landing-page?locale=${language}`), {
-      headers: {
-        Accept: 'application/json',
-      },
-    })
-      .then((response) => {
-        if (!response.ok) {
-            throw new Error('Failed to load company profile')
-        }
-
-        return response.json()
-      })
+    fetchCatalogLandingPage(language)
       .then((payload) => {
         if (payload?.data) {
           setPageContent(getLandingChromeContent(payload.data, { hashPrefix: '/', locale: language }))

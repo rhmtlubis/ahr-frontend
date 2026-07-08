@@ -1,3 +1,6 @@
+import { isB2cOnlyStore } from './storeConfig'
+import { resolveMediaUrl, resolveMediaUrls } from './mediaUrl'
+
 const productTones = ['navy', 'sand', 'orange', 'black']
 
 function createPlaceholderDataUrl(label, background, foreground = '#f8fafc') {
@@ -49,11 +52,25 @@ export function slugifyCategoryLabel(label = '') {
 }
 
 export function getAudiencePaths(payloadAudiencePaths = [], locale = 'id') {
-  if (Array.isArray(payloadAudiencePaths) && payloadAudiencePaths.length > 0) {
-    return payloadAudiencePaths
+  let paths =
+    Array.isArray(payloadAudiencePaths) && payloadAudiencePaths.length > 0
+      ? payloadAudiencePaths
+      : fallbackAudiencePathsByLocale[locale] || fallbackAudiencePathsByLocale.id
+
+  if (isB2cOnlyStore()) {
+    paths = paths.filter((item) => {
+      const audience = String(item?.audience || '').toLowerCase()
+      const id = String(item?.id || '').toLowerCase()
+
+      return audience !== 'b2b' && !id.includes('b2b') && audience !== 'hybrid'
+    })
+
+    if (paths.length === 0) {
+      paths = fallbackAudiencePathsByLocale[locale] || fallbackAudiencePathsByLocale.id
+    }
   }
 
-  return fallbackAudiencePathsByLocale[locale] || fallbackAudiencePathsByLocale.id
+  return paths
 }
 
 export function findAudiencePathById(audiencePaths = [], segmentId = '') {
@@ -72,10 +89,10 @@ function normalizeSizeStock(sizeStock) {
 
 function normalizeGallery(gallery, fallbackImage) {
   if (Array.isArray(gallery) && gallery.length > 0) {
-    return gallery.filter(Boolean)
+    return resolveMediaUrls(gallery.filter(Boolean))
   }
 
-  return [fallbackImage]
+  return [resolveMediaUrl(fallbackImage)]
 }
 
 function buildDetail(item) {
@@ -87,10 +104,10 @@ function buildDetail(item) {
 }
 
 function buildProductImage(item) {
-  return item?.image || item?.featured_image?.url || productPlaceholderImage
+  return resolveMediaUrl(item?.image || item?.featured_image?.url || productPlaceholderImage)
 }
 
-function normalizeCatalogProduct(item = {}, index = 0) {
+export function normalizeCatalogProduct(item = {}, index = 0) {
   const image = buildProductImage(item)
   const categoryLabel = item.category_label || item.category || ''
 
@@ -104,6 +121,8 @@ function normalizeCatalogProduct(item = {}, index = 0) {
     originalPrice: item.originalPrice || (item.promo_price_hint ? item.price_hint : null),
     bestPrice: item.bestPrice || item.promo_price_hint || null,
     promoBadge: item.promoBadge || item.promo_badge || null,
+    isFeatured: Boolean(item.isFeatured || item.is_featured),
+    createdAt: item.createdAt || item.created_at || null,
     hasPromo: Boolean(item.hasPromo || item.promo_price_hint || item.bestPrice),
     pricing: item.pricing || null,
     detail: buildDetail(item),

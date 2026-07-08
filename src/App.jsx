@@ -22,10 +22,11 @@ import {
   Truck,
 } from 'lucide-react'
 import './App.css'
-import { initializeAnalytics, trackEvent, trackPageView, updateConsent } from './lib/analytics'
-import { getApiUrl } from './lib/api'
+import { initializeAnalytics, trackEvent, trackPageView, updateConsent, buildGa4ItemFromProduct, trackEcommerceEvent } from './lib/analytics'
+import { fetchCatalogLandingPage, getApiUrl, saveCatalogLead } from './lib/api'
 import { getAttributionParams } from './lib/attribution'
 import { useCart } from './lib/cart.jsx'
+import { useCartAdd } from './lib/useCartAdd.js'
 import {
   categoryPlaceholderImage,
   faqPlaceholderImage,
@@ -35,6 +36,7 @@ import {
   normalizeProducts,
 } from './lib/cmsContent.js'
 import CategoryFilterHeader from './components/landing/CategoryFilterHeader'
+import ProductFeaturedBadge from './components/catalog/ProductFeaturedBadge'
 import ProductPrice from './components/catalog/ProductPrice'
 import CookieConsentBanner from './components/layout/CookieConsentBanner'
 import SiteFooter from './components/layout/SiteFooter'
@@ -258,7 +260,8 @@ function App() {
       type: 'website',
     },
   )
-  const { addCartItem, itemCount } = useCart()
+  const { itemCount } = useCart()
+  const addToCart = useCartAdd()
   const rootRef = useRef(null)
   const gsapRef = useRef(null)
   const scrollTriggerRef = useRef(null)
@@ -439,18 +442,7 @@ function App() {
     window.addEventListener('scroll', handleScroll, { passive: true })
     window.addEventListener('beforeunload', handleUnload)
 
-    fetch(getApiUrl(`/api/catalog/landing-page?locale=${language}`), {
-      headers: {
-        Accept: 'application/json',
-      },
-    })
-        .then((response) => {
-          if (!response.ok) {
-            throw new Error('Gagal memuat konten landing page')
-          }
-
-          return response.json()
-        })
+    fetchCatalogLandingPage(language)
       .then((payload) => {
         if (payload?.data) {
           setLandingPageContent(normalizeLandingPageContent(payload.data, {}, language))
@@ -683,24 +675,7 @@ function App() {
     }
 
     try {
-      const response = await fetch(getApiUrl('/api/catalog/leads'), {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Accept: 'application/json',
-        },
-        body: JSON.stringify(payload),
-      })
-
-      if (!response.ok) {
-        const responsePayload = await response.json().catch(() => null)
-        const errorMessage =
-          responsePayload?.message ||
-          Object.values(responsePayload?.errors || {}).flat()[0] ||
-          'Gagal menyimpan lead'
-
-        throw new Error(errorMessage)
-      }
+      await saveCatalogLead(payload)
 
       setLeadStatus({
         state: 'success',
@@ -746,11 +721,11 @@ function App() {
     })
   }
 
-  const handleAddToCart = (product) => {
-    addCartItem(product, {
+  const handleAddToCart = (product, event) => {
+    addToCart(product, {
       size: 'M',
       quantity: 1,
-    })
+    }, event)
 
     trackEvent('cart_add_item', {
       source_page: '/',
@@ -759,6 +734,17 @@ function App() {
       product_size: 'M',
       quantity: 1,
     })
+
+    const ga4Item = buildGa4ItemFromProduct(product, 1)
+
+    if (ga4Item) {
+      trackEcommerceEvent('add_to_cart', {
+        currency: product?.pricing?.currency || 'IDR',
+        value: ga4Item.price,
+        items: [ga4Item],
+        source_page: '/',
+      })
+    }
   }
 
   const handleCatalogFilterClick = (filterId) => {
@@ -973,6 +959,7 @@ function App() {
                       aria-label={`${t('common.detail')} ${product.name}`}
                     >
                       <div className="product-media">
+                        {product.isFeatured ? <ProductFeaturedBadge /> : null}
                         <img
                           className="product-image product-image-primary"
                           src={product.image}
@@ -1005,7 +992,7 @@ function App() {
                       className="wishlist-button"
                       type="button"
                       aria-label={`${t('cart.addToCart')} ${product.name}`}
-                      onClick={() => handleAddToCart(product)}
+                      onClick={(event) => handleAddToCart(product, event)}
                     >
                       <ShoppingCart size={18} />
                     </button>
@@ -1046,6 +1033,7 @@ function App() {
                       aria-label={`${t('common.detail')} ${product.name}`}
                     >
                       <div className="product-media">
+                        {product.isFeatured ? <ProductFeaturedBadge /> : null}
                         <img
                           className="product-image product-image-primary"
                           src={product.image}
@@ -1078,7 +1066,7 @@ function App() {
                       className="wishlist-button"
                       type="button"
                       aria-label={`${t('cart.addToCart')} ${product.name}`}
-                      onClick={() => handleAddToCart(product)}
+                      onClick={(event) => handleAddToCart(product, event)}
                     >
                       <ShoppingCart size={18} />
                     </button>

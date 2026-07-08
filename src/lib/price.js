@@ -1,3 +1,5 @@
+import { getDisplayCurrency } from './currency.js'
+
 const LANGUAGE_TO_LOCALE = {
   id: 'id-ID',
   en: 'en-US',
@@ -65,8 +67,8 @@ export function formatCurrencyAmount(amountMinor, currency = 'IDR', language = '
   }
 
   const formattedUsd = new Intl.NumberFormat(locale, {
-    minimumFractionDigits: 1,
-    maximumFractionDigits: 1,
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
   }).format(normalizedAmountMinor / 100)
 
   return normalizeCurrencySpacing(`$${formattedUsd}`)
@@ -77,9 +79,13 @@ export function getProductPriceDisplay(product, language = 'id') {
   const currentAmount = toMinorNumber(pricing.final_amount_minor)
   const originalAmount = toMinorNumber(pricing.original_amount_minor)
   const currency =
-    (pricing.is_estimated ? pricing.source_currency : pricing.currency) ||
+    (pricing.currency === 'USD' && !pricing.is_estimated
+      ? pricing.currency
+      : pricing.is_estimated
+        ? getDisplayCurrency(language)
+        : pricing.currency) ||
     pricing.source_currency ||
-    (language === 'en' ? 'USD' : 'IDR')
+    getDisplayCurrency(language)
 
   const currentPrice =
     formatCurrencyAmount(currentAmount, currency, language) ||

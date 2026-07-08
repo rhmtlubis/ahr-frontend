@@ -153,7 +153,6 @@ export default function VoucherCodeField({
     }
 
     setSheetOpen(true)
-    loadVoucherList()
   }
 
   useEffect(() => {

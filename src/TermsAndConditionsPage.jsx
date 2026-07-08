@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom'
 import './App.css'
 import SiteFooter from './components/layout/SiteFooter'
 import SiteHeader from './components/layout/SiteHeader'
-import { getApiUrl } from './lib/api'
+import { fetchCatalogLandingPage } from './lib/api'
 import { fetchCheckoutTerms } from './lib/checkoutTerms'
 import { useCart } from './lib/cart.jsx'
 import { useLanguage } from './lib/i18n.jsx'
@@ -38,10 +38,7 @@ export default function TermsAndConditionsPage() {
   )
 
   useEffect(() => {
-    fetch(getApiUrl(`/api/catalog/landing-page?locale=${language}`), {
-      headers: { Accept: 'application/json' },
-    })
-      .then((response) => (response.ok ? response.json() : null))
+    fetchCatalogLandingPage(language)
       .then((payload) => {
         if (payload?.data) {
           setPageContent(getLandingChromeContent(payload.data, { hashPrefix: '/', locale: language }))

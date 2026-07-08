@@ -1,6 +1,13 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
+import {
+  buildCssLlmsFullTxt,
+  buildCssLlmsTxt,
+  buildLlmsFullTxt,
+  buildLlmsTxt,
+  buildRobotsTxt,
+} from './build-llms-files.mjs'
 import { fallbackSiteData, legacyProductRedirects } from './prerender-fallback-data.mjs'
 import { getCategoryRoute, getCategorySeoContent } from '../src/lib/categorySeo.js'
 import { articles as fallbackArticles } from '../src/content/articles.js'
@@ -9,12 +16,19 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const projectRoot = path.resolve(__dirname, '..')
 const distRoot = path.join(projectRoot, 'dist')
 const indexPath = path.join(distRoot, 'index.html')
-const siteUrl = normalizeBaseUrl(process.env.VITE_SITE_URL || fallbackSiteData.siteUrl)
 const fileEnv = {
   ...(await loadEnvFile(path.join(projectRoot, '.env'))),
   ...(await loadEnvFile(path.join(projectRoot, '.env.production'))),
   ...(await loadEnvFile(path.join(projectRoot, '.env.production.local'))),
 }
+const siteUrl = normalizeBaseUrl(process.env.VITE_SITE_URL || fileEnv.VITE_SITE_URL || fallbackSiteData.siteUrl)
+const brandSkin = String(process.env.VITE_BRAND_SKIN || fileEnv.VITE_BRAND_SKIN || 'ahr').toLowerCase()
+const isCssStore = brandSkin === 'css' || siteUrl.includes('css.ahrcorporation.id')
+const mainSiteUrl = normalizeBaseUrl(
+  process.env.VITE_MAIN_SITE_URL || fileEnv.VITE_MAIN_SITE_URL || 'https://ahrcorporation.id',
+)
+const storeBrandName =
+  process.env.VITE_STORE_BRAND_NAME || fileEnv.VITE_STORE_BRAND_NAME || (isCssStore ? 'CS Studio' : 'AHR Corporation')
 const apiCandidates = [
   process.env.VITE_PRERENDER_API_BASE_URL,
   process.env.VITE_API_BASE_URL,
@@ -45,9 +59,19 @@ function toPublicUrl(routePath = '/') {
 async function main() {
   const template = await readFile(indexPath, 'utf8')
   const remotePayload = await loadLandingPayload()
-  const remoteArticles = await loadArticles()
+  const remoteArticles = await loadArticles(isCssStore ? 'css' : null)
   const siteData = buildSiteData(remotePayload)
-  const articles = remoteArticles.length > 0 ? remoteArticles : fallbackArticles
+
+  if (isCssStore) {
+    siteData.siteName = storeBrandName
+    siteData.whatsappNumber = resolveCssWhatsappNumber()
+    siteData.brandDescription = truncateText(
+      'Jersey World Cup Fantasy oleh CS Studio. Pesan online, checkout aman via Midtrans, produksi AHR Corporation.',
+      200,
+    )
+  }
+
+  const articles = remoteArticles.length > 0 ? remoteArticles : isCssStore ? [] : fallbackArticles
   const productPages = siteData.products.map((product) => ({
     routePath: `/produk/${product.slug}`,
     filePath: path.join(distRoot, 'produk', product.slug, 'index.html'),
@@ -184,42 +208,79 @@ async function main() {
   })
 
   const staticPages = [
-    {
-      routePath: '/',
-      filePath: indexPath,
-      title: 'Jersey Custom Sublimasi, Seragam Printing & Konveksi',
-      description: siteData.brandDescription,
-      image: resolveAbsoluteUrl(siteData.defaultImage),
-      imageAlt: 'AHR custom jersey and sublimation apparel',
-      type: 'website',
-      bodyContent: buildHomepageBodyContent(siteData),
-      jsonLd: [
-        {
-          '@context': 'https://schema.org',
-          '@type': 'Organization',
-          name: siteData.siteName,
-          url: toPublicUrl('/'),
-          logo: resolveAbsoluteUrl(siteData.defaultImage),
+    isCssStore
+      ? {
+          routePath: '/',
+          filePath: indexPath,
+          title: 'CS Studio | Jersey World Cup Fantasy',
           description: siteData.brandDescription,
-          contactPoint: [
+          image: resolveAbsoluteUrl('/css-brand-logo.gif'),
+          imageAlt: 'CS Studio logo',
+          type: 'website',
+          bodyContent: buildCssHomepageBodyContent(siteData, articles),
+          jsonLd: [
             {
-              '@type': 'ContactPoint',
-              telephone: formatTelephoneForSchema(siteData.whatsappNumber),
-              contactType: 'customer service',
-              availableLanguage: ['id', 'en'],
+              '@context': 'https://schema.org',
+              '@type': 'Organization',
+              name: storeBrandName,
+              url: toPublicUrl('/'),
+              logo: resolveAbsoluteUrl('/css-brand-logo.gif'),
+              description: siteData.brandDescription,
+              sameAs: ['https://www.instagram.com/customsupplystudio/'],
+              contactPoint: [
+                {
+                  '@type': 'ContactPoint',
+                  telephone: formatTelephoneForSchema(siteData.whatsappNumber),
+                  contactType: 'customer service',
+                  availableLanguage: ['id', 'en'],
+                },
+              ],
+            },
+            {
+              '@context': 'https://schema.org',
+              '@type': 'WebSite',
+              name: storeBrandName,
+              url: toPublicUrl('/'),
+              description: siteData.brandDescription,
             },
           ],
-        },
-        {
-          '@context': 'https://schema.org',
-          '@type': 'WebSite',
-          name: siteData.siteName,
-          url: toPublicUrl('/'),
+        }
+      : {
+          routePath: '/',
+          filePath: indexPath,
+          title: 'Jersey Custom Sublimasi, Seragam Printing & Konveksi',
           description: siteData.brandDescription,
+          image: resolveAbsoluteUrl(siteData.defaultImage),
+          imageAlt: 'AHR custom jersey and sublimation apparel',
+          type: 'website',
+          bodyContent: buildHomepageBodyContent(siteData),
+          jsonLd: [
+            {
+              '@context': 'https://schema.org',
+              '@type': 'Organization',
+              name: siteData.siteName,
+              url: toPublicUrl('/'),
+              logo: resolveAbsoluteUrl(siteData.defaultImage),
+              description: siteData.brandDescription,
+              contactPoint: [
+                {
+                  '@type': 'ContactPoint',
+                  telephone: formatTelephoneForSchema(siteData.whatsappNumber),
+                  contactType: 'customer service',
+                  availableLanguage: ['id', 'en'],
+                },
+              ],
+            },
+            {
+              '@context': 'https://schema.org',
+              '@type': 'WebSite',
+              name: siteData.siteName,
+              url: toPublicUrl('/'),
+              description: siteData.brandDescription,
+            },
+            buildFaqSchema(siteData.faqItems),
+          ],
         },
-        buildFaqSchema(siteData.faqItems),
-      ],
-    },
     {
       routePath: '/kontak-kerja-sama',
       filePath: path.join(distRoot, 'kontak-kerja-sama', 'index.html'),
@@ -309,25 +370,71 @@ async function main() {
         ]),
       ],
     },
+    isCssStore
+      ? {
+          routePath: '/linktree',
+          filePath: path.join(distRoot, 'linktree', 'index.html'),
+          title: 'CS Studio | Link & Belanja',
+          description:
+            'Semua link CS Studio dalam satu halaman — belanja jersey World Cup Fantasy unggulan, chat WhatsApp, dan jelajahi katalog lengkap.',
+          image: resolveAbsoluteUrl('/css-brand-logo.gif'),
+          imageAlt: 'CS Studio logo',
+          type: 'website',
+          bodyContent: buildSimplePageBodyContent(
+            'CS Studio Link & Shop',
+            'Halaman link resmi CS Studio untuk belanja jersey fantasy, WhatsApp, Instagram, dan katalog produk.',
+            [
+              'Tampilkan 4 produk unggulan (is featured) dalam grid 2x2, lalu arahkan pengunjung ke katalog lengkap atau chat WhatsApp.',
+            ],
+          ),
+          jsonLd: [
+            buildBreadcrumbSchema([
+              { name: 'Home', url: toPublicUrl('/') },
+              { name: 'Linktree', url: toPublicUrl('/linktree') },
+            ]),
+          ],
+        }
+      : {
+          routePath: '/linktree',
+          filePath: path.join(distRoot, 'linktree', 'index.html'),
+          title: 'Kontak Marketing Jersey Custom & Sublimasi',
+          description: siteData.linktreeDescription,
+          image: resolveAbsoluteUrl(siteData.defaultImage),
+          imageAlt: 'Kontak marketing AHR',
+          type: 'website',
+          bodyContent: buildSimplePageBodyContent(
+            'Kontak Marketing AHR',
+            siteData.linktreeDescription,
+            [
+              'Gunakan halaman ini untuk menghubungi tim AHR, membuka WhatsApp, dan menemukan jalur tercepat menuju katalog serta company profile.',
+            ],
+          ),
+          jsonLd: [
+            buildBreadcrumbSchema([
+              { name: 'Home', url: toPublicUrl('/') },
+              { name: 'Linktree', url: toPublicUrl('/linktree') },
+            ]),
+          ],
+        },
     {
-      routePath: '/linktree',
-      filePath: path.join(distRoot, 'linktree', 'index.html'),
-      title: 'Kontak Marketing Jersey Custom & Sublimasi',
-      description: siteData.linktreeDescription,
-      image: resolveAbsoluteUrl(siteData.defaultImage),
-      imageAlt: 'Kontak marketing AHR',
+      routePath: '/oriana-channel',
+      filePath: path.join(distRoot, 'oriana-channel', 'index.html'),
+      title: 'Oriana Apparel — Official Channel',
+      description: siteData.orianaChannelDescription,
+      image: resolveAbsoluteUrl('/oriana-apparel-logo.png'),
+      imageAlt: 'Logo Oriana Apparel',
       type: 'website',
       bodyContent: buildSimplePageBodyContent(
-        'Kontak Marketing AHR',
-        siteData.linktreeDescription,
+        'Oriana Apparel',
+        siteData.orianaChannelDescription,
         [
-          'Gunakan halaman ini untuk menghubungi tim AHR, membuka WhatsApp, dan menemukan jalur tercepat menuju katalog serta company profile.',
+          'Kunjungi Shopee, WhatsApp, atau Instagram resmi Oriana Apparel untuk order jersey dan apparel original.',
         ],
       ),
       jsonLd: [
         buildBreadcrumbSchema([
           { name: 'Home', url: toPublicUrl('/') },
-          { name: 'Linktree', url: toPublicUrl('/linktree') },
+          { name: 'Oriana Channel', url: toPublicUrl('/oriana-channel') },
         ]),
       ],
     },
@@ -361,6 +468,25 @@ async function main() {
     buildSitemap([...staticPages, ...categoryPages, ...productPages, ...articlePages]),
     'utf8',
   )
+
+  const llmsPayload = {
+    siteData,
+    articles,
+    products: siteData.products,
+    categories: siteData.categories,
+    mainSiteUrl,
+    storeBrandName,
+  }
+
+  if (isCssStore) {
+    await writeFile(path.join(distRoot, 'llms.txt'), buildCssLlmsTxt(llmsPayload), 'utf8')
+    await writeFile(path.join(distRoot, 'llms-full.txt'), buildCssLlmsFullTxt(llmsPayload), 'utf8')
+  } else {
+    await writeFile(path.join(distRoot, 'llms.txt'), buildLlmsTxt(llmsPayload), 'utf8')
+    await writeFile(path.join(distRoot, 'llms-full.txt'), buildLlmsFullTxt(llmsPayload), 'utf8')
+  }
+
+  await writeFile(path.join(distRoot, 'robots.txt'), buildRobotsTxt(siteUrl), 'utf8')
 }
 
 function normalizeBaseUrl(value) {
@@ -429,10 +555,16 @@ async function loadLandingPayload() {
   return null
 }
 
-async function loadArticles() {
+async function loadArticles(store = null) {
+  const query = new URLSearchParams({ locale: 'id' })
+
+  if (store) {
+    query.set('store', store)
+  }
+
   for (const candidate of apiCandidates) {
     try {
-      const response = await fetchWithTimeout(`${candidate}/api/articles?locale=id`)
+      const response = await fetchWithTimeout(`${candidate}/api/articles?${query.toString()}`)
 
       if (!response.ok) {
         continue
@@ -448,7 +580,9 @@ async function loadArticles() {
     }
   }
 
-  return fallbackArticles
+  return isCssStore
+    ? fallbackArticles.filter((article) => article.store_scope === 'css')
+    : fallbackArticles
 }
 
 function fetchWithTimeout(url, timeoutMs = 8000) {
@@ -509,6 +643,7 @@ function buildSiteData(payload) {
       200,
     ),
     linktreeDescription: fallbackSiteData.linktreeDescription,
+    orianaChannelDescription: fallbackSiteData.orianaChannelDescription,
     faqItems: Array.isArray(payload.faqs) && payload.faqs.length > 0
       ? payload.faqs
           .map((faq) => ({
@@ -644,6 +779,53 @@ function buildHomepageBodyContent(siteData) {
     '  </ul>',
     '</section>',
   ].join('\n')
+}
+
+function buildCssHomepageBodyContent(siteData, articles = []) {
+  return [
+    '<section data-prerendered-seo hidden aria-hidden="true">',
+    `  <h1>${escapeHtml(siteData.siteName)} - Jersey World Cup Fantasy</h1>`,
+    `  <p>${escapeHtml(siteData.brandDescription)}</p>`,
+    '  <h2>Produk unggulan</h2>',
+    '  <ul>',
+    ...siteData.products.slice(0, 6).map(
+      (product) =>
+        `    <li><a href="/produk/${escapeAttribute(product.slug)}">${escapeHtml(product.name)}</a>${product.category ? ` - ${escapeHtml(product.category)}` : ''}</li>`,
+    ),
+    '  </ul>',
+    articles.length > 0 ? '  <h2>Artikel</h2>' : '',
+    articles.length > 0 ? '  <ul>' : '',
+    ...(articles.length > 0
+      ? articles.slice(0, 3).map(
+          (article) => `    <li><a href="/artikel/${escapeAttribute(article.slug)}">${escapeHtml(article.title)}</a></li>`,
+        )
+      : []),
+    articles.length > 0 ? '  </ul>' : '',
+    '  <p>WhatsApp CS Studio: 089653616294 · Instagram: customsupplystudio</p>',
+    '</section>',
+  ]
+    .filter(Boolean)
+    .join('\n')
+}
+
+function resolveCssWhatsappNumber() {
+  const raw =
+    process.env.VITE_CSS_WHATSAPP_NUMBER ||
+    fileEnv.VITE_CSS_WHATSAPP_NUMBER ||
+    process.env.VITE_CSS_WHATSAPP_DISPLAY ||
+    fileEnv.VITE_CSS_WHATSAPP_DISPLAY ||
+    '089653616294'
+  const digits = String(raw).replace(/\D/g, '')
+
+  if (digits.startsWith('62')) {
+    return digits
+  }
+
+  if (digits.startsWith('0')) {
+    return `62${digits.slice(1)}`
+  }
+
+  return digits || '6289653616294'
 }
 
 function buildListingBodyContent(siteData) {

@@ -10,6 +10,7 @@ export default function CheckoutPriceBreakdown({
   checkoutTotals,
   fulfillment = 'delivery',
   hasShippingSelection = false,
+  shippingEstimateLabel = null,
   compact = false,
 }) {
   const currency = checkoutTotals?.currency || cartTotals?.currency || (language === 'en' ? 'USD' : 'IDR')
@@ -56,10 +57,18 @@ export default function CheckoutPriceBreakdown({
       label: language === 'en' ? 'Shipping' : 'Pengiriman',
       value: hasShippingSelection
         ? checkoutTotals.shippingLabel
-        : language === 'en'
-          ? 'Select on checkout'
-          : 'Pilih di checkout',
+        : shippingEstimateLabel ||
+          (language === 'en' ? 'Select on checkout' : 'Pilih di checkout'),
       tone: 'default',
+    })
+  }
+
+  if (checkoutTotals?.freeShippingThresholdDiscountLabel) {
+    rows.push({
+      key: 'free-shipping-threshold',
+      label: language === 'en' ? 'Free shipping promo' : 'Promo gratis ongkir',
+      value: checkoutTotals.freeShippingThresholdDiscountLabel,
+      tone: 'discount',
     })
   }
 

@@ -21,6 +21,10 @@ export function sanitizeAuthReturnPath(returnPath = '/akun') {
 export function getCustomerGoogleAuthUrl(returnPath = '/akun') {
   const params = new URLSearchParams({ return_to: sanitizeAuthReturnPath(returnPath) })
 
+  if (typeof window !== 'undefined' && window.location?.origin) {
+    params.set('storefront_origin', window.location.origin)
+  }
+
   return getBackendUrl(`/api/customer/auth/google/redirect?${params.toString()}`)
 }
 

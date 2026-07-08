@@ -1,0 +1,664 @@
+.css-linktree-shell {
+  --css-lt-bg: #fafafa;
+  --css-lt-card: #ffffff;
+  --css-lt-card-deep: #f5f5f5;
+  --css-lt-text: #000000;
+  --css-lt-text-muted: #666666;
+  --css-lt-pill-active-bg: #111111;
+  --css-lt-pill-active-text: #ffffff;
+  --css-lt-link-bg: #ffffff;
+  --css-lt-link-border: rgba(0, 0, 0, 0.12);
+  --css-lt-link-hover: #fafafa;
+
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 28px 16px 40px;
+  background: var(--css-lt-bg);
+  color: var(--css-lt-text);
+  font-family: 'Inter', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+}
+
+.css-linktree-card {
+  width: min(100%, 420px);
+  padding: 28px 22px 24px;
+  border-radius: 0;
+  border: 1px solid var(--css-lt-link-border);
+  background: var(--css-lt-card);
+  box-shadow: none;
+}
+
+.css-linktree-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.css-linktree-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--css-lt-text);
+  font-size: 0.72rem;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  text-decoration: none;
+  opacity: 0.88;
+}
+
+.css-linktree-back:hover {
+  opacity: 1;
+}
+
+.css-linktree-share-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border: 1px solid var(--css-lt-link-border);
+  border-radius: 999px;
+  background: #ffffff;
+  color: var(--css-lt-text);
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.css-linktree-share-trigger:hover {
+  background: var(--css-lt-link-hover);
+  border-color: rgba(0, 0, 0, 0.22);
+}
+
+.css-linktree-share-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: grid;
+  place-items: end center;
+  padding: 16px;
+  background: rgba(0, 0, 0, 0.42);
+}
+
+.css-linktree-share-dialog {
+  width: min(100%, 420px);
+  padding: 18px 18px 20px;
+  border: 1px solid var(--css-lt-link-border);
+  background: #ffffff;
+  color: #000000;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.18);
+}
+
+.css-linktree-share-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.css-linktree-share-header h2 {
+  margin: 0;
+  font-family: 'Inter', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.css-linktree-share-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  border-radius: 999px;
+  background: #ffffff;
+  color: #000000;
+  cursor: pointer;
+}
+
+.css-linktree-share-preview {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  margin-bottom: 18px;
+  padding: 18px 16px;
+  background: #111111;
+  color: #ffffff;
+  text-align: center;
+}
+
+.css-linktree-share-preview-avatar {
+  width: 56px;
+  height: 56px;
+  border-radius: 999px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.css-linktree-share-preview-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.css-linktree-share-preview strong {
+  font-family: 'Cormorant Garamond', 'Times New Roman', Georgia, serif;
+  font-size: 1.35rem;
+  font-weight: 500;
+}
+
+.css-linktree-share-preview span {
+  font-size: 0.78rem;
+  color: rgba(255, 255, 255, 0.72);
+  word-break: break-all;
+}
+
+.css-linktree-share-row {
+  display: flex;
+  gap: 14px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+
+.css-linktree-share-option {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  min-width: 72px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-decoration: none;
+  font: inherit;
+  font-size: 0.72rem;
+  cursor: pointer;
+}
+
+.css-linktree-share-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 999px;
+  color: #ffffff;
+}
+
+.css-linktree-share-icon--copy {
+  background: #666666;
+}
+
+.css-linktree-share-icon--whatsapp {
+  background: #25d366;
+}
+
+.css-linktree-share-icon--facebook {
+  background: #1877f2;
+}
+
+.css-linktree-share-icon--x {
+  background: #000000;
+}
+
+@media (min-width: 640px) {
+  .css-linktree-share-overlay {
+    place-items: center;
+  }
+}
+
+.css-linktree-profile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 10px;
+}
+
+.css-linktree-avatar {
+  width: 72px;
+  height: 72px;
+  border-radius: 999px;
+  overflow: hidden;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  background: #ffffff;
+}
+
+.css-linktree-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.css-linktree-profile h1 {
+  margin: 0;
+  font-family: 'Cormorant Garamond', 'Times New Roman', Georgia, serif;
+  font-size: 1.75rem;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+}
+
+.css-linktree-profile p {
+  margin: 0;
+  max-width: 32ch;
+  font-size: 0.92rem;
+  line-height: 1.55;
+  color: var(--css-lt-text-muted);
+}
+
+.css-linktree-socials {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.css-linktree-socials a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 999px;
+  border: 1px solid var(--css-lt-link-border);
+  color: var(--css-lt-text);
+  background: #ffffff;
+  text-decoration: none;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.css-linktree-socials a:hover {
+  background: var(--css-lt-link-hover);
+  border-color: rgba(0, 0, 0, 0.22);
+}
+
+.css-linktree-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin: 22px 0 18px;
+  padding: 4px;
+  border-radius: 0;
+  border: 1px solid var(--css-lt-link-border);
+  background: #ffffff;
+}
+
+.css-linktree-tab {
+  border: 0;
+  border-radius: 0;
+  padding: 10px 14px;
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  cursor: pointer;
+  color: var(--css-lt-text-muted);
+  background: transparent;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.css-linktree-tab.is-active {
+  background: var(--css-lt-pill-active-bg);
+  color: var(--css-lt-pill-active-text);
+}
+
+.css-linktree-ask {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  margin-bottom: 16px;
+  padding: 14px 16px;
+  border-radius: 0;
+  border: 1px solid var(--css-lt-link-border);
+  background: var(--css-lt-link-bg);
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+  transition: background 0.15s ease;
+}
+
+.css-linktree-ask:hover {
+  background: var(--css-lt-link-hover);
+}
+
+.css-linktree-ask strong {
+  display: block;
+  font-size: 0.92rem;
+  font-weight: 600;
+}
+
+.css-linktree-ask span {
+  display: block;
+  margin-top: 4px;
+  font-size: 0.78rem;
+  color: var(--css-lt-text-muted);
+}
+
+.css-linktree-ask-icon {
+  flex-shrink: 0;
+  opacity: 0.85;
+}
+
+.css-linktree-featured {
+  display: block;
+  margin-bottom: 16px;
+  border-radius: 0;
+  overflow: hidden;
+  text-decoration: none;
+  color: inherit;
+  border: 1px solid var(--css-lt-link-border);
+  background: #ffffff;
+  transition: background 0.15s ease;
+}
+
+.css-linktree-featured:hover {
+  background: var(--css-lt-link-hover);
+}
+
+.css-linktree-featured-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0;
+}
+
+.css-linktree-featured-cell {
+  aspect-ratio: 1;
+  overflow: hidden;
+  background: #f0f0f0;
+  border-right: 1px solid var(--css-lt-link-border);
+  border-bottom: 1px solid var(--css-lt-link-border);
+}
+
+.css-linktree-featured-cell:nth-child(2n) {
+  border-right: 0;
+}
+
+.css-linktree-featured-cell:nth-child(n + 3) {
+  border-bottom: 0;
+}
+
+.css-linktree-featured-cell img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.css-linktree-featured-caption {
+  padding: 14px 16px 16px;
+  text-align: center;
+  border-top: 1px solid var(--css-lt-link-border);
+}
+
+.css-linktree-featured-caption strong {
+  display: block;
+  font-family: 'Cormorant Garamond', 'Times New Roman', Georgia, serif;
+  font-size: 1.15rem;
+  font-weight: 500;
+}
+
+.css-linktree-featured-caption span {
+  display: block;
+  margin-top: 4px;
+  font-size: 0.68rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--css-lt-text-muted);
+}
+
+.css-linktree-stack {
+  display: grid;
+  gap: 12px;
+}
+
+.css-linktree-link-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: 0;
+  border: 1px solid var(--css-lt-link-border);
+  background: var(--css-lt-link-bg);
+  color: inherit;
+  text-decoration: none;
+  transition: background 0.15s ease;
+  font: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+
+.css-linktree-link-card:hover {
+  background: var(--css-lt-link-hover);
+}
+
+.css-linktree-link-card strong {
+  display: block;
+  font-size: 0.92rem;
+  font-weight: 600;
+}
+
+.css-linktree-link-card span {
+  display: block;
+  margin-top: 4px;
+  font-size: 0.78rem;
+  color: var(--css-lt-text-muted);
+}
+
+.css-linktree-shop-grid {
+  display: grid;
+  gap: 14px;
+}
+
+.css-linktree-shop-channels {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 4px;
+}
+
+.css-linktree-shop-kicker {
+  margin: 0;
+  font-size: 0.68rem;
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--css-lt-text-muted);
+}
+
+.css-linktree-shop-tip {
+  margin: 0;
+  padding: 12px 14px;
+  border: 1px solid var(--css-lt-link-border);
+  background: #fafafa;
+  font-size: 0.82rem;
+  line-height: 1.5;
+  color: var(--css-lt-text-muted);
+}
+
+.css-linktree-channel-stack {
+  display: grid;
+  gap: 10px;
+}
+
+.css-linktree-channel-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: 0;
+  border: 1px solid var(--css-lt-link-border);
+  background: var(--css-lt-link-bg);
+  color: inherit;
+  text-decoration: none;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.css-linktree-channel-card:hover {
+  background: var(--css-lt-link-hover);
+}
+
+.css-linktree-channel-card--recommended {
+  border-color: #111111;
+  background: #fafafa;
+}
+
+.css-linktree-channel-card--recommended:hover {
+  background: #f3f3f3;
+}
+
+.css-linktree-channel-copy {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.css-linktree-channel-title-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.css-linktree-channel-copy strong {
+  font-size: 0.92rem;
+  font-weight: 600;
+}
+
+.css-linktree-channel-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 8px;
+  border: 1px solid #111111;
+  background: #111111;
+  color: #ffffff;
+  font-size: 0.62rem;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.css-linktree-channel-description {
+  display: block;
+  font-size: 0.78rem;
+  color: var(--css-lt-text-muted);
+  line-height: 1.4;
+}
+
+.css-linktree-product-card {
+  display: grid;
+  grid-template-columns: 96px minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+  padding: 12px;
+  border-radius: 0;
+  border: 1px solid var(--css-lt-link-border);
+  background: var(--css-lt-link-bg);
+  color: inherit;
+  text-decoration: none;
+  transition: background 0.15s ease;
+}
+
+.css-linktree-product-card:hover {
+  background: var(--css-lt-link-hover);
+}
+
+.css-linktree-product-thumb {
+  width: 96px;
+  height: 96px;
+  border-radius: 0;
+  overflow: hidden;
+  background: #f0f0f0;
+  border: 1px solid var(--css-lt-link-border);
+}
+
+.css-linktree-product-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.css-linktree-product-copy strong {
+  display: block;
+  font-family: 'Cormorant Garamond', 'Times New Roman', Georgia, serif;
+  font-size: 1.05rem;
+  font-weight: 500;
+  line-height: 1.35;
+}
+
+.css-linktree-product-copy span {
+  display: block;
+  margin-top: 6px;
+  font-size: 0.68rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--css-lt-text-muted);
+}
+
+.css-linktree-product-price {
+  margin-top: 8px;
+  font-size: 0.86rem;
+  font-weight: 600;
+}
+
+.css-linktree-cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  margin-top: 4px;
+  padding: 13px 16px;
+  border-radius: 0;
+  border: 1px solid #111111;
+  background: #111111;
+  color: #ffffff;
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.css-linktree-cta:hover {
+  background: #000000;
+  border-color: #000000;
+}
+
+.css-linktree-footer {
+  margin-top: 20px;
+  text-align: center;
+  font-size: 0.74rem;
+  color: var(--css-lt-text-muted);
+}
+
+.css-linktree-footer a {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
+@media (max-width: 380px) {
+  .css-linktree-card {
+    padding: 24px 16px 20px;
+  }
+
+  .css-linktree-product-card {
+    grid-template-columns: 84px minmax(0, 1fr);
+  }
+
+  .css-linktree-product-thumb {
+    width: 84px;
+    height: 84px;
+  }
+}

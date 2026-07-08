@@ -1,4 +1,4 @@
-﻿import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ArrowLeft, CreditCard, LockKeyhole, LogOut, Mail, Minus, Plus, ShoppingBag, Trash2, Truck } from 'lucide-react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import './App.css'
@@ -7,12 +7,17 @@ import ShippingOptionPicker from './components/checkout/ShippingOptionPicker'
 import CookieConsentBanner from './components/layout/CookieConsentBanner'
 import SiteFooter from './components/layout/SiteFooter'
 import SiteHeader from './components/layout/SiteHeader'
-import { initializeAnalyticsAndTrackCurrentPage, trackEvent, updateConsent } from './lib/analytics'
+import { buildGa4ItemFromProduct, initializeAnalyticsAndTrackCurrentPage, setEnhancedConversionUserData, trackEvent, updateConsent, getGaClientId } from './lib/analytics'
+import { buildPurchaseContext, savePurchaseContext } from './lib/checkoutConversion'
+import { clearCheckoutAbandoned, markCheckoutAbandoned } from './lib/cartRecovery'
+import { fetchStorePromo, getFreeShippingThresholdDiscount } from './lib/storePromo'
 import {
   fetchCatalogShippingRates,
+  fetchCatalogShippingCountries,
   fetchCatalogCities,
   fetchCatalogDistricts,
   fetchCatalogProvinces,
+  fetchCatalogLandingPage,
   getApiUrl,
   loginCustomer,
   logoutCustomer,
@@ -21,6 +26,14 @@ import {
   updateCustomerProfile,
   validateCatalogVoucher,
 } from './lib/api'
+import {
+  convertAmountMinorForDisplay,
+  formatExchangeRateNote,
+  getDisplayCurrency,
+  getItemDisplayAmounts,
+  getItemPaymentAmounts,
+  getPaymentCurrency,
+} from './lib/currency.js'
 import { getAttributionParams } from './lib/attribution'
 import { getProductSizeOptions, useCart } from './lib/cart.jsx'
 import { getConsentPreferences, setConsentPreferences } from './lib/consent'
@@ -28,11 +41,14 @@ import { useCustomer } from './lib/customer.jsx'
 import { useGoogleAuthCallback } from './lib/googleAuth'
 import { useLanguage } from './lib/i18n.jsx'
 import { getLandingChromeContent } from './lib/landingContent'
-import { clearPendingPayment, savePendingPayment } from './lib/pendingPayment'
+import { getRetailHeaderActions } from './lib/storeConfig'
+import { buildOrderDetailPath, clearPendingPayment, getPendingPayment, savePendingPayment } from './lib/pendingPayment'
 import { useMidtransPayment } from './lib/useMidtransPayment'
 import { clearPersonalizationData } from './lib/personalization'
 import { formatCurrencyAmount, getProductPriceDisplay } from './lib/price'
+import { getCountryLabel, isInternationalCountry, isShippingDestinationReady } from './lib/shippingCountries.js'
 import useDocumentTitle from './lib/useDocumentTitle'
+import useCartShippingEstimate from './lib/useCartShippingEstimate'
 import CartStepView, { CartEmptyView } from './components/cart/CartStepView'
 import CheckoutStepView from './components/cart/CheckoutStepView'
 
@@ -41,9 +57,13 @@ const defaultCheckoutForm = {
   email: '',
   whatsapp: '',
   fulfillment: 'delivery',
+  countryCode: 'ID',
   provinceCode: '',
   cityCode: '',
   districtCode: '',
+  cityName: '',
+  stateRegion: '',
+  postalCode: '',
   addressLine: '',
   notes: '',
 }
@@ -108,9 +128,22 @@ function stripTrailingRegionsFromAddressLine(addressLine, locationOptions, check
   return line.replace(/,\s*$/, '')
 }
 
-function buildStructuredAddress(checkoutForm, locationOptions) {
+function buildStructuredAddress(checkoutForm, locationOptions, countryOptions = []) {
   if (checkoutForm.fulfillment !== 'delivery') {
     return ''
+  }
+
+  if (isInternationalCountry(checkoutForm.countryCode)) {
+    return [
+      checkoutForm.addressLine,
+      checkoutForm.cityName,
+      checkoutForm.stateRegion,
+      checkoutForm.postalCode,
+      getCountryLabel(countryOptions, checkoutForm.countryCode),
+    ]
+      .map((value) => String(value || '').trim())
+      .filter(Boolean)
+      .join(', ')
   }
 
   const streetLine = stripTrailingRegionsFromAddressLine(
@@ -135,13 +168,73 @@ function buildWhatsAppUrl(phoneNumber, message) {
 }
 
 function getItemCurrency(item, language) {
-  const pricing = item.product?.pricing || {}
+  return getItemDisplayAmounts(item.product?.pricing || {}, language).currency
+}
 
-  return (
-    (pricing.is_estimated ? pricing.source_currency : pricing.currency) ||
-    pricing.source_currency ||
-    (language === 'en' ? 'USD' : 'IDR')
-  )
+function getItemPriceAmounts(item, language, exchangeRate = null) {
+  const pricing = item.product?.pricing || {}
+  const { currency, unitNetAmount, unitOriginalAmount } = getItemDisplayAmounts(pricing, language, exchangeRate)
+
+  if (unitNetAmount === null || unitOriginalAmount === null) {
+    const fallbackCurrency = getItemCurrency(item, language)
+    const unitNetFallback = getFirstPriceAmount(
+      [pricing.final_amount_minor, pricing.formatted_final, item.product?.bestPrice, item.product?.price],
+      fallbackCurrency,
+    )
+    const unitOriginalFallback = getFirstPriceAmount(
+      [pricing.original_amount_minor, pricing.formatted_original, item.product?.originalPrice, item.product?.price, unitNetFallback],
+      fallbackCurrency,
+    )
+
+    if (unitNetFallback === null || unitOriginalFallback === null) {
+      return null
+    }
+
+    const safeOriginalAmount = Math.max(unitOriginalFallback, unitNetFallback)
+
+    return {
+      currency: fallbackCurrency,
+      unitOriginalAmount: safeOriginalAmount,
+      unitDiscountAmount: Math.max(safeOriginalAmount - unitNetFallback, 0),
+      unitNetAmount: unitNetFallback,
+      originalAmount: safeOriginalAmount * item.quantity,
+      discountAmount: Math.max(safeOriginalAmount - unitNetFallback, 0) * item.quantity,
+      netAmount: unitNetFallback * item.quantity,
+    }
+  }
+
+  const safeOriginalAmount = Math.max(unitOriginalAmount, unitNetAmount)
+
+  return {
+    currency,
+    unitOriginalAmount: safeOriginalAmount,
+    unitDiscountAmount: Math.max(safeOriginalAmount - unitNetAmount, 0),
+    unitNetAmount,
+    originalAmount: safeOriginalAmount * item.quantity,
+    discountAmount: Math.max(safeOriginalAmount - unitNetAmount, 0) * item.quantity,
+    netAmount: unitNetAmount * item.quantity,
+  }
+}
+
+function getItemChargeAmounts(item) {
+  const pricing = item.product?.pricing || {}
+  const { currency, unitNetAmount, unitOriginalAmount } = getItemPaymentAmounts(pricing)
+
+  if (unitNetAmount === null || unitOriginalAmount === null) {
+    return null
+  }
+
+  const safeOriginalAmount = Math.max(unitOriginalAmount, unitNetAmount)
+
+  return {
+    currency,
+    unitOriginalAmount: safeOriginalAmount,
+    unitDiscountAmount: Math.max(safeOriginalAmount - unitNetAmount, 0),
+    unitNetAmount,
+    originalAmount: safeOriginalAmount * item.quantity,
+    discountAmount: Math.max(safeOriginalAmount - unitNetAmount, 0) * item.quantity,
+    netAmount: unitNetAmount * item.quantity,
+  }
 }
 
 function parsePriceAmount(value, currency = 'IDR') {
@@ -187,48 +280,32 @@ function getFirstPriceAmount(values, currency) {
   return null
 }
 
-function getItemPriceAmounts(item, language) {
-  const pricing = item.product?.pricing || {}
-  const currency = getItemCurrency(item, language)
-  const unitNetAmount = getFirstPriceAmount(
-    [
-      pricing.final_amount_minor,
-      pricing.formatted_final,
-      item.product?.bestPrice,
-      item.product?.price,
-    ],
-    currency,
-  )
-  const unitOriginalAmount = getFirstPriceAmount(
-    [
-      pricing.original_amount_minor,
-      pricing.formatted_original,
-      item.product?.originalPrice,
-      item.product?.price,
-      unitNetAmount,
-    ],
-    currency,
-  )
+function getCartChargeTotals(items) {
+  const pricedItems = items.map((item) => getItemChargeAmounts(item))
 
-  if (unitNetAmount === null || unitOriginalAmount === null) {
+  if (pricedItems.some((item) => !item) || pricedItems.length === 0) {
     return null
   }
 
-  const safeOriginalAmount = Math.max(unitOriginalAmount, unitNetAmount)
+  const currency = getPaymentCurrency()
+  const originalAmount = pricedItems.reduce((total, item) => total + item.originalAmount, 0)
+  const discountAmount = pricedItems.reduce((total, item) => total + item.discountAmount, 0)
+  const netAmount = pricedItems.reduce((total, item) => total + item.netAmount, 0)
 
   return {
     currency,
-    unitOriginalAmount: safeOriginalAmount,
-    unitDiscountAmount: Math.max(safeOriginalAmount - unitNetAmount, 0),
-    unitNetAmount,
-    originalAmount: safeOriginalAmount * item.quantity,
-    discountAmount: Math.max(safeOriginalAmount - unitNetAmount, 0) * item.quantity,
-    netAmount: unitNetAmount * item.quantity,
+    originalAmount,
+    discountAmount,
+    netAmount,
+    originalLabel: formatCurrencyAmount(originalAmount, currency, 'id'),
+    discountLabel: formatCurrencyAmount(discountAmount, currency, 'id'),
+    discountDisplayLabel: `${discountAmount > 0 ? '-' : ''}${formatCurrencyAmount(discountAmount, currency, 'id')}`,
+    netLabel: formatCurrencyAmount(netAmount, currency, 'id'),
   }
 }
 
-function getCartTotals(items, language) {
-  const pricedItems = items.map((item) => getItemPriceAmounts(item, language))
+function getCartTotals(items, language, exchangeRate = null) {
+  const pricedItems = items.map((item) => getItemPriceAmounts(item, language, exchangeRate))
 
   if (pricedItems.some((item) => !item) || pricedItems.length === 0) {
     return null
@@ -283,45 +360,93 @@ function getVoucherDiscountParts(appliedVoucher) {
   return { orderDiscountAmount, shippingDiscountAmount }
 }
 
-function getCheckoutTotals(cartTotals, shippingOption, language, appliedVoucher) {
-  const shippingAmount = Number.isFinite(shippingOption?.price) ? shippingOption.price : 0
-  const shippingCurrency = shippingOption?.currency || cartTotals?.currency || (language === 'en' ? 'USD' : 'IDR')
+function getCheckoutTotals(
+  cartTotals,
+  shippingOption,
+  language,
+  appliedVoucher,
+  storePromo,
+  fulfillment = 'delivery',
+  chargeCartTotals = null,
+  exchangeRate = null,
+) {
+  const displayCurrency = cartTotals?.currency || (language === 'en' ? 'USD' : 'IDR')
+  const shippingAmountIdr = Number.isFinite(shippingOption?.price) ? shippingOption.price : 0
+  const shippingSourceCurrency = shippingOption?.currency || getPaymentCurrency()
+  const shippingAmount = convertAmountMinorForDisplay(
+    shippingAmountIdr,
+    shippingSourceCurrency,
+    displayCurrency,
+    exchangeRate,
+  )
   const { orderDiscountAmount, shippingDiscountAmount } = getVoucherDiscountParts(appliedVoucher)
+  const orderDiscountAmountDisplay = convertAmountMinorForDisplay(
+    orderDiscountAmount,
+    getPaymentCurrency(),
+    displayCurrency,
+    exchangeRate,
+  )
+  const shippingDiscountAmountDisplay = convertAmountMinorForDisplay(
+    shippingDiscountAmount,
+    getPaymentCurrency(),
+    displayCurrency,
+    exchangeRate,
+  )
+  const promoCartTotals = chargeCartTotals || cartTotals
+  const freeShippingThresholdDiscountAmount = getFreeShippingThresholdDiscount({
+    storePromo,
+    cartTotals: promoCartTotals,
+    fulfillment,
+    existingShippingDiscountAmount: shippingDiscountAmount,
+    shippingAmount: shippingAmountIdr,
+  })
+  const freeShippingThresholdDiscountAmountDisplay = convertAmountMinorForDisplay(
+    freeShippingThresholdDiscountAmount,
+    getPaymentCurrency(),
+    displayCurrency,
+    exchangeRate,
+  )
+  const totalShippingDiscountAmount = shippingDiscountAmountDisplay + freeShippingThresholdDiscountAmountDisplay
   const hasKnownCartTotal = Number.isFinite(cartTotals?.netAmount)
-  const netAfterVoucher = hasKnownCartTotal ? Math.max(cartTotals.netAmount - orderDiscountAmount, 0) : null
-  const shippingAfterVoucher = Math.max(shippingAmount - shippingDiscountAmount, 0)
-  const grandTotalAmount = netAfterVoucher !== null ? netAfterVoucher + shippingAfterVoucher : null
+  const netAfterVoucher = hasKnownCartTotal ? Math.max(cartTotals.netAmount - orderDiscountAmountDisplay, 0) : null
+  const shippingAfterDiscount = Math.max(shippingAmount - totalShippingDiscountAmount, 0)
+  const grandTotalAmount = netAfterVoucher !== null ? netAfterVoucher + shippingAfterDiscount : null
 
   return {
-    currency: shippingCurrency,
+    currency: displayCurrency,
     shippingAmount,
-    shippingLabel: formatCurrencyAmount(shippingAmount, shippingCurrency, language),
-    orderVoucherDiscountAmount: orderDiscountAmount,
+    shippingLabel: formatCurrencyAmount(shippingAmount, displayCurrency, language),
+    orderVoucherDiscountAmount: orderDiscountAmountDisplay,
     orderVoucherDiscountLabel:
-      orderDiscountAmount > 0
-        ? `-${formatCurrencyAmount(orderDiscountAmount, shippingCurrency, language)}`
+      orderDiscountAmountDisplay > 0
+        ? `-${formatCurrencyAmount(orderDiscountAmountDisplay, displayCurrency, language)}`
         : null,
-    shippingVoucherDiscountAmount: shippingDiscountAmount,
+    shippingVoucherDiscountAmount: shippingDiscountAmountDisplay,
     shippingVoucherDiscountLabel:
-      shippingDiscountAmount > 0
-        ? `-${formatCurrencyAmount(shippingDiscountAmount, shippingCurrency, language)}`
+      shippingDiscountAmountDisplay > 0
+        ? `-${formatCurrencyAmount(shippingDiscountAmountDisplay, displayCurrency, language)}`
         : null,
-    voucherDiscountAmount: orderDiscountAmount + shippingDiscountAmount,
+    freeShippingThresholdDiscountAmount: freeShippingThresholdDiscountAmountDisplay,
+    freeShippingThresholdDiscountLabel:
+      freeShippingThresholdDiscountAmountDisplay > 0
+        ? `-${formatCurrencyAmount(freeShippingThresholdDiscountAmountDisplay, displayCurrency, language)}`
+        : null,
+    voucherDiscountAmount: orderDiscountAmountDisplay + totalShippingDiscountAmount,
     voucherDiscountLabel:
-      orderDiscountAmount + shippingDiscountAmount > 0
-        ? `-${formatCurrencyAmount(orderDiscountAmount + shippingDiscountAmount, shippingCurrency, language)}`
+      orderDiscountAmountDisplay + totalShippingDiscountAmount > 0
+        ? `-${formatCurrencyAmount(orderDiscountAmountDisplay + totalShippingDiscountAmount, displayCurrency, language)}`
         : null,
     grandTotalAmount,
     grandTotalLabel:
       grandTotalAmount !== null
-        ? formatCurrencyAmount(grandTotalAmount, shippingCurrency, language)
+        ? formatCurrencyAmount(grandTotalAmount, displayCurrency, language)
         : null,
   }
 }
 
-function buildVoucherValidateItems(items, language) {
+function buildVoucherValidateItems(items) {
   return items.map((item) => {
-    const priceAmounts = getItemPriceAmounts(item, language)
+    const priceAmounts = getItemChargeAmounts(item)
 
     return {
       product_slug: item.product.slug,
@@ -483,14 +608,12 @@ function buildCheckoutMessage(items, checkoutForm, language, cartTotals, locatio
     .join('\n')
 }
 
-function buildCheckoutPayload(items, checkoutForm, language, cartTotals, locationOptions, appliedVoucherCode) {
-  const firstItemCurrency = items.length > 0 ? getItemCurrency(items[0], language) : language === 'en' ? 'USD' : 'IDR'
-  const formattedAddress = buildStructuredAddress(checkoutForm, locationOptions)
-  const addressLine = stripTrailingRegionsFromAddressLine(
-    checkoutForm.addressLine,
-    locationOptions,
-    checkoutForm,
-  )
+function buildCheckoutPayload(items, checkoutForm, language, locationOptions, appliedVoucherCode, countryOptions = []) {
+  const formattedAddress = buildStructuredAddress(checkoutForm, locationOptions, countryOptions)
+  const addressLine = isInternationalCountry(checkoutForm.countryCode)
+    ? String(checkoutForm.addressLine || '').trim()
+    : stripTrailingRegionsFromAddressLine(checkoutForm.addressLine, locationOptions, checkoutForm)
+  const isInternational = isInternationalCountry(checkoutForm.countryCode)
 
   return {
     name: checkoutForm.name,
@@ -499,19 +622,25 @@ function buildCheckoutPayload(items, checkoutForm, language, cartTotals, locatio
     fulfillment: checkoutForm.fulfillment,
     address: formattedAddress || undefined,
     address_line: addressLine || undefined,
-    province_code: checkoutForm.provinceCode || undefined,
-    city_code: checkoutForm.cityCode || undefined,
-    district_code: checkoutForm.districtCode || undefined,
+    country_code: isInternational ? checkoutForm.countryCode : 'ID',
+    city_name: isInternational ? checkoutForm.cityName : undefined,
+    state_region: isInternational ? checkoutForm.stateRegion || undefined : undefined,
+    postal_code: isInternational ? checkoutForm.postalCode : undefined,
+    province_code: !isInternational ? checkoutForm.provinceCode || undefined : undefined,
+    city_code: !isInternational ? checkoutForm.cityCode || undefined : undefined,
+    district_code: !isInternational ? checkoutForm.districtCode || undefined : undefined,
     notes: checkoutForm.notes || undefined,
     terms_accepted: true,
     voucher_code: appliedVoucherCode || undefined,
     locale: language,
-    currency: cartTotals?.currency || firstItemCurrency,
+    currency: getPaymentCurrency(),
     source_page: window.location.pathname,
     referrer_url: document.referrer || undefined,
+    store_hostname: typeof window !== 'undefined' ? window.location.hostname : undefined,
+    ga_client_id: getGaClientId() || undefined,
     ...getAttributionParams(),
     items: items.map((item) => {
-      const priceAmounts = getItemPriceAmounts(item, language)
+      const priceAmounts = getItemChargeAmounts(item)
 
       return {
         product_slug: item.product.slug,
@@ -526,44 +655,83 @@ function buildCheckoutPayload(items, checkoutForm, language, cartTotals, locatio
   }
 }
 
-function buildShippingQuotePayload(items, checkoutForm, language) {
+function buildShippingQuotePayload(items, checkoutForm) {
+  const payloadItems = items.map((item) => {
+    const priceAmounts = getItemPriceAmounts(item, 'id')
+
+    return {
+      product_slug: item.product.slug,
+      product_name: item.product.name,
+      product_category: item.product.category || null,
+      quantity: item.quantity,
+      expected_unit_amount_minor: priceAmounts?.unitNetAmount ?? null,
+      expected_original_unit_amount_minor: priceAmounts?.unitOriginalAmount ?? null,
+    }
+  })
+
+  const countryCode = String(checkoutForm.countryCode || 'ID').toUpperCase()
+
+  if (isInternationalCountry(countryCode)) {
+    const payload = {
+      country_code: countryCode,
+      items: payloadItems,
+    }
+
+    const cityName = checkoutForm.cityName?.trim()
+    const postalCode = checkoutForm.postalCode?.trim()
+    const stateRegion = checkoutForm.stateRegion?.trim()
+
+    if (cityName) {
+      payload.city_name = cityName
+    }
+
+    if (postalCode) {
+      payload.postal_code = postalCode
+    }
+
+    if (stateRegion) {
+      payload.state_region = stateRegion
+    }
+
+    return payload
+  }
+
   return {
+    country_code: 'ID',
     province_code: checkoutForm.provinceCode,
     city_code: checkoutForm.cityCode,
     district_code: checkoutForm.districtCode,
-    items: items.map((item) => {
-      const priceAmounts = getItemPriceAmounts(item, language)
-
-      return {
-        product_slug: item.product.slug,
-        product_name: item.product.name,
-        product_category: item.product.category || null,
-        quantity: item.quantity,
-        expected_unit_amount_minor: priceAmounts?.unitNetAmount ?? null,
-        expected_original_unit_amount_minor: priceAmounts?.unitOriginalAmount ?? null,
-      }
-    }),
+    items: payloadItems,
   }
 }
 
 function mapCustomerToCheckoutForm(customer, locationOptions = { provinces: [], cities: [], districts: [] }) {
+  const countryCode = customer?.default_shipping_country_code || 'ID'
+  const isInternational = isInternationalCountry(countryCode)
+
   const checkoutForm = {
     name: customer?.name || '',
     email: customer?.email || '',
     whatsapp: customer?.phone || '',
     fulfillment: customer?.default_fulfillment_method || 'delivery',
-    provinceCode: customer?.default_shipping_province_code || '',
-    cityCode: customer?.default_shipping_city_code || '',
-    districtCode: customer?.default_shipping_district_code || '',
+    countryCode,
+    provinceCode: isInternational ? '' : customer?.default_shipping_province_code || '',
+    cityCode: isInternational ? '' : customer?.default_shipping_city_code || '',
+    districtCode: isInternational ? '' : customer?.default_shipping_district_code || '',
+    cityName: isInternational ? customer?.default_shipping_city_name || '' : '',
+    stateRegion: isInternational ? customer?.default_shipping_province_name || '' : '',
+    postalCode: isInternational ? customer?.default_shipping_postal_code || '' : '',
     addressLine: customer?.default_shipping_address || '',
     notes: '',
   }
 
-  checkoutForm.addressLine = stripTrailingRegionsFromAddressLine(
-    checkoutForm.addressLine,
-    locationOptions,
-    checkoutForm,
-  )
+  if (!isInternational) {
+    checkoutForm.addressLine = stripTrailingRegionsFromAddressLine(
+      checkoutForm.addressLine,
+      locationOptions,
+      checkoutForm,
+    )
+  }
 
   return checkoutForm
 }
@@ -578,25 +746,45 @@ function mapCustomerToAuthForm(customer) {
 }
 
 function buildCustomerProfilePayload(checkoutForm, locationOptions) {
+  const isInternational = isInternationalCountry(checkoutForm.countryCode)
+
   return {
     name: checkoutForm.name,
     email: checkoutForm.email,
     whatsapp: checkoutForm.whatsapp,
     fulfillment: checkoutForm.fulfillment,
+    country_code: checkoutForm.fulfillment === 'delivery' ? checkoutForm.countryCode : 'ID',
     address_line: checkoutForm.fulfillment === 'delivery' ? checkoutForm.addressLine : '',
-    province_code: checkoutForm.fulfillment === 'delivery' ? checkoutForm.provinceCode : '',
-    province_name:
-      checkoutForm.fulfillment === 'delivery'
-        ? findLocationName(locationOptions.provinces, checkoutForm.provinceCode)
-        : '',
-    city_code: checkoutForm.fulfillment === 'delivery' ? checkoutForm.cityCode : '',
-    city_name:
-      checkoutForm.fulfillment === 'delivery' ? findLocationName(locationOptions.cities, checkoutForm.cityCode) : '',
-    district_code: checkoutForm.fulfillment === 'delivery' ? checkoutForm.districtCode : '',
-    district_name:
-      checkoutForm.fulfillment === 'delivery'
-        ? findLocationName(locationOptions.districts, checkoutForm.districtCode)
-        : '',
+    ...(isInternational
+      ? {
+          city_name: checkoutForm.cityName,
+          state_region: checkoutForm.stateRegion,
+          postal_code: checkoutForm.postalCode,
+          province_code: '',
+          province_name: '',
+          city_code: '',
+          district_code: '',
+          district_name: '',
+        }
+      : {
+          province_code: checkoutForm.fulfillment === 'delivery' ? checkoutForm.provinceCode : '',
+          province_name:
+            checkoutForm.fulfillment === 'delivery'
+              ? findLocationName(locationOptions.provinces, checkoutForm.provinceCode)
+              : '',
+          city_code: checkoutForm.fulfillment === 'delivery' ? checkoutForm.cityCode : '',
+          city_name:
+            checkoutForm.fulfillment === 'delivery'
+              ? findLocationName(locationOptions.cities, checkoutForm.cityCode)
+              : '',
+          district_code: checkoutForm.fulfillment === 'delivery' ? checkoutForm.districtCode : '',
+          district_name:
+            checkoutForm.fulfillment === 'delivery'
+              ? findLocationName(locationOptions.districts, checkoutForm.districtCode)
+              : '',
+          postal_code: '',
+          state_region: '',
+        }),
   }
 }
 
@@ -625,18 +813,23 @@ export default function CartPage() {
     },
   )
   const { items, itemCount, updateCartItemQuantity, updateCartItemSize, distributeCartItemSizes, removeCartItem, clearCart } = useCart()
-  const { payOrder } = useMidtransPayment()
+  const { payOrder } = useMidtransPayment({ preload: isCheckoutStep })
+  const paymentInProgressRef = useRef(false)
+  const wasOnCheckoutRef = useRef(false)
+  const [storePromo, setStorePromo] = useState(null)
   const [pageContent, setPageContent] = useState(() =>
     getLandingChromeContent({}, { hashPrefix: '/', locale: language }),
   )
   const [checkoutForm, setCheckoutForm] = useState(defaultCheckoutForm)
   const [checkoutStatus, setCheckoutStatus] = useState({ state: 'idle', message: '' })
   const [authMode, setAuthMode] = useState('login')
+  const [checkoutAuthMode, setCheckoutAuthMode] = useState('guest')
   const [authForm, setAuthForm] = useState(defaultAuthForm)
   const [authStatus, setAuthStatus] = useState({ state: 'idle', message: '' })
   const [mixedSizeDrafts, setMixedSizeDrafts] = useState({})
   const [consentPreferences, setConsentPreferencesState] = useState(() => getConsentPreferences())
   const [provinceOptions, setProvinceOptions] = useState([])
+  const [countryOptions, setCountryOptions] = useState([])
   const [cityOptions, setCityOptions] = useState([])
   const [districtOptions, setDistrictOptions] = useState([])
   const [shippingOptions, setShippingOptions] = useState([])
@@ -645,6 +838,7 @@ export default function CartPage() {
   const [termsAccepted, setTermsAccepted] = useState(false)
   const [termsError, setTermsError] = useState('')
   const [appliedVoucher, setAppliedVoucher] = useState(null)
+  const [exchangeRateMeta, setExchangeRateMeta] = useState(null)
   const appliedVoucherRef = useRef(null)
   const [locationLoading, setLocationLoading] = useState({
     provinces: false,
@@ -652,37 +846,130 @@ export default function CartPage() {
     districts: false,
   })
 
-  const cartTotals = useMemo(() => getCartTotals(items, language), [items, language])
   const checkoutItems = useMemo(() => materializeCheckoutItems(items, mixedSizeDrafts), [items, mixedSizeDrafts])
+  const cartTotals = useMemo(
+    () => getCartTotals(items, language, exchangeRateMeta),
+    [items, language, exchangeRateMeta],
+  )
+  const cartChargeTotals = useMemo(() => getCartChargeTotals(checkoutItems), [checkoutItems])
   const selectedShippingOption = useMemo(
     () => getSelectedShippingOption(shippingOptions, selectedShippingOptionKey),
     [shippingOptions, selectedShippingOptionKey],
   )
   const checkoutTotals = useMemo(
-    () => getCheckoutTotals(cartTotals, selectedShippingOption, language, appliedVoucher),
-    [appliedVoucher, cartTotals, selectedShippingOption, language],
+    () =>
+      getCheckoutTotals(
+        cartTotals,
+        selectedShippingOption,
+        language,
+        appliedVoucher,
+        storePromo,
+        checkoutForm.fulfillment,
+        cartChargeTotals,
+        exchangeRateMeta,
+      ),
+    [
+      appliedVoucher,
+      cartChargeTotals,
+      cartTotals,
+      checkoutForm.fulfillment,
+      exchangeRateMeta,
+      selectedShippingOption,
+      language,
+      storePromo,
+    ],
   )
+  const checkoutChargeTotals = useMemo(
+    () =>
+      getCheckoutTotals(
+        cartChargeTotals,
+        selectedShippingOption,
+        'id',
+        appliedVoucher,
+        storePromo,
+        checkoutForm.fulfillment,
+        cartChargeTotals,
+      ),
+    [appliedVoucher, cartChargeTotals, checkoutForm.fulfillment, selectedShippingOption, storePromo],
+  )
+  const exchangeRateNote = useMemo(
+    () => formatExchangeRateNote(exchangeRateMeta, language),
+    [exchangeRateMeta, language],
+  )
+  const { estimate: shippingEstimate, loading: shippingEstimateLoading } = useCartShippingEstimate(checkoutItems, language)
+  const canPlaceOrder = Boolean(customerSession) || checkoutAuthMode === 'guest'
+  const shippingEstimateLabel =
+    shippingEstimate?.state === 'ready' && shippingEstimate.priceLabel
+      ? language === 'en'
+        ? `From ${shippingEstimate.priceLabel}`
+        : `Mulai ${shippingEstimate.priceLabel}`
+      : null
 
   useEffect(() => {
-    fetch(getApiUrl(`/api/catalog/landing-page?locale=${language}`), {
-      headers: {
-        Accept: 'application/json',
-      },
-    })
-      .then((response) => {
-        if (!response.ok) {
-          throw new Error('Gagal memuat checkout cart')
-        }
+    let cancelled = false
 
-        return response.json()
+    fetchCatalogShippingCountries(language)
+      .then((countries) => {
+        if (!cancelled) {
+          setCountryOptions(countries)
+        }
       })
+      .catch(() => {
+        if (!cancelled) {
+          setCountryOptions([])
+        }
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [language])
+
+  useEffect(() => {
+    let cancelled = false
+
+    fetchStorePromo().then((promo) => {
+      if (!cancelled) {
+        setStorePromo(promo)
+      }
+    })
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  useEffect(() => {
+    if (isCheckoutStep) {
+      wasOnCheckoutRef.current = true
+      clearCheckoutAbandoned()
+      return
+    }
+
+    if (wasOnCheckoutRef.current && items.length > 0) {
+      markCheckoutAbandoned(items)
+      trackEvent('cart_checkout_abandoned', {
+        cart_item_count: itemCount,
+        cart_unique_item_count: items.length,
+        source_page: '/cart/checkout',
+      })
+    }
+
+    wasOnCheckoutRef.current = false
+  }, [isCheckoutStep, itemCount, items])
+
+  useEffect(() => {
+    fetchCatalogLandingPage(language)
       .then((payload) => {
         if (payload?.data) {
           setPageContent(getLandingChromeContent(payload.data, { hashPrefix: '/', locale: language }))
         }
+
+        setExchangeRateMeta(payload?.meta?.exchange_rate || null)
       })
       .catch(() => {
         setPageContent(getLandingChromeContent({}, { hashPrefix: '/', locale: language }))
+        setExchangeRateMeta(null)
       })
   }, [language])
 
@@ -726,9 +1013,9 @@ export default function CartPage() {
       try {
         const preview = await validateCatalogVoucher({
           voucherCode: voucher.code,
-          items: buildVoucherValidateItems(checkoutItems, language),
+          items: buildVoucherValidateItems(checkoutItems),
           locale: language === 'en' ? 'en' : 'id',
-          currency: cartTotals?.currency || (language === 'en' ? 'USD' : 'IDR'),
+          currency: getPaymentCurrency(),
           fulfillment: checkoutForm.fulfillment,
           shippingFeeAmountMinor,
         })
@@ -807,12 +1094,15 @@ export default function CartPage() {
 
   const applyCustomerProfileToForms = (customer) => {
     setCustomerSession(customer)
+    const mapped = mapCustomerToCheckoutForm(customer, {
+      provinces: provinceOptions,
+      cities: cityOptions,
+      districts: districtOptions,
+    })
+
     setCheckoutForm((current) => ({
-      ...mapCustomerToCheckoutForm(customer, {
-        provinces: provinceOptions,
-        cities: cityOptions,
-        districts: districtOptions,
-      }),
+      ...current,
+      ...mapped,
       notes: current.notes,
     }))
     setAuthForm(mapCustomerToAuthForm(customer))
@@ -964,7 +1254,7 @@ export default function CartPage() {
   }, [checkoutForm.cityCode])
 
   useEffect(() => {
-    if (checkoutForm.fulfillment !== 'delivery') {
+    if (!isCheckoutStep || checkoutForm.fulfillment !== 'delivery') {
       setShippingOptions([])
       setSelectedShippingOptionKey('')
       setShippingStatus({ state: 'idle', message: '' })
@@ -972,7 +1262,7 @@ export default function CartPage() {
       return
     }
 
-    if (!checkoutForm.provinceCode || !checkoutForm.cityCode || !checkoutForm.districtCode || checkoutItems.length === 0) {
+    if (!isShippingDestinationReady(checkoutForm) || checkoutItems.length === 0) {
       setShippingOptions([])
       setSelectedShippingOptionKey('')
       setShippingStatus({ state: 'idle', message: '' })
@@ -984,7 +1274,7 @@ export default function CartPage() {
 
     setShippingStatus({ state: 'loading', message: '' })
 
-    fetchCatalogShippingRates(buildShippingQuotePayload(checkoutItems, checkoutForm, language))
+    fetchCatalogShippingRates(buildShippingQuotePayload(checkoutItems, checkoutForm))
       .then((data) => {
         if (!isActive) {
           return
@@ -1034,10 +1324,16 @@ export default function CartPage() {
       isActive = false
     }
   }, [
+    isCheckoutStep,
     checkoutForm.fulfillment,
+    checkoutForm.countryCode,
     checkoutForm.provinceCode,
     checkoutForm.cityCode,
     checkoutForm.districtCode,
+    checkoutForm.cityName,
+    checkoutForm.stateRegion,
+    checkoutForm.postalCode,
+    checkoutForm.addressLine,
     checkoutItems,
     language,
   ])
@@ -1162,7 +1458,7 @@ export default function CartPage() {
   const handleCheckoutSubmit = async (event) => {
     event.preventDefault()
 
-    if (!customerSession) {
+    if (!customerSession && checkoutAuthMode !== 'guest') {
       if (authMode === 'register') {
         await handleCustomerRegister(event)
         return
@@ -1206,7 +1502,7 @@ export default function CartPage() {
       message: t('cart.profileSyncing'),
     })
 
-    trackEvent('begin_checkout', {
+    trackEvent('checkout_submit', {
       currency: cartTotals?.currency || 'IDR',
       value:
         cartTotals?.netAmount !== undefined && cartTotals?.netAmount !== null
@@ -1218,19 +1514,23 @@ export default function CartPage() {
       fulfillment: checkoutForm.fulfillment,
     })
 
-    try {
-      const syncedCustomer = await updateCustomerProfile(buildCustomerProfilePayload(checkoutForm, locationOptions))
+    let savedOrderNumber = ''
 
-      setCustomerSession(syncedCustomer)
+    try {
+      if (customerSession) {
+        const syncedCustomer = await updateCustomerProfile(buildCustomerProfilePayload(checkoutForm, locationOptions))
+        setCustomerSession(syncedCustomer)
+      }
+
       const savedOrder = await saveCatalogOrder(
         {
           ...buildCheckoutPayload(
             checkoutItems,
             checkoutForm,
             language,
-            cartTotals,
             locationOptions,
             appliedVoucher?.code,
+            countryOptions,
           ),
           shipping_option: selectedShippingOption
             ? {
@@ -1246,6 +1546,7 @@ export default function CartPage() {
             : undefined,
         },
       )
+      savedOrderNumber = savedOrder?.order_number || ''
 
       setCheckoutStatus({
         state: 'success',
@@ -1255,6 +1556,25 @@ export default function CartPage() {
       })
 
       const conversion = resolveCheckoutConversionValue(savedOrder)
+      const purchaseContext = buildPurchaseContext(
+        savedOrder,
+        checkoutItems,
+        customerSession || {
+          email: checkoutForm.email,
+          phone: checkoutForm.whatsapp,
+        },
+      )
+
+      if (purchaseContext) {
+        savePurchaseContext(purchaseContext)
+      }
+
+      clearCheckoutAbandoned()
+
+      void setEnhancedConversionUserData({
+        email: purchaseContext?.customer?.email || checkoutForm.email,
+        phone: purchaseContext?.customer?.phone || checkoutForm.whatsapp,
+      })
 
       trackEvent('cart_checkout_order_saved', {
         source_page: '/cart',
@@ -1266,6 +1586,7 @@ export default function CartPage() {
         currency: conversion.currency,
         value: conversion.value,
         value_source: conversion.source,
+        items: purchaseContext?.items || [],
       })
 
       trackEvent('generate_lead', {
@@ -1282,12 +1603,7 @@ export default function CartPage() {
 
       savePendingPayment(savedOrder.order_number, savedOrder.payment_access_token)
 
-      clearCart()
-      setMixedSizeDrafts({})
-      setCheckoutForm((current) => ({
-        ...current,
-        notes: '',
-      }))
+      paymentInProgressRef.current = true
 
       setCheckoutStatus({
         state: 'loading',
@@ -1297,9 +1613,21 @@ export default function CartPage() {
       await payOrder(savedOrder.order_number, savedOrder.payment_access_token, {
         onSuccess: () => {
           clearPendingPayment()
+          clearCart()
+          setMixedSizeDrafts({})
+          setCheckoutForm((current) => ({
+            ...current,
+            notes: '',
+          }))
           navigate(`/payment/success?order=${savedOrder.order_number}`)
         },
         onPending: () => {
+          clearCart()
+          setMixedSizeDrafts({})
+          setCheckoutForm((current) => ({
+            ...current,
+            notes: '',
+          }))
           setCheckoutStatus({
             state: 'idle',
             message:
@@ -1307,16 +1635,22 @@ export default function CartPage() {
                 ? 'Payment is pending. You can complete it from your order detail.'
                 : 'Pembayaran masih pending. Anda bisa menyelesaikannya dari detail pesanan.',
           })
-          navigate(`/akun/pesanan/${savedOrder.order_number}`)
+          navigate(buildOrderDetailPath(savedOrder.order_number, savedOrder.payment_access_token))
         },
         onError: () => {
           setCheckoutStatus({
             state: 'error',
             message: 'Pembayaran gagal atau dibatalkan.',
           })
-          navigate(`/akun/pesanan/${savedOrder.order_number}`)
+          navigate(buildOrderDetailPath(savedOrder.order_number, savedOrder.payment_access_token))
         },
         onClose: () => {
+          clearCart()
+          setMixedSizeDrafts({})
+          setCheckoutForm((current) => ({
+            ...current,
+            notes: '',
+          }))
           setCheckoutStatus({
             state: 'idle',
             message:
@@ -1324,21 +1658,44 @@ export default function CartPage() {
                 ? 'Payment window closed. Continue from your order detail anytime.'
                 : 'Pembayaran ditutup. Anda bisa melanjutkan dari detail pesanan kapan saja.',
           })
-          navigate(`/akun/pesanan/${savedOrder.order_number}`)
+          navigate(buildOrderDetailPath(savedOrder.order_number, savedOrder.payment_access_token))
         },
-      })
+      }, { paymentSource: 'checkout' })
     } catch (error) {
+      const paymentOpenFailed = Boolean(savedOrderNumber)
+
       setCheckoutStatus({
         state: 'error',
-        message: error.message || t('cart.checkoutFallback'),
+        message:
+          error.message
+          || (paymentOpenFailed
+            ? (language === 'en'
+              ? 'Payment could not be opened. Continue from your order detail.'
+              : 'Pembayaran tidak dapat dibuka. Lanjutkan dari detail pesanan.')
+            : t('cart.checkoutFallback')),
       })
 
-      trackEvent('cart_checkout_order_save_failed', {
-        source_page: '/cart',
-        cart_item_count: itemCount,
-        cart_unique_item_count: items.length,
-        error_message: error.message || 'unknown-error',
-      })
+      if (paymentOpenFailed) {
+        const pending = getPendingPayment(savedOrderNumber)
+        navigate(buildOrderDetailPath(savedOrderNumber, pending?.paymentAccessToken))
+
+        trackEvent('cart_checkout_payment_open_failed', {
+          source_page: '/cart',
+          order_number: savedOrderNumber,
+          cart_item_count: itemCount,
+          cart_unique_item_count: items.length,
+          error_message: error.message || 'unknown-error',
+        })
+      } else {
+        trackEvent('cart_checkout_order_save_failed', {
+          source_page: '/cart',
+          cart_item_count: itemCount,
+          cart_unique_item_count: items.length,
+          error_message: error.message || 'unknown-error',
+        })
+      }
+    } finally {
+      paymentInProgressRef.current = false
     }
   }
 
@@ -1347,11 +1704,26 @@ export default function CartPage() {
       return
     }
 
+    trackEvent('begin_checkout', {
+      currency: cartTotals?.currency || 'IDR',
+      value:
+        cartTotals?.netAmount !== undefined && cartTotals?.netAmount !== null
+          ? normalizeGoogleAdsConversionValue(cartTotals.netAmount, cartTotals.currency)
+          : undefined,
+      source_page: '/cart',
+      cart_item_count: itemCount,
+      cart_unique_item_count: items.length,
+      checkout_step: 'cart_to_checkout',
+      items: checkoutItems
+        .map((item) => buildGa4ItemFromProduct(item.product, item.quantity))
+        .filter(Boolean),
+    })
+
     navigate('/cart/checkout')
   }
 
   useEffect(() => {
-    if (isCheckoutStep && items.length === 0) {
+    if (isCheckoutStep && items.length === 0 && !paymentInProgressRef.current) {
       navigate('/cart', { replace: true })
     }
   }, [isCheckoutStep, items.length, navigate])
@@ -1379,7 +1751,7 @@ export default function CartPage() {
         <div className="cart-auth-card">
           <p className="cart-auth-copy">{t('cart.authLoading')}</p>
         </div>
-      ) : !customerSession ? (
+      ) : !customerSession && checkoutAuthMode !== 'guest' ? (
         <div className="cart-auth-card">
           <div className="cart-auth-heading">
             <div>
@@ -1394,14 +1766,20 @@ export default function CartPage() {
             <button
               className={authMode === 'login' ? 'cart-auth-tab active' : 'cart-auth-tab'}
               type="button"
-              onClick={() => setAuthMode('login')}
+              onClick={() => {
+                setAuthMode('login')
+                setCheckoutAuthMode('login')
+              }}
             >
               {t('cart.loginTab')}
             </button>
             <button
               className={authMode === 'register' ? 'cart-auth-tab active' : 'cart-auth-tab'}
               type="button"
-              onClick={() => setAuthMode('register')}
+              onClick={() => {
+                setAuthMode('register')
+                setCheckoutAuthMode('register')
+              }}
             >
               {t('cart.registerTab')}
             </button>
@@ -1514,19 +1892,52 @@ export default function CartPage() {
           )}
 
           {authStatus.message ? <p className={`cart-status ${authStatus.state}`}>{authStatus.message}</p> : null}
+
+          <div className="cart-auth-guest">
+            <button
+              className="cart-auth-guest-button"
+              type="button"
+              onClick={() => {
+                setCheckoutAuthMode('guest')
+                setAuthStatus({ state: 'idle', message: '' })
+              }}
+            >
+              {t('cart.guestCheckoutCta')}
+            </button>
+            <p>{t('cart.guestCheckoutHint')}</p>
+          </div>
         </div>
       ) : (
         <>
+          {!customerSession && checkoutAuthMode === 'guest' ? (
+            <div className="cart-auth-card cart-auth-card--guest">
+              <div className="cart-auth-heading">
+                <div>
+                  <span>{t('cart.summaryEyebrow')}</span>
+                  <h3>{t('cart.guestCheckoutCta')}</h3>
+                </div>
+              </div>
+              <p className="cart-auth-copy">{t('cart.guestCheckoutHint')}</p>
+              <button className="cart-auth-guest-back" type="button" onClick={() => setCheckoutAuthMode('login')}>
+                {language === 'en' ? 'Use account instead' : 'Pakai akun saja'}
+              </button>
+            </div>
+          ) : null}
+
           <div className="checkout-confirm-card">
             <div className="checkout-confirm-card-head">
-              <h2>{language === 'en' ? 'Delivery details' : 'Detail alamat'}</h2>
-              <span className="checkout-confirm-card-badge">{t('cart.accountTitle')}</span>
+              <h2>{t('cart.deliveryDetails')}</h2>
+              <span className="checkout-confirm-card-badge">
+                {customerSession ? t('cart.accountTitle') : t('cart.guestCheckoutBadge')}
+              </span>
             </div>
-            <div className="checkout-confirm-address">
-              <strong>{checkoutForm.name || customerSession.name}</strong>
-              <span>{checkoutForm.whatsapp || customerSession.phone}</span>
-              <p>{formattedDeliveryAddress}</p>
-            </div>
+            {customerSession ? (
+              <div className="checkout-confirm-address">
+                <strong>{checkoutForm.name || customerSession.name}</strong>
+                <span>{checkoutForm.whatsapp || customerSession.phone}</span>
+                <p>{formattedDeliveryAddress}</p>
+              </div>
+            ) : null}
           </div>
 
           <div className="cart-form-field">
@@ -1574,6 +1985,83 @@ export default function CartPage() {
 
           {checkoutForm.fulfillment === 'delivery' ? (
             <>
+              <div className="cart-form-field">
+                <label htmlFor="cart-country">{t('cart.country')}</label>
+                <select
+                  id="cart-country"
+                  value={checkoutForm.countryCode}
+                  onChange={(event) => {
+                    updateCheckoutFormFields({
+                      countryCode: event.target.value,
+                      provinceCode: '',
+                      cityCode: '',
+                      districtCode: '',
+                      cityName: '',
+                      stateRegion: '',
+                      postalCode: '',
+                      addressLine: '',
+                    })
+                    setShippingOptions([])
+                    setSelectedShippingOptionKey('')
+                    setShippingStatus({ state: 'idle', message: '' })
+                  }}
+                  required
+                >
+                  {countryOptions.length > 0 ? (
+                    countryOptions.map((country) => (
+                      <option key={country.code} value={country.code}>
+                        {country.label}
+                      </option>
+                    ))
+                  ) : (
+                    <>
+                      <option value="ID">{language === 'en' ? 'Indonesia' : 'Indonesia'}</option>
+                      <option value="SG">{language === 'en' ? 'Singapore' : 'Singapura'}</option>
+                      <option value="MY">{language === 'en' ? 'Malaysia' : 'Malaysia'}</option>
+                      <option value="US">{language === 'en' ? 'United States' : 'Amerika Serikat'}</option>
+                    </>
+                  )}
+                </select>
+              </div>
+
+              {isInternationalCountry(checkoutForm.countryCode) ? (
+                <>
+                  <div className="cart-form-grid">
+                    <div className="cart-form-field">
+                      <label htmlFor="cart-city-name">{t('cart.cityName')}</label>
+                      <input
+                        id="cart-city-name"
+                        type="text"
+                        value={checkoutForm.cityName}
+                        onChange={(event) => updateCheckoutForm('cityName', event.target.value)}
+                        required
+                      />
+                    </div>
+
+                    <div className="cart-form-field">
+                      <label htmlFor="cart-state-region">{t('cart.stateRegion')}</label>
+                      <input
+                        id="cart-state-region"
+                        type="text"
+                        value={checkoutForm.stateRegion}
+                        onChange={(event) => updateCheckoutForm('stateRegion', event.target.value)}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="cart-form-field">
+                    <label htmlFor="cart-postal-code">{t('cart.postalCode')}</label>
+                    <input
+                      id="cart-postal-code"
+                      type="text"
+                      value={checkoutForm.postalCode}
+                      onChange={(event) => updateCheckoutForm('postalCode', event.target.value)}
+                      required
+                    />
+                  </div>
+                </>
+              ) : (
+                <>
               <div className="cart-form-grid">
                 <div className="cart-form-field">
                   <label htmlFor="cart-province">{t('cart.province')}</label>
@@ -1644,6 +2132,8 @@ export default function CartPage() {
               {locationLoading.provinces || locationLoading.cities || locationLoading.districts ? (
                 <p className="cart-form-location-status">{t('cart.loadingLocations')}</p>
               ) : null}
+                </>
+              )}
 
               <div className="cart-form-field">
                 <label htmlFor="cart-address">{t('cart.addressDetail')}</label>
@@ -1656,9 +2146,13 @@ export default function CartPage() {
                 />
               </div>
 
+              {isInternationalCountry(checkoutForm.countryCode) ? (
+                <p className="checkout-confirm-payment-note">{t('cart.internationalShippingNote')}</p>
+              ) : null}
+
               <div className="checkout-confirm-card checkout-confirm-card-interactive">
                 <div className="checkout-confirm-card-head">
-                  <h2>{language === 'en' ? 'Shipping method' : 'Metode pengiriman'}</h2>
+                  <h2>{t('cart.shippingMethod')}</h2>
                   <Truck size={18} aria-hidden="true" />
                 </div>
                 <div className="cart-form-field cart-form-field-shipping">
@@ -1670,6 +2164,7 @@ export default function CartPage() {
                     disabled={shippingStatus.state === 'loading'}
                     language={language}
                     currency={checkoutTotals.currency}
+                    exchangeRate={exchangeRateMeta}
                   />
                 </div>
                 {shippingStatus.message ? (
@@ -1681,7 +2176,7 @@ export default function CartPage() {
 
           <div className="checkout-confirm-card">
             <div className="checkout-confirm-card-head">
-              <h2>{language === 'en' ? 'Payment method' : 'Metode pembayaran'}</h2>
+              <h2>{t('cart.paymentMethod')}</h2>
               <CreditCard size={18} aria-hidden="true" />
             </div>
             <p className="checkout-confirm-payment-copy">
@@ -1691,10 +2186,16 @@ export default function CartPage() {
             </p>
           </div>
 
-          <button className="cart-account-logout checkout-confirm-logout" type="button" onClick={handleCustomerLogout}>
-            <LogOut size={16} />
-            <span>{t('cart.logout')}</span>
-          </button>
+          {customerSession ? (
+            <button
+              className="cart-account-logout checkout-confirm-logout"
+              type="button"
+              onClick={handleCustomerLogout}
+            >
+              <LogOut size={16} />
+              <span>{t('cart.logout')}</span>
+            </button>
+          ) : null}
         </>
       )}
     </div>
@@ -1725,10 +2226,12 @@ export default function CartPage() {
         utilityLinks={pageContent.utilityLinks}
         utilityMessage={pageContent.utilityMessage}
         cartItemCount={itemCount}
-        onPrimaryAction={() => {
-          window.location.href = '/all-products'
-        }}
-        primaryActionLabel={t('cart.continueShopping')}
+        {...getRetailHeaderActions({
+          primaryActionLabel: t('cart.continueShopping'),
+          onPrimaryAction: () => {
+            window.location.href = '/all-products'
+          },
+        })}
       />
 
       <main className={`cart-page ${isCheckoutStep ? 'cart-page--checkout' : 'cart-page--cart'}`}>
@@ -1742,9 +2245,12 @@ export default function CartPage() {
             itemCount={itemCount}
             cartTotals={cartTotals}
             checkoutTotals={checkoutTotals}
+            checkoutChargeTotals={checkoutChargeTotals}
+            exchangeRateNote={exchangeRateNote}
             checkoutForm={checkoutForm}
             checkoutItems={checkoutItems}
             customerSession={customerSession}
+            canPlaceOrder={canPlaceOrder}
             appliedVoucher={appliedVoucher}
             setAppliedVoucher={setAppliedVoucher}
             selectedShippingOption={selectedShippingOption}
@@ -1757,6 +2263,11 @@ export default function CartPage() {
             handleCheckoutSubmit={handleCheckoutSubmit}
             renderCheckoutForm={renderCheckoutForm}
             itemHandlers={itemHandlers}
+            shippingEstimate={shippingEstimate}
+            shippingEstimateLoading={shippingEstimateLoading}
+            storePromo={storePromo}
+            promoCartTotals={cartChargeTotals}
+            fulfillment={checkoutForm.fulfillment}
           />
         ) : (
           <CartStepView
@@ -1769,6 +2280,10 @@ export default function CartPage() {
             clearCart={clearCart}
             onCheckout={handleGoToCheckout}
             itemHandlers={itemHandlers}
+            shippingEstimate={shippingEstimate}
+            shippingEstimateLoading={shippingEstimateLoading}
+            storePromo={storePromo}
+            promoCartTotals={cartChargeTotals}
           />
         )}
       </main>

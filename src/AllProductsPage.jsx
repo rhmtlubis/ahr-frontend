@@ -3,6 +3,7 @@ import { ArrowLeft, ChevronDown, MessageSquareMore, ShoppingCart } from 'lucide-
 import { Link, useSearchParams } from 'react-router-dom'
 import './App.css'
 import CategoryFilterHeader from './components/landing/CategoryFilterHeader'
+import ProductFeaturedBadge from './components/catalog/ProductFeaturedBadge'
 import ProductPrice from './components/catalog/ProductPrice'
 import CookieConsentBanner from './components/layout/CookieConsentBanner'
 import SiteFooter from './components/layout/SiteFooter'
@@ -12,15 +13,18 @@ import {
   normalizeCategoryCard,
   normalizeProducts,
 } from './lib/cmsContent.js'
-import { initializeAnalyticsAndTrackCurrentPage, trackEvent, updateConsent } from './lib/analytics'
-import { fetchCatalogPriceQuote, getApiUrl, getPreferredCurrency } from './lib/api'
+import { initializeAnalyticsAndTrackCurrentPage, trackEvent, updateConsent, buildGa4ItemFromProduct, trackEcommerceEvent } from './lib/analytics'
+import { fetchCatalogLandingPage, fetchCatalogPriceQuote, getPreferredCurrency } from './lib/api'
 import { useCart } from './lib/cart.jsx'
+import { useCartAdd } from './lib/useCartAdd.js'
 import { getConsentPreferences, setConsentPreferences } from './lib/consent'
 import { useLanguage } from './lib/i18n.jsx'
 import { getLandingChromeContent } from './lib/landingContent'
+import { getRetailHeaderActions, isCssStore } from './lib/storeConfig'
 import { clearPersonalizationData } from './lib/personalization'
 import { getCategoryRoute } from './lib/categorySeo.js'
 import { animateCatalogListingReveal } from './lib/gsapCatalogAnimations.js'
+import { sortProducts } from './lib/productListing.js'
 import useDocumentTitle from './lib/useDocumentTitle'
 
 const PRODUCTS_PER_PAGE = 8
@@ -32,30 +36,6 @@ const SORT_OPTIONS = {
 
 function buildWhatsAppUrl(phoneNumber, message) {
   return `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`
-}
-
-function getProductSortAmount(product) {
-  return (
-    product?.pricing?.final_amount_minor ??
-    product?.pricing?.source_final_amount_minor ??
-    product?.pricing?.original_amount_minor ??
-    product?.pricing?.source_original_amount_minor ??
-    Number.MAX_SAFE_INTEGER
-  )
-}
-
-function sortProducts(products = [], sortKey = 'newest') {
-  const items = [...products]
-
-  if (sortKey === 'priceDesc') {
-    return items.sort((left, right) => getProductSortAmount(right) - getProductSortAmount(left))
-  }
-
-  if (sortKey === 'priceAsc') {
-    return items.sort((left, right) => getProductSortAmount(left) - getProductSortAmount(right))
-  }
-
-  return items
 }
 
 function normalizeListingContent(payload = {}, language = 'id') {
@@ -117,7 +97,8 @@ export default function AllProductsPage() {
       type: 'website',
     },
   )
-  const { addCartItem, itemCount } = useCart()
+  const { itemCount } = useCart()
+  const addToCart = useCartAdd()
   const rootRef = useRef(null)
   const gsapRef = useRef(null)
   const [searchParams, setSearchParams] = useSearchParams()
@@ -162,18 +143,7 @@ export default function AllProductsPage() {
   }, [])
 
   useEffect(() => {
-    fetch(getApiUrl(`/api/catalog/landing-page?locale=${language}`), {
-      headers: {
-        Accept: 'application/json',
-      },
-    })
-      .then((response) => {
-        if (!response.ok) {
-          throw new Error('Gagal memuat listing produk')
-        }
-
-        return response.json()
-      })
+    fetchCatalogLandingPage(language)
       .then((payload) => {
         if (payload?.data) {
           setListingContent(normalizeListingContent(payload.data, language))
@@ -330,6 +300,15 @@ export default function AllProductsPage() {
       source_page: '/all-products',
     })
 
+    trackEvent('product_detail_whatsapp_click', {
+      product_name: product.name,
+      product_category: product.category,
+      product_size: 'M',
+      product_price: product.price,
+      button_location: 'catalog-card',
+      source_page: '/all-products',
+    })
+
     try {
       const quote = await fetchCatalogPriceQuote({
         productSlug: product.slug,
@@ -361,11 +340,11 @@ export default function AllProductsPage() {
     }
   }
 
-  const handleAddToCart = (product) => {
-    addCartItem(product, {
+  const handleAddToCart = (product, event) => {
+    addToCart(product, {
       size: 'M',
       quantity: 1,
-    })
+    }, event)
 
     trackEvent('cart_add_item', {
       source_page: '/all-products',
@@ -374,6 +353,17 @@ export default function AllProductsPage() {
       product_size: 'M',
       quantity: 1,
     })
+
+    const ga4Item = buildGa4ItemFromProduct(product, 1)
+
+    if (ga4Item) {
+      trackEcommerceEvent('add_to_cart', {
+        currency: product?.pricing?.currency || 'IDR',
+        value: ga4Item.price,
+        items: [ga4Item],
+        source_page: '/all-products',
+      })
+    }
   }
 
   const handleFooterWhatsApp = (message) => {
@@ -412,7 +402,7 @@ export default function AllProductsPage() {
   }
 
   return (
-    <div className="app-shell" ref={rootRef}>
+    <div className={isCssStore() ? 'app-shell css-store-shell' : 'app-shell'} ref={rootRef}>
       <SiteHeader
         brandHref="/"
         navGroups={listingContent.navGroups}
@@ -420,18 +410,22 @@ export default function AllProductsPage() {
         utilityLinks={listingContent.utilityLinks}
         utilityMessage={listingContent.utilityMessage}
         cartItemCount={itemCount}
-        primaryActionLabel={t('allProducts.contactAhr')}
-        onPrimaryAction={() => handleFooterWhatsApp(t('allProducts.footerMessage'))}
+        {...getRetailHeaderActions({
+          primaryActionLabel: t('allProducts.contactAhr'),
+          onPrimaryAction: () => handleFooterWhatsApp(t('allProducts.footerMessage')),
+        })}
       />
 
-      <main className="all-products-page">
+      <main className={isCssStore() ? 'all-products-page css-store-page' : 'all-products-page'}>
         <section className="content-block section-plain all-products-hero" data-products-hero>
-          <div className="all-products-breadcrumb">
-            <Link to="/">
-              <ArrowLeft size={16} />
-              <span>{t('common.backToHome')}</span>
-            </Link>
-          </div>
+          {!isCssStore() ? (
+            <div className="all-products-breadcrumb">
+              <Link to="/">
+                <ArrowLeft size={16} />
+                <span>{t('common.backToHome')}</span>
+              </Link>
+            </div>
+          ) : null}
 
           <CategoryFilterHeader
             categories={categoryNavigationItems}
@@ -439,7 +433,7 @@ export default function AllProductsPage() {
             activeCategoryLabel={activeCategory?.label}
             productCount={visibleProducts.length}
             getCategoryHref={(category) => getCategoryRoute(category)}
-            showHeading={false}
+            showHeading={isCssStore()}
           />
         </section>
 
@@ -481,6 +475,7 @@ export default function AllProductsPage() {
                   onClick={() => handleProductOpen(product)}
                 >
                   <div className="product-media">
+                    {product.isFeatured ? <ProductFeaturedBadge /> : null}
                     <img
                       className="product-image product-image-primary"
                       src={product.image}
@@ -515,7 +510,7 @@ export default function AllProductsPage() {
                     className="all-products-cart"
                     type="button"
                     aria-label={`${t('cart.addToCart')} ${product.name}`}
-                    onClick={() => handleAddToCart(product)}
+                    onClick={(event) => handleAddToCart(product, event)}
                   >
                     <ShoppingCart size={16} />
                     <span>{t('cart.addShort')}</span>

@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useState } from 'react'
 import { ArrowLeft, CreditCard, LockKeyhole, MapPin, Package, Store, Wallet } from 'lucide-react'
 import OrderShipmentTracking from './components/orders/OrderShipmentTracking'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import './App.css'
 import CookieConsentBanner from './components/layout/CookieConsentBanner'
 import SiteFooter from './components/layout/SiteFooter'
 import SiteHeader from './components/layout/SiteHeader'
-import { fetchCustomerOrder, getApiUrl, syncCustomerOrderShipment } from './lib/api'
+import { fetchCatalogLandingPage, fetchCustomerOrder, fetchGuestOrder, fetchCatalogShippingCountries, getApiUrl, syncCustomerOrderShipment } from './lib/api'
 import { useCart } from './lib/cart.jsx'
 import { getConsentPreferences, setConsentPreferences } from './lib/consent'
 import { useCustomer } from './lib/customer.jsx'
@@ -14,9 +14,10 @@ import { useLanguage } from './lib/i18n.jsx'
 import { getLandingChromeContent } from './lib/landingContent'
 import { useMidtransPayment } from './lib/useMidtransPayment'
 import CheckoutTermsAgreement from './components/checkout/CheckoutTermsAgreement'
+import PostPurchaseReviewPrompt from './components/cart/PostPurchaseReviewPrompt'
 import { formatCurrencyAmount } from './lib/price'
-import { savePendingPayment } from './lib/pendingPayment'
-import useDocumentTitle from './lib/useDocumentTitle'
+import { getPendingPayment, savePendingPayment } from './lib/pendingPayment'
+import { getCountryLabel } from './lib/shippingCountries'
 
 function formatOrderAmount(amountMinor, currency) {
   if (amountMinor === null || amountMinor === undefined) {
@@ -45,12 +46,13 @@ function buildWhatsAppUrl(phoneNumber, message) {
 
 export default function CustomerOrderDetailPage() {
   const { orderNumber } = useParams()
+  const [searchParams] = useSearchParams()
   const navigate = useNavigate()
   const { language, t } = useLanguage()
   const { itemCount } = useCart()
   const { customer, isLoading: customerLoading, refreshCustomer } = useCustomer()
   const [sessionExpired, setSessionExpired] = useState(false)
-  const { payOrder, isSnapReady } = useMidtransPayment()
+  const { payOrder, isSnapReady } = useMidtransPayment({ preload: true })
   const [pageContent, setPageContent] = useState(() =>
     getLandingChromeContent({}, { hashPrefix: '/', locale: language }),
   )
@@ -61,6 +63,11 @@ export default function CustomerOrderDetailPage() {
   const [termsAccepted, setTermsAccepted] = useState(false)
   const [termsError, setTermsError] = useState('')
   const [consentPreferences, setConsentPreferencesState] = useState(() => getConsentPreferences())
+
+  const urlToken = searchParams.get('token')?.trim() || ''
+  const guestToken = urlToken || getPendingPayment(orderNumber)?.paymentAccessToken || ''
+  const hasGuestAccess = Boolean(guestToken)
+  const isGuestView = hasGuestAccess && !customer
 
   useDocumentTitle(
     language === 'en' ? 'Order Detail' : 'Detail Pesanan',
@@ -85,7 +92,16 @@ export default function CustomerOrderDetailPage() {
     setSessionExpired(false)
 
     try {
-      const data = await fetchCustomerOrder(orderNumber)
+      let data = null
+
+      if (customer) {
+        data = await fetchCustomerOrder(orderNumber)
+      } else if (hasGuestAccess) {
+        data = await fetchGuestOrder(orderNumber, guestToken)
+      } else {
+        return
+      }
+
       setOrder(data)
 
       if (data?.order_number && data?.payment_access_token) {
@@ -93,7 +109,7 @@ export default function CustomerOrderDetailPage() {
       }
     } catch (error) {
       const message = error.message || ''
-      const expired = message.toLowerCase().includes('unauthenticated')
+      const expired = !hasGuestAccess && message.toLowerCase().includes('unauthenticated')
       setSessionExpired(expired)
       setLoadError(expired ? '' : message)
       setOrder(null)
@@ -102,7 +118,7 @@ export default function CustomerOrderDetailPage() {
         await refreshCustomer()
       }
     }
-  }, [orderNumber, refreshCustomer])
+  }, [customer, guestToken, hasGuestAccess, orderNumber, refreshCustomer])
 
   const handleRefreshTracking = useCallback(async () => {
     if (!orderNumber) {
@@ -141,10 +157,7 @@ export default function CustomerOrderDetailPage() {
   }, [loadOrder, order, orderNumber])
 
   useEffect(() => {
-    fetch(getApiUrl(`/api/catalog/landing-page?locale=${language}`), {
-      headers: { Accept: 'application/json' },
-    })
-      .then((response) => (response.ok ? response.json() : null))
+    fetchCatalogLandingPage(language)
       .then((payload) => {
         if (payload?.data) {
           setPageContent(getLandingChromeContent(payload.data, { hashPrefix: '/', locale: language }))
@@ -156,12 +169,14 @@ export default function CustomerOrderDetailPage() {
   }, [language])
 
   useEffect(() => {
-    if (!customer || customerLoading) {
+    if (customerLoading) {
       return
     }
 
-    loadOrder()
-  }, [customer, customerLoading, loadOrder])
+    if (customer || hasGuestAccess) {
+      loadOrder()
+    }
+  }, [customer, customerLoading, hasGuestAccess, loadOrder])
 
   const handlePayAgain = async () => {
     if (!order?.can_pay || !order?.order_number) {
@@ -185,7 +200,7 @@ export default function CustomerOrderDetailPage() {
     })
 
     try {
-      await payOrder(order.order_number, order.payment_access_token, {
+      await payOrder(order.order_number, order.payment_access_token || guestToken, {
         onSuccess: () => {
           setPaymentStatus({ state: 'success', message: '' })
           navigate(`/payment/success?order=${order.order_number}`)
@@ -210,7 +225,7 @@ export default function CustomerOrderDetailPage() {
           })
           loadOrder()
         },
-      })
+      }, { paymentSource: 'order_detail' })
 
       setPaymentStatus({
         state: 'idle',
@@ -235,22 +250,36 @@ export default function CustomerOrderDetailPage() {
       <main className="cart-page">
         <section className="content-block section-plain cart-hero">
           <div className="all-products-breadcrumb">
-            <Link to="/akun">
+            <Link to={isGuestView ? '/' : '/akun'}>
               <ArrowLeft size={16} />
-              <span>{language === 'en' ? 'Back to account' : 'Kembali ke akun'}</span>
+              <span>
+                {isGuestView
+                  ? language === 'en'
+                    ? 'Back to shop'
+                    : 'Kembali ke toko'
+                  : language === 'en'
+                    ? 'Back to account'
+                    : 'Kembali ke akun'}
+              </span>
             </Link>
           </div>
-          <OrderDetailHeading language={language} />
+          <OrderDetailHeading language={language} isGuestView={isGuestView} />
         </section>
 
         <section className="content-block section-soft">
           <section className="customer-order-detail-shell">
-            {!customerLoading && (!customer || sessionExpired) ? (
+            {!customerLoading && !customer && !hasGuestAccess ? (
               <SessionPrompt language={language} t={t} expired={sessionExpired} />
-            ) : customerLoading || (!order && !loadError && !sessionExpired) ? (
+            ) : customerLoading || (!order && !loadError && (customer || hasGuestAccess)) ? (
               <p className="cart-auth-copy">{t('cart.authLoading')}</p>
             ) : loadError ? (
-              <ErrorState language={language} loadError={loadError} />
+              <ErrorState
+                language={language}
+                loadError={loadError}
+                isGuestView={isGuestView}
+                whatsappNumber={pageContent.brand?.whatsapp_number}
+                orderNumber={orderNumber}
+              />
             ) : (
               <OrderDetailContent
                 order={order}
@@ -269,6 +298,8 @@ export default function CustomerOrderDetailPage() {
                   }
                 }}
                 termsError={termsError}
+                whatsappNumber={pageContent.brand?.whatsapp_number}
+                isGuestView={isGuestView}
               />
             )}
           </section>
@@ -290,6 +321,8 @@ function OrderDetailContent({
   termsAccepted,
   onTermsAcceptedChange,
   termsError,
+  whatsappNumber,
+  isGuestView,
 }) {
   return (
     <>
@@ -387,11 +420,28 @@ function OrderDetailContent({
       ) : null}
 
       {order.is_payment_expired ? (
-        <p className="cart-status error">
-          {language === 'en'
-            ? 'This payment link has expired. Please create a new order if you still want to purchase.'
-            : 'Batas waktu pembayaran sudah habis. Silakan buat order baru jika masih ingin memesan.'}
-        </p>
+        <div className="customer-order-expired-help">
+          <p className="cart-status error">
+            {language === 'en'
+              ? 'This payment link has expired. Please create a new order if you still want to purchase.'
+              : 'Batas waktu pembayaran sudah habis. Silakan buat order baru jika masih ingin memesan.'}
+          </p>
+          {whatsappNumber ? (
+            <a
+              className="cta-button cta-button-dark customer-order-expired-whatsapp"
+              href={buildWhatsAppUrl(
+                whatsappNumber,
+                language === 'en'
+                  ? `Hi AHR, my order ${order.order_number} payment expired. Can you help me reorder?`
+                  : `Halo AHR, pembayaran order ${order.order_number} sudah kedaluwarsa. Bisa bantu saya pesan ulang?`,
+              )}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              {language === 'en' ? 'Chat on WhatsApp' : 'Chat via WhatsApp'}
+            </a>
+          ) : null}
+        </div>
       ) : null}
 
       <OrderPaymentInfo order={order} language={language} />
@@ -439,20 +489,47 @@ function OrderDetailContent({
           ) : null}
         </div>
       ) : null}
+
+      {['confirmed', 'processing', 'completed'].includes(order.status) || order.paid_at ? (
+        <PostPurchaseReviewPrompt
+          orderNumber={order.order_number}
+          paymentAccessToken={order.payment_access_token}
+        />
+      ) : null}
+
+      {isGuestView ? (
+        <p className="customer-order-guest-hint">
+          {language === 'en'
+            ? 'Bookmark this page or save the link from your checkout email to return and pay later.'
+            : 'Simpan halaman ini atau link dari checkout agar bisa kembali dan bayar nanti.'}
+        </p>
+      ) : null}
     </>
   )
 }
 
 function OrderFulfillmentInfo({ order, language }) {
+  const [countryOptions, setCountryOptions] = useState([])
+
+  useEffect(() => {
+    fetchCatalogShippingCountries(language)
+      .then((countries) => setCountryOptions(Array.isArray(countries) ? countries : []))
+      .catch(() => setCountryOptions([]))
+  }, [language])
+
   const isDelivery = order.fulfillment_method === 'delivery'
   const shipping = order.shipping
+  const isInternational = shipping?.country_code && shipping.country_code !== 'ID'
 
   if (!isDelivery && order.fulfillment_method !== 'pickup') {
     return null
   }
 
   const courierLine = [shipping?.courier_name, shipping?.service_name].filter(Boolean).join(' · ')
-  const regionParts = [shipping?.district, shipping?.city, shipping?.province].filter(Boolean)
+  const regionParts = isInternational
+    ? [shipping?.city, shipping?.province, shipping?.postal_code].filter(Boolean)
+    : [shipping?.district, shipping?.city, shipping?.province].filter(Boolean)
+  const countryLabel = isInternational ? getCountryLabel(countryOptions, shipping.country_code) : null
 
   return (
     <section className="customer-order-fulfillment">
@@ -482,6 +559,9 @@ function OrderFulfillmentInfo({ order, language }) {
           </p>
           {regionParts.length > 0 ? (
             <p className="customer-order-fulfillment-region">{regionParts.join(', ')}</p>
+          ) : null}
+          {countryLabel ? (
+            <p className="customer-order-fulfillment-region">{countryLabel}</p>
           ) : null}
           {courierLine ? (
             <p className="customer-order-fulfillment-courier">
@@ -593,7 +673,7 @@ function ShippingFeeRow({ order, language }) {
   )
 }
 
-function OrderDetailHeading({ language }) {
+function OrderDetailHeading({ language, isGuestView }) {
   return (
     <div className="section-heading heading-inline cart-heading">
       <div>
@@ -601,9 +681,13 @@ function OrderDetailHeading({ language }) {
         <h1>{language === 'en' ? 'Order Detail' : 'Detail Pesanan'}</h1>
       </div>
       <p>
-        {language === 'en'
-          ? 'Check payment status and pay again without creating a new order.'
-          : 'Cek status pembayaran dan bayar ulang tanpa membuat order baru.'}
+        {isGuestView
+          ? language === 'en'
+            ? 'Complete payment here without logging in. Your link is valid until the payment deadline.'
+            : 'Selesaikan pembayaran di sini tanpa login. Link ini berlaku sampai batas waktu bayar.'
+          : language === 'en'
+            ? 'Check payment status and pay again without creating a new order.'
+            : 'Cek status pembayaran dan bayar ulang tanpa membuat order baru.'}
       </p>
     </div>
   )
@@ -640,7 +724,7 @@ function SessionPrompt({ language, t, expired }) {
   )
 }
 
-function ErrorState({ language, loadError }) {
+function ErrorState({ language, loadError, isGuestView, whatsappNumber, orderNumber }) {
   return (
     <div className="customer-account-notice customer-account-notice-muted">
       <div className="customer-account-notice-icon">
@@ -650,9 +734,31 @@ function ErrorState({ language, loadError }) {
         <h2>{language === 'en' ? 'Order not found' : 'Pesanan tidak ditemukan'}</h2>
         <p>{loadError}</p>
       </div>
-      <Link className="cta-button cta-button-dark" to="/akun">
-        {language === 'en' ? 'Back to account' : 'Kembali ke akun'}
-      </Link>
+      {whatsappNumber && isGuestView ? (
+        <a
+          className="cta-button cta-button-dark"
+          href={buildWhatsAppUrl(
+            whatsappNumber,
+            language === 'en'
+              ? `Hi AHR, I need help accessing order ${orderNumber || ''}.`
+              : `Halo AHR, saya butuh bantuan mengakses order ${orderNumber || ''}.`,
+          )}
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          {language === 'en' ? 'Chat on WhatsApp' : 'Chat via WhatsApp'}
+        </a>
+      ) : (
+        <Link className="cta-button cta-button-dark" to={isGuestView ? '/' : '/akun'}>
+          {isGuestView
+            ? language === 'en'
+              ? 'Back to shop'
+              : 'Kembali ke toko'
+            : language === 'en'
+              ? 'Back to account'
+              : 'Kembali ke akun'}
+        </Link>
+      )}
     </div>
   )
 }

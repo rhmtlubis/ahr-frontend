@@ -49,3 +49,13 @@ export function getPendingPayment(orderNumber) {
 export function clearPendingPayment() {
   sessionStorage.removeItem(STORAGE_KEY)
 }
+
+export function buildOrderDetailPath(orderNumber, paymentAccessToken) {
+  const base = `/akun/pesanan/${encodeURIComponent(orderNumber)}`
+
+  if (!paymentAccessToken) {
+    return base
+  }
+
+  return `${base}?token=${encodeURIComponent(paymentAccessToken)}`
+}

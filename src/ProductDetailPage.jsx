@@ -2,12 +2,24 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { ChevronDown, ChevronLeft, ChevronRight, MessageCircleMore, Minus, MoveLeft, Plus, ShoppingCart, X } from 'lucide-react'
 import { Link, useLocation, useParams } from 'react-router-dom'
 import './App.css'
-import { normalizeProductDetail } from './lib/cmsContent.js'
-import { initializeAnalyticsAndTrackCurrentPage, trackEvent, updateConsent } from './lib/analytics'
-import { fetchCatalogPriceQuote, getApiUrl, getPreferredCurrency } from './lib/api'
+import { normalizeCatalogProduct, normalizeProductDetail } from './lib/cmsContent.js'
+import {
+  buildGa4ItemFromProduct,
+  initializeAnalyticsAndTrackCurrentPage,
+  trackEcommerceEvent,
+  trackEvent,
+  updateConsent,
+} from './lib/analytics'
+import { fetchCatalogPriceQuote, fetchCatalogLandingPage, fetchProductReviews, getApiUrl, getCatalogProductUrl, getCatalogRelatedProductsUrl, getPreferredCurrency } from './lib/api'
+import { buildCartAddFeedback } from './lib/cartAddFeedback.js'
 import { getProductSizeOptions, useCart } from './lib/cart.jsx'
 import { buildProductStructuredData } from './lib/structuredData'
 import howToMeasureImage from './assets/size-guide/how-to-measure.png'
+import ProductFeaturedBadge from './components/catalog/ProductFeaturedBadge'
+import ProductRelatedGrid from './components/catalog/ProductRelatedGrid'
+import ProductSocialProof from './components/catalog/ProductSocialProof'
+import CssProductTrustPanel from './components/css/CssProductTrustPanel.jsx'
+import CssTrustBar from './components/css/CssTrustBar.jsx'
 import ProductPrice from './components/catalog/ProductPrice'
 import CookieConsentBanner from './components/layout/CookieConsentBanner'
 import SiteFooter from './components/layout/SiteFooter'
@@ -15,6 +27,7 @@ import SiteHeader from './components/layout/SiteHeader'
 import { getConsentPreferences, setConsentPreferences } from './lib/consent'
 import { useLanguage } from './lib/i18n.jsx'
 import { getLandingChromeContent } from './lib/landingContent'
+import { getRetailHeaderActions, isCssStore } from './lib/storeConfig'
 import { clearPersonalizationData, recordProductView } from './lib/personalization'
 import useDocumentTitle from './lib/useDocumentTitle'
 
@@ -77,6 +90,10 @@ export default function ProductDetailPage() {
   const [chromeContent, setChromeContent] = useState(() =>
     getLandingChromeContent({}, { hashPrefix: '/', locale: language }),
   )
+  const [landingTestimonials, setLandingTestimonials] = useState([])
+  const [landingHeroStats, setLandingHeroStats] = useState([])
+  const [organicReviews, setOrganicReviews] = useState([])
+  const [relatedProducts, setRelatedProducts] = useState([])
   const [selectedSize, setSelectedSize] = useState('M')
   const [sizeGuideOpen, setSizeGuideOpen] = useState(false)
   const [showAllImages, setShowAllImages] = useState(false)
@@ -91,7 +108,6 @@ export default function ProductDetailPage() {
   const [quoteStatus, setQuoteStatus] = useState('idle')
   const [cartQuantity, setCartQuantity] = useState(1)
   const [mixedSizeSelections, setMixedSizeSelections] = useState(['M'])
-  const [cartNotice, setCartNotice] = useState('')
   const [consentPreferences, setConsentPreferencesState] = useState({
     analytics: 'unknown',
     personalization: 'unknown',
@@ -177,11 +193,57 @@ export default function ProductDetailPage() {
   useEffect(() => {
     let cancelled = false
 
+    fetchProductReviews(productSlug)
+      .then((reviews) => {
+        if (!cancelled) {
+          setOrganicReviews(reviews)
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setOrganicReviews([])
+        }
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [productSlug])
+
+  useEffect(() => {
+    let cancelled = false
+
+    fetch(getApiUrl(getCatalogRelatedProductsUrl(productSlug, language)), {
+      headers: {
+        Accept: 'application/json',
+      },
+    })
+      .then((response) => (response.ok ? response.json() : null))
+      .then((payload) => {
+        if (!cancelled) {
+          const items = Array.isArray(payload?.data) ? payload.data : []
+          setRelatedProducts(items.map((item, index) => normalizeCatalogProduct(item, index)))
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setRelatedProducts([])
+        }
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [language, productSlug])
+
+  useEffect(() => {
+    let cancelled = false
+
     setProduct(initialProduct)
     setStatus(initialProduct ? 'ready' : 'loading')
 
     Promise.all([
-      fetch(getApiUrl(`/api/catalog/products/${productSlug}?locale=${language}`), {
+      fetch(getApiUrl(getCatalogProductUrl(productSlug, language)), {
         headers: {
           Accept: 'application/json',
         },
@@ -192,13 +254,7 @@ export default function ProductDetailPage() {
 
         return response.json()
       }),
-      fetch(getApiUrl(`/api/catalog/landing-page?locale=${language}`), {
-        headers: {
-          Accept: 'application/json',
-        },
-      })
-        .then((response) => (response.ok ? response.json() : null))
-        .catch(() => null),
+      fetchCatalogLandingPage(language).catch(() => null),
     ])
       .then(([productPayload, landingPayload]) => {
         if (cancelled) {
@@ -209,7 +265,10 @@ export default function ProductDetailPage() {
         setStatus('ready')
 
         if (landingPayload?.data) {
-          setChromeContent(getLandingChromeContent(landingPayload.data, { hashPrefix: '/', locale: language }))
+          const landingData = landingPayload.data
+          setChromeContent(getLandingChromeContent(landingData, { hashPrefix: '/', locale: language }))
+          setLandingTestimonials(Array.isArray(landingData.testimonials) ? landingData.testimonials : [])
+          setLandingHeroStats(Array.isArray(landingData.hero?.stats) ? landingData.hero.stats : [])
         }
       })
       .catch(() => {
@@ -240,8 +299,26 @@ export default function ProductDetailPage() {
     setHasAnimatedEntry(false)
     setCartQuantity(1)
     setMixedSizeSelections(['M'])
-    setCartNotice('')
   }, [productSlug])
+
+  useEffect(() => {
+    if (status !== 'ready' || !product) {
+      return
+    }
+
+    const ga4Item = buildGa4ItemFromProduct(product, 1)
+
+    if (!ga4Item) {
+      return
+    }
+
+    trackEcommerceEvent('view_item', {
+      currency: product?.pricing?.currency || 'IDR',
+      value: ga4Item.price,
+      items: [ga4Item],
+      source_page: `/produk/${product.slug}`,
+    })
+  }, [product, status])
 
   useEffect(() => {
     setMixedSizeSelections((current) => {
@@ -440,7 +517,7 @@ export default function ProductDetailPage() {
     })
   }
 
-  const handleAddToCart = () => {
+  const handleAddToCart = (event) => {
     const sizeSelections =
       cartQuantity > 1
         ? mixedSizeSelections.map((size) => String(size || selectedSize).trim() || selectedSize)
@@ -450,11 +527,16 @@ export default function ProductDetailPage() {
 
       return counts
     }, {})
-    const addedItems = Object.entries(sizeBreakdown)
-      .map(([size, quantity]) =>
+    const sizeEntries = Object.entries(sizeBreakdown)
+    const addedItems = sizeEntries
+      .map(([size, quantity], index) =>
         addCartItem(product, {
           size,
           quantity,
+          feedback:
+            index === sizeEntries.length - 1
+              ? buildCartAddFeedback(event) || {}
+              : false,
         }),
       )
       .filter(Boolean)
@@ -471,21 +553,22 @@ export default function ProductDetailPage() {
       quantity: cartQuantity,
     })
 
-    setCartNotice(
-      cartQuantity > 1
-        ? `${cartQuantity} pcs ${product.name} sudah masuk cart dengan size: ${Object.entries(sizeBreakdown)
-            .map(([size, quantity]) => `${size} (${quantity} pcs)`)
-            .join(', ')}.`
-        : t('cart.addedNotice', {
-            quantity: cartQuantity,
-            name: product.name,
-            size: selectedSize,
-          }),
-    )
+    const ga4Item = buildGa4ItemFromProduct(product, cartQuantity)
+
+    if (ga4Item) {
+      trackEcommerceEvent('add_to_cart', {
+        currency: product?.pricing?.currency || 'IDR',
+        value: ga4Item.price !== undefined ? ga4Item.price * cartQuantity : undefined,
+        items: [ga4Item],
+        source_page: `/produk/${product.slug}`,
+      })
+    }
   }
 
   const handleInquiry = async () => {
     setQuoteStatus('loading')
+
+    initializeAnalyticsAndTrackCurrentPage()
 
     trackEvent('product_detail_whatsapp_click', {
       product_name: product.name,
@@ -544,7 +627,17 @@ export default function ProductDetailPage() {
           window.location.href = '/#final-cta'
         }}
         onUtilityInteraction={(label, surface) => trackEvent('nav_click', { nav_item: label, surface })}
-        primaryActionLabel={t('common.consult')}
+        {...getRetailHeaderActions({
+          primaryActionLabel: t('common.consult'),
+          onPrimaryAction: () => {
+            trackEvent('nav_click', {
+              nav_item: 'konsultasi',
+              surface: 'header-cta',
+              product_name: product.name,
+            })
+            window.location.href = '/#final-cta'
+          },
+        })}
       />
 
       <main className="product-detail-shell">
@@ -615,6 +708,7 @@ export default function ProductDetailPage() {
               <p className="product-detail-category">
                 {product.audience} • {product.category}
               </p>
+              {product.isFeatured ? <ProductFeaturedBadge className="product-detail-featured-badge" /> : null}
               <h1>{product.name}</h1>
               <ProductPrice product={product} variant="detail" />
 
@@ -717,7 +811,7 @@ export default function ProductDetailPage() {
               ) : null}
 
               <div className="product-detail-actions">
-                <button className="product-detail-primary" type="button" onClick={handleAddToCart}>
+                <button className="product-detail-primary" type="button" onClick={(event) => handleAddToCart(event)}>
                   <ShoppingCart size={18} />
                   <span>{t('cart.addToCart')}</span>
                 </button>
@@ -732,16 +826,13 @@ export default function ProductDetailPage() {
                 </button>
               </div>
 
-              {cartNotice ? (
-                <p className="product-detail-cart-notice">
-                  {cartNotice} <Link to="/cart">{t('cart.viewCart')}</Link>
-                </p>
-              ) : null}
             </div>
           </aside>
         </section>
 
         <section className="product-detail-content">
+          {isCssStore() ? <CssTrustBar compact /> : null}
+
           <div className="product-detail-accordion-list">
             <ProductAccordion
               items={product.description}
@@ -763,6 +854,16 @@ export default function ProductDetailPage() {
               title={t('common.care')}
             />
           </div>
+
+          {isCssStore() ? <CssProductTrustPanel product={product} /> : null}
+
+          <ProductSocialProof
+            cmsTestimonials={landingTestimonials}
+            heroStats={landingHeroStats}
+            organicReviews={organicReviews}
+          />
+
+          <ProductRelatedGrid products={relatedProducts} />
         </section>
       </main>
 

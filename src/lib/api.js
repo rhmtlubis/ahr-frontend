@@ -1,4 +1,20 @@
 import axios from 'axios'
+import { getCatalogLandingPageUrl, getDisplayCurrency } from './currency.js'
+
+export {
+  buildCatalogQuery,
+  getCatalogLandingPageUrl,
+  getCatalogProductUrl,
+  getCatalogRelatedProductsUrl,
+  getDisplayCurrency,
+  getPaymentCurrency,
+  getPreferredCurrency,
+  getItemDisplayAmounts,
+  getItemPaymentAmounts,
+  getItemDisplayCurrency,
+  formatExchangeRateNote,
+  detectInitialLanguage,
+} from './currency.js'
 
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL?.replace(/\/$/, '') || ''
 
@@ -15,6 +31,7 @@ export const apiClient = axios.create({
 })
 
 let unauthorizedHandler = null
+let csrfCookiePromise = null
 
 export function setUnauthorizedHandler(handler) {
   unauthorizedHandler = handler
@@ -22,9 +39,17 @@ export function setUnauthorizedHandler(handler) {
 
 apiClient.interceptors.response.use(
   (response) => response,
-  (error) => {
+  async (error) => {
     const status = error?.response?.status
     const skipLogout = Boolean(error?.config?.skipUnauthorizedHandler)
+    const originalRequest = error?.config
+
+    if (status === 419 && originalRequest && !originalRequest.__csrfRetried) {
+      originalRequest.__csrfRetried = true
+      csrfCookiePromise = null
+      await ensureCsrfCookie()
+      return apiClient.request(originalRequest)
+    }
 
     if (status === 401 && !skipLogout) {
       unauthorizedHandler?.(error)
@@ -47,18 +72,34 @@ export function getBackendUrl(path) {
 }
 
 export async function ensureCsrfCookie() {
-  await apiClient.get('/sanctum/csrf-cookie')
+  if (!csrfCookiePromise) {
+    csrfCookiePromise = apiClient.get('/sanctum/csrf-cookie').finally(() => {
+      csrfCookiePromise = null
+    })
+  }
+
+  await csrfCookiePromise
 }
 
-export function getPreferredCurrency(locale = 'id') {
-  return locale === 'en' ? 'USD' : 'IDR'
+export async function fetchCatalogLandingPage(locale = 'id') {
+  const response = await fetch(getApiUrl(getCatalogLandingPageUrl(locale)), {
+    headers: {
+      Accept: 'application/json',
+    },
+  })
+
+  if (!response.ok) {
+    throw new Error('Failed to load landing page content')
+  }
+
+  return response.json()
 }
 
 export async function fetchCatalogPriceQuote({
   productSlug,
   quantity = 1,
   locale = 'id',
-  currency = getPreferredCurrency(locale),
+  currency = getDisplayCurrency(locale),
   expectedTotalAmountMinor,
 }) {
   await ensureCsrfCookie()
@@ -163,6 +204,22 @@ export async function fetchCatalogShippingRates(payload) {
   }
 }
 
+export async function fetchCatalogShippingCountries(locale = 'id') {
+  const response = await fetch(getApiUrl(`/api/catalog/shipping/countries?locale=${locale}`), {
+    headers: {
+      Accept: 'application/json',
+    },
+  })
+
+  const payload = await response.json().catch(() => null)
+
+  if (!response.ok) {
+    throw new Error(payload?.message || 'Gagal memuat daftar negara')
+  }
+
+  return payload?.data || []
+}
+
 async function fetchCatalogLocationOptions(path, params = {}) {
   const searchParams = new URLSearchParams(
     Object.entries(params).filter(([, value]) => value !== undefined && value !== null && value !== ''),
@@ -194,12 +251,13 @@ export function fetchCatalogDistricts(cityCode) {
   return fetchCatalogLocationOptions('/api/catalog/locations/districts', { city_code: cityCode })
 }
 
-export async function createPaymentTransaction(orderNumber, paymentAccessToken) {
+export async function createPaymentTransaction(orderNumber, paymentAccessToken, options = {}) {
   await ensureCsrfCookie()
 
   try {
     const response = await apiClient.post(`/api/catalog/orders/${orderNumber}/pay`, {
       token: paymentAccessToken,
+      ...(options.paymentSource ? { payment_source: options.paymentSource } : {}),
     })
     return response.data?.data || null
   } catch (error) {
@@ -217,6 +275,23 @@ export async function fetchPaymentStatus(orderNumber, paymentAccessToken) {
     return response.data?.data || null
   } catch (error) {
     throw new Error(resolveApiError(error, 'Gagal memuat status pembayaran'))
+  }
+}
+
+export async function fetchOrderConversionContext(orderNumber, paymentAccessToken) {
+  try {
+    const response = await apiClient.get(`/api/catalog/orders/${orderNumber}/conversion-context`, {
+      params: paymentAccessToken ? { token: paymentAccessToken } : undefined,
+      headers: paymentAccessToken
+        ? {
+            'X-Payment-Access-Token': paymentAccessToken,
+          }
+        : undefined,
+    })
+
+    return response.data?.data || null
+  } catch (error) {
+    throw new Error(resolveApiError(error, 'Gagal memuat konteks konversi'))
   }
 }
 
@@ -384,6 +459,29 @@ export async function fetchCustomerOrder(orderNumber) {
   }
 }
 
+export async function fetchGuestOrder(orderNumber, paymentAccessToken) {
+  if (!orderNumber || !paymentAccessToken) {
+    throw new Error('Token akses pesanan tidak ditemukan.')
+  }
+
+  try {
+    const response = await apiClient.get(`/api/catalog/orders/${encodeURIComponent(orderNumber)}`, {
+      params: { token: paymentAccessToken },
+      headers: {
+        'X-Payment-Access-Token': paymentAccessToken,
+      },
+    })
+
+    return response.data?.data || null
+  } catch (error) {
+    if (error?.response?.status === 422) {
+      throw new Error(resolveApiError(error, 'Link pesanan tidak valid atau sudah kedaluwarsa.'))
+    }
+
+    throw new Error(resolveApiError(error, 'Gagal memuat detail pesanan'))
+  }
+}
+
 export async function syncCustomerOrderShipment(orderNumber) {
   await ensureCsrfCookie()
 
@@ -411,13 +509,88 @@ export async function syncCustomerOrderShipment(orderNumber) {
   }
 }
 
-export async function createPaymentTransactionForCustomer(orderNumber) {
+export async function createPaymentTransactionForCustomer(orderNumber, options = {}) {
   await ensureCsrfCookie()
 
   try {
-    const response = await apiClient.post(`/api/catalog/orders/${orderNumber}/pay`)
+    const response = await apiClient.post(`/api/catalog/orders/${orderNumber}/pay`, {
+      ...(options.paymentSource ? { payment_source: options.paymentSource } : {}),
+    })
     return response.data?.data || null
   } catch (error) {
     throw new Error(resolveApiError(error, 'Gagal membuat transaksi pembayaran'))
+  }
+}
+
+export async function saveCatalogLead(payload) {
+  await ensureCsrfCookie()
+
+  try {
+    const response = await apiClient.post('/api/catalog/leads', payload)
+    return response.data?.data || null
+  } catch (error) {
+    throw new Error(resolveApiError(error, 'Gagal menyimpan lead'))
+  }
+}
+
+export async function saveB2BLead(payload) {
+  await ensureCsrfCookie()
+
+  try {
+    const response = await apiClient.post('/api/b2b/leads', payload)
+    return response.data?.data || null
+  } catch (error) {
+    throw new Error(resolveApiError(error, 'Gagal menyimpan lead B2B'))
+  }
+}
+
+export async function fetchProductReviews(productSlug) {
+  try {
+    const response = await apiClient.get(`/api/catalog/products/${productSlug}/reviews`)
+    return Array.isArray(response.data?.data) ? response.data.data : []
+  } catch {
+    return []
+  }
+}
+
+export async function fetchOrderReviewContext(orderNumber, paymentAccessToken) {
+  await ensureCsrfCookie()
+
+  try {
+    const response = await apiClient.get(`/api/catalog/orders/${orderNumber}/reviews/context`, {
+      params: paymentAccessToken ? { token: paymentAccessToken } : undefined,
+      headers: paymentAccessToken ? { 'X-Payment-Access-Token': paymentAccessToken } : undefined,
+    })
+
+    return response.data?.data || { eligible: false, items: [] }
+  } catch (error) {
+    throw new Error(resolveApiError(error, 'Gagal memuat form ulasan'))
+  }
+}
+
+export async function submitProductReview(orderNumber, { orderItemId, rating, body, paymentAccessToken }) {
+  await ensureCsrfCookie()
+
+  try {
+    const response = await apiClient.post(
+      `/api/catalog/orders/${orderNumber}/reviews`,
+      {
+        order_item_id: orderItemId,
+        rating,
+        body,
+        ...(paymentAccessToken ? { token: paymentAccessToken } : {}),
+      },
+      paymentAccessToken
+        ? {
+            headers: {
+              'X-Payment-Access-Token': paymentAccessToken,
+            },
+          }
+        : undefined,
+    )
+
+    return response.data?.data || null
+  } catch (error) {
+    throw new Error(resolveApiError(error, 'Gagal mengirim ulasan'))
   }
 }

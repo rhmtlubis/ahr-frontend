@@ -9,6 +9,8 @@ export const fallbackSiteData = {
     'Kenali AHR sebagai perusahaan konveksi jersey custom, apparel sublimasi, dan seragam printing untuk brand, tim, dan instansi.',
   linktreeDescription:
     'Hubungi tim marketing AHR untuk order jersey custom, konsultasi desain sublimasi, dan informasi pemesanan apparel printing.',
+  orianaChannelDescription:
+    'Temukan Oriana Apparel di Shopee, WhatsApp, dan Instagram. Jersey original dan apparel olahraga.',
   faqItems: [
     {
       question: 'Berapa minimal order untuk jersey custom?',

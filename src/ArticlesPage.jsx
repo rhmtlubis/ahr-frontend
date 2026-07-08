@@ -1,15 +1,18 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { ArrowRight, CalendarDays, Clock3 } from 'lucide-react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import './App.css'
 import './ArticlePage.css'
+import ArticleCategoryStrip from './components/articles/ArticleCategoryStrip'
 import SiteFooter from './components/layout/SiteFooter'
 import SiteHeader from './components/layout/SiteHeader'
-import { getApiUrl } from './lib/api'
+import { fetchCatalogLandingPage } from './lib/api'
 import { fetchArticles, getFallbackArticles } from './lib/articles.js'
+import { buildArticleCategoryNavigation, filterArticlesByCategory } from './lib/articleCategories.js'
 import { useCart } from './lib/cart.jsx'
 import { useLanguage } from './lib/i18n.jsx'
 import { getLandingChromeContent } from './lib/landingContent'
+import { getRetailHeaderActions, getStoreBrandName, isCssStore } from './lib/storeConfig'
 import { buildArticleListingStructuredData } from './lib/structuredData.js'
 import useDocumentTitle from './lib/useDocumentTitle'
 
@@ -24,18 +27,28 @@ function formatArticleDate(date, locale) {
 function ArticlesPage() {
   const { language, t } = useLanguage()
   const { itemCount } = useCart()
+  const [searchParams] = useSearchParams()
+  const activeCategoryId = searchParams.get('kategori') || 'all'
   const [articles, setArticles] = useState(() => getFallbackArticles())
   const [pageContent, setPageContent] = useState(() =>
     getLandingChromeContent({}, { hashPrefix: '/', locale: language }),
   )
 
   useDocumentTitle(
-    language === 'en'
-      ? 'Articles About Custom Jerseys, Sublimation, and Ordering Tips'
-      : 'Artikel Jersey Custom, Sublimasi, dan Tips Pemesanan',
-    language === 'en'
-      ? 'Browse AHR articles about custom jerseys, sublimation apparel, design tips, material selection, and ordering guidance.'
-      : 'Baca artikel AHR seputar jersey custom, apparel sublimasi, desain, bahan, dan tips pemesanan untuk tim, komunitas, sekolah, dan perusahaan.',
+    isCssStore()
+      ? language === 'en'
+        ? 'CS Studio Articles'
+        : 'Artikel CS Studio'
+      : language === 'en'
+        ? 'Articles About Custom Jerseys, Sublimation, and Ordering Tips'
+        : 'Artikel Jersey Custom, Sublimasi, dan Tips Pemesanan',
+    isCssStore()
+      ? language === 'en'
+        ? 'Stories, styling notes, and practical guides from CS Studio.'
+        : 'Cerita, catatan styling, dan panduan praktis dari CS Studio.'
+      : language === 'en'
+        ? 'Browse AHR articles about custom jerseys, sublimation apparel, design tips, material selection, and ordering guidance.'
+        : 'Baca artikel AHR seputar jersey custom, apparel sublimasi, desain, bahan, dan tips pemesanan untuk tim, komunitas, sekolah, dan perusahaan.',
     {
       canonicalPath: '/artikel',
       image: '/og-preview.png',
@@ -59,18 +72,7 @@ function ArticlesPage() {
       }
     })
 
-    fetch(getApiUrl(`/api/catalog/landing-page?locale=${language}`), {
-      headers: {
-        Accept: 'application/json',
-      },
-    })
-      .then((response) => {
-        if (!response.ok) {
-          throw new Error('Failed to load article page chrome content')
-        }
-
-        return response.json()
-      })
+    fetchCatalogLandingPage(language)
       .then((payload) => {
         if (payload?.data) {
           setPageContent(getLandingChromeContent(payload.data, { hashPrefix: '/', locale: language }))
@@ -97,7 +99,17 @@ function ArticlesPage() {
   } = pageContent
 
   const featuredArticle = articles[0]
-  const visibleArticles = articles.slice(0)
+  const articleCategories = useMemo(() => buildArticleCategoryNavigation(articles), [articles])
+  const visibleArticles = useMemo(
+    () => filterArticlesByCategory(articles, activeCategoryId),
+    [activeCategoryId, articles],
+  )
+  const activeCategoryLabel =
+    activeCategoryId === 'all'
+      ? language === 'en'
+        ? 'All topics'
+        : 'Semua topik'
+      : articleCategories.find((category) => category.id === activeCategoryId)?.label || activeCategoryId
   return (
     <div className="app-shell article-page-shell">
       <SiteHeader
@@ -108,10 +120,12 @@ function ArticlesPage() {
         utilityLinks={utilityLinks}
         utilityMessage={utilityMessage}
         cartItemCount={itemCount}
-        onPrimaryAction={() => {
-          window.location.href = '/#contact'
-        }}
-        primaryActionLabel={t('common.chatWhatsApp')}
+        {...getRetailHeaderActions({
+          primaryActionLabel: t('common.chatWhatsApp'),
+          onPrimaryAction: () => {
+            window.location.href = '/#contact'
+          },
+        })}
       />
 
       <main className="article-main">
@@ -123,22 +137,28 @@ function ArticlesPage() {
             />
           </div>
           <div className="article-hero-copy">
-            <span className="article-hero-kicker">News hub</span>
+            <span className="article-hero-kicker">{isCssStore() ? getStoreBrandName() : 'News hub'}</span>
             <h1>{language === 'en' ? 'Latest articles' : 'Artikel terbaru'}</h1>
             <p>
-              {language === 'en'
-                ? 'Editorial notes, production insights, and practical guides for custom jersey buyers.'
-                : 'Catatan editorial, insight produksi, dan panduan praktis untuk buyer jersey custom.'}
+              {isCssStore()
+                ? language === 'en'
+                  ? 'Explore CS Studio articles on World Cup Legend tees, fantasy jerseys, streetwear styling, and custom apparel guides — published by Custom Supply for buyers across Indonesia.'
+                  : 'Jelajahi artikel CS Studio tentang kaos World Cup Legend, jersey fantasy, styling streetwear, dan panduan apparel custom — diterbitkan Custom Supply untuk pembeli di seluruh Indonesia.'
+                : language === 'en'
+                  ? 'Editorial notes, production insights, and practical guides for custom jersey buyers.'
+                  : 'Catatan editorial, insight produksi, dan panduan praktis untuk buyer jersey custom.'}
             </p>
             <div className="article-hero-actions">
               <Link className="article-pill-link" to="/all-products">
                 {language === 'en' ? 'See products' : 'Lihat produk'}
                 <ArrowRight size={16} />
               </Link>
-              <Link className="article-pill-link" to="/#contact">
-                {language === 'en' ? 'Talk to team' : 'Konsultasi tim'}
-                <ArrowRight size={16} />
-              </Link>
+              {!isCssStore() ? (
+                <Link className="article-pill-link" to="/#contact">
+                  {language === 'en' ? 'Talk to team' : 'Konsultasi tim'}
+                  <ArrowRight size={16} />
+                </Link>
+              ) : null}
             </div>
           </div>
         </section>
@@ -147,12 +167,30 @@ function ArticlesPage() {
           <div className="article-section-title">
             <h2>{language === 'en' ? 'Latest news' : 'Berita terbaru'}</h2>
             <div className="article-filter-note">
-              {language === 'en' ? 'Filter by: All topics' : 'Filter: semua topik'}
+              {language === 'en' ? 'Filter by:' : 'Filter:'} {activeCategoryLabel}
             </div>
           </div>
 
+          {isCssStore() ? (
+            <ArticleCategoryStrip
+              categories={articleCategories}
+              activeCategoryId={activeCategoryId}
+              allLabel={language === 'en' ? 'All topics' : 'Semua topik'}
+              getCategoryHref={(categoryId) =>
+                categoryId === 'all' ? '/artikel' : `/artikel?kategori=${categoryId}`
+              }
+            />
+          ) : null}
+
           <div className="article-grid">
-            {visibleArticles.map((article) => (
+            {visibleArticles.length === 0 ? (
+              <p className="article-empty-state">
+                {language === 'en'
+                  ? 'No articles published for CS Studio yet.'
+                  : 'Belum ada artikel yang dipublikasikan untuk CS Studio.'}
+              </p>
+            ) : (
+              visibleArticles.map((article) => (
               <Link className="article-card" key={article.slug} to={`/artikel/${article.slug}`}>
                 <img
                   className="article-card-image"
@@ -181,7 +219,8 @@ function ArticlesPage() {
                   </span>
                 </div>
               </Link>
-            ))}
+              ))
+            )}
           </div>
         </section>
       </main>

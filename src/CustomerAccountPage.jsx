@@ -12,7 +12,9 @@ import {
   fetchCatalogCities,
   fetchCatalogDistricts,
   fetchCatalogProvinces,
+  fetchCatalogShippingCountries,
   fetchCustomerOrders,
+  fetchCatalogLandingPage,
   getApiUrl,
   loginCustomer,
   logoutCustomer,
@@ -25,9 +27,10 @@ import { useCustomer } from './lib/customer.jsx'
 import { useGoogleAuthCallback } from './lib/googleAuth'
 import { useLanguage } from './lib/i18n.jsx'
 import { getLandingChromeContent } from './lib/landingContent'
+import { getRetailHeaderActions, getStoreBrandName, isCssStore } from './lib/storeConfig'
 import { clearPersonalizationData } from './lib/personalization'
 import { formatCurrencyAmount } from './lib/price'
-import useDocumentTitle from './lib/useDocumentTitle'
+import { getCountryLabel, isInternationalCountry } from './lib/shippingCountries'
 
 const ORDER_STATUS_FILTERS = [
   { value: 'all', labelId: 'Semua', labelEn: 'All' },
@@ -111,9 +114,13 @@ const defaultProfileForm = {
   email: '',
   whatsapp: '',
   fulfillment: 'delivery',
+  countryCode: 'ID',
   provinceCode: '',
   cityCode: '',
   districtCode: '',
+  cityName: '',
+  stateRegion: '',
+  postalCode: '',
   addressLine: '',
 }
 
@@ -134,14 +141,21 @@ function findLocationName(options, code) {
 }
 
 function mapCustomerToProfileForm(customer) {
+  const countryCode = customer?.default_shipping_country_code || 'ID'
+  const isInternational = isInternationalCountry(countryCode)
+
   return {
     name: customer?.name || '',
     email: customer?.email || '',
     whatsapp: customer?.phone || '',
     fulfillment: customer?.default_fulfillment_method || 'delivery',
-    provinceCode: customer?.default_shipping_province_code || '',
-    cityCode: customer?.default_shipping_city_code || '',
-    districtCode: customer?.default_shipping_district_code || '',
+    countryCode,
+    provinceCode: isInternational ? '' : customer?.default_shipping_province_code || '',
+    cityCode: isInternational ? '' : customer?.default_shipping_city_code || '',
+    districtCode: isInternational ? '' : customer?.default_shipping_district_code || '',
+    cityName: isInternational ? customer?.default_shipping_city_name || '' : '',
+    stateRegion: isInternational ? customer?.default_shipping_province_name || '' : '',
+    postalCode: isInternational ? customer?.default_shipping_postal_code || '' : '',
     addressLine: customer?.default_shipping_address || '',
   }
 }
@@ -173,6 +187,7 @@ export default function CustomerAccountPage() {
   const [provinceOptions, setProvinceOptions] = useState([])
   const [cityOptions, setCityOptions] = useState([])
   const [districtOptions, setDistrictOptions] = useState([])
+  const [countryOptions, setCountryOptions] = useState([])
   const [locationLoading, setLocationLoading] = useState({
     provinces: false,
     cities: false,
@@ -224,18 +239,13 @@ export default function CustomerAccountPage() {
   )
 
   useEffect(() => {
-    fetch(getApiUrl(`/api/catalog/landing-page?locale=${language}`), {
-      headers: {
-        Accept: 'application/json',
-      },
-    })
-      .then((response) => {
-        if (!response.ok) {
-          throw new Error('Gagal memuat halaman akun')
-        }
+    fetchCatalogShippingCountries(language)
+      .then((countries) => setCountryOptions(Array.isArray(countries) ? countries : []))
+      .catch(() => setCountryOptions([]))
+  }, [language])
 
-        return response.json()
-      })
+  useEffect(() => {
+    fetchCatalogLandingPage(language)
       .then((payload) => {
         if (payload?.data) {
           setPageContent(getLandingChromeContent(payload.data, { hashPrefix: '/', locale: language }))
@@ -459,6 +469,19 @@ export default function CustomerAccountPage() {
       return ''
     }
 
+    if (isInternationalCountry(profileForm.countryCode)) {
+      return [
+        profileForm.addressLine,
+        profileForm.cityName,
+        profileForm.stateRegion,
+        profileForm.postalCode,
+        getCountryLabel(countryOptions, profileForm.countryCode),
+      ]
+        .map((value) => String(value || '').trim())
+        .filter(Boolean)
+        .join(', ')
+    }
+
     return [
       profileForm.addressLine,
       findLocationName(districtOptions, profileForm.districtCode),
@@ -468,7 +491,7 @@ export default function CustomerAccountPage() {
       .map((value) => String(value || '').trim())
       .filter(Boolean)
       .join(', ')
-  }, [cityOptions, districtOptions, profileForm, provinceOptions])
+  }, [cityOptions, countryOptions, districtOptions, profileForm, provinceOptions])
 
   const updateAuthForm = (field, value) => {
     if (authStatus.message) {
@@ -553,23 +576,43 @@ export default function CustomerAccountPage() {
     setProfileFieldErrors({})
 
     try {
+      const isInternational = isInternationalCountry(profileForm.countryCode)
+
       const nextCustomer = await updateCustomerProfile({
         name: profileForm.name,
         email: profileForm.email,
         whatsapp: profileForm.whatsapp,
         fulfillment: profileForm.fulfillment,
+        country_code: profileForm.fulfillment === 'delivery' ? profileForm.countryCode : 'ID',
         address_line: profileForm.fulfillment === 'delivery' ? profileForm.addressLine : '',
-        province_code: profileForm.fulfillment === 'delivery' ? profileForm.provinceCode : '',
-        province_name:
-          profileForm.fulfillment === 'delivery'
-            ? findLocationName(provinceOptions, profileForm.provinceCode)
-            : '',
-        city_code: profileForm.fulfillment === 'delivery' ? profileForm.cityCode : '',
-        city_name:
-          profileForm.fulfillment === 'delivery' ? findLocationName(cityOptions, profileForm.cityCode) : '',
-        district_code: profileForm.fulfillment === 'delivery' ? profileForm.districtCode : '',
-        district_name:
-          profileForm.fulfillment === 'delivery' ? findLocationName(districtOptions, profileForm.districtCode) : '',
+        ...(isInternational
+          ? {
+              city_name: profileForm.cityName,
+              state_region: profileForm.stateRegion,
+              postal_code: profileForm.postalCode,
+              province_code: '',
+              province_name: '',
+              city_code: '',
+              district_code: '',
+              district_name: '',
+            }
+          : {
+              province_code: profileForm.fulfillment === 'delivery' ? profileForm.provinceCode : '',
+              province_name:
+                profileForm.fulfillment === 'delivery'
+                  ? findLocationName(provinceOptions, profileForm.provinceCode)
+                  : '',
+              city_code: profileForm.fulfillment === 'delivery' ? profileForm.cityCode : '',
+              city_name:
+                profileForm.fulfillment === 'delivery' ? findLocationName(cityOptions, profileForm.cityCode) : '',
+              district_code: profileForm.fulfillment === 'delivery' ? profileForm.districtCode : '',
+              district_name:
+                profileForm.fulfillment === 'delivery'
+                  ? findLocationName(districtOptions, profileForm.districtCode)
+                  : '',
+              postal_code: '',
+              state_region: '',
+            }),
       })
 
       setCustomer(nextCustomer)
@@ -597,24 +640,26 @@ export default function CustomerAccountPage() {
         utilityLinks={pageContent.utilityLinks}
         utilityMessage={pageContent.utilityMessage}
         cartItemCount={itemCount}
-        onPrimaryAction={() => {
-          window.location.href = '/all-products'
-        }}
-        primaryActionLabel={t('cart.continueShopping')}
+        {...getRetailHeaderActions({
+          primaryActionLabel: t('cart.continueShopping'),
+          onPrimaryAction: () => {
+            window.location.href = '/all-products'
+          },
+        })}
       />
 
       <main className="cart-page customer-account-page">
         <section className="content-block section-plain cart-hero customer-account-hero">
           <div className="all-products-breadcrumb">
-            <Link to="/">
+            <Link to={isCssStore() ? '/all-products' : '/'}>
               <ArrowLeft size={16} />
-              <span>{t('common.backToHome')}</span>
+              <span>{isCssStore() ? (language === 'en' ? 'Back to store' : 'Kembali ke toko') : t('common.backToHome')}</span>
             </Link>
           </div>
 
           <div className="section-heading heading-inline cart-heading customer-account-heading">
             <div>
-              <span>{t('common.profileLabel')}</span>
+              <span>{isCssStore() ? getStoreBrandName() : t('common.profileLabel')}</span>
               <h1>{language === 'en' ? 'Customer Account' : 'Akun Customer'}</h1>
               <p>
                 {language === 'en'
@@ -931,6 +976,77 @@ export default function CustomerAccountPage() {
 
                 {profileForm.fulfillment === 'delivery' ? (
                   <>
+                    <div className="cart-form-field">
+                      <label htmlFor="profile-country">{t('cart.country')}</label>
+                      <select
+                        id="profile-country"
+                        value={profileForm.countryCode}
+                        onChange={(event) =>
+                          updateProfileForm({
+                            countryCode: event.target.value,
+                            provinceCode: '',
+                            cityCode: '',
+                            districtCode: '',
+                            cityName: '',
+                            stateRegion: '',
+                            postalCode: '',
+                          })
+                        }
+                        required
+                      >
+                        {countryOptions.length > 0 ? (
+                          countryOptions.map((country) => (
+                            <option key={country.code} value={country.code}>
+                              {country.label}
+                            </option>
+                          ))
+                        ) : (
+                          <>
+                            <option value="ID">{language === 'en' ? 'Indonesia' : 'Indonesia'}</option>
+                            <option value="SG">{language === 'en' ? 'Singapore' : 'Singapura'}</option>
+                          </>
+                        )}
+                      </select>
+                    </div>
+
+                    {isInternationalCountry(profileForm.countryCode) ? (
+                      <>
+                        <div className="cart-form-grid">
+                          <div className="cart-form-field">
+                            <label htmlFor="profile-city-name">{t('cart.cityName')}</label>
+                            <input
+                              id="profile-city-name"
+                              type="text"
+                              value={profileForm.cityName}
+                              onChange={(event) => updateProfileForm({ cityName: event.target.value })}
+                              required
+                            />
+                          </div>
+
+                          <div className="cart-form-field">
+                            <label htmlFor="profile-state-region">{t('cart.stateRegion')}</label>
+                            <input
+                              id="profile-state-region"
+                              type="text"
+                              value={profileForm.stateRegion}
+                              onChange={(event) => updateProfileForm({ stateRegion: event.target.value })}
+                            />
+                          </div>
+                        </div>
+
+                        <div className="cart-form-field">
+                          <label htmlFor="profile-postal-code">{t('cart.postalCode')}</label>
+                          <input
+                            id="profile-postal-code"
+                            type="text"
+                            value={profileForm.postalCode}
+                            onChange={(event) => updateProfileForm({ postalCode: event.target.value })}
+                            required
+                          />
+                        </div>
+                      </>
+                    ) : (
+                      <>
                     <div className="cart-form-grid">
                       <div className="cart-form-field">
                         <label htmlFor="profile-province">{t('cart.province')}</label>
@@ -992,6 +1108,8 @@ export default function CustomerAccountPage() {
                         ))}
                       </select>
                     </div>
+                      </>
+                    )}
 
                     <div className="cart-form-field">
                       <label htmlFor="profile-address">{t('cart.addressDetail')}</label>
