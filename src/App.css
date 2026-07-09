@@ -289,6 +289,10 @@ main {
   background: #1c1c1c;
 }
 
+.language-switcher-backdrop {
+  display: none;
+}
+
 .utility-links a,
 .mega-menu a,
 .heading-inline a {
@@ -4031,10 +4035,49 @@ main {
     display: none;
   }
 
-  .mobile-language-switcher .language-switcher-menu,
-  .language-switcher .language-switcher-menu {
-    right: auto;
+  .language-switcher-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 45;
+    border: 0;
+    padding: 0;
+    background: rgba(17, 17, 17, 0.42);
+    cursor: pointer;
+  }
+
+  .header-language-switcher .language-switcher-menu {
+    position: fixed;
+    top: auto;
+    bottom: 0;
     left: 0;
+    right: 0;
+    z-index: 50;
+    min-width: 0;
+    width: 100%;
+    max-height: min(72vh, 420px);
+    overflow-y: auto;
+    border: 0;
+    border-top: 1px solid #111111;
+    border-radius: 18px 18px 0 0;
+    box-shadow: 0 -18px 40px rgba(2, 37, 84, 0.16);
+    transform: translateY(100%);
+  }
+
+  .header-language-switcher .language-switcher-menu.open {
+    transform: translateY(0);
+  }
+
+  .header-language-switcher .language-switcher-panel {
+    gap: 20px;
+    padding:
+      24px clamp(16px, 4vw, 32px)
+      calc(24px + env(safe-area-inset-bottom));
+  }
+
+  .header-language-switcher .language-switcher-save {
+    width: 100%;
+    max-width: none;
   }
 
   .ticker-bar {

@@ -1,4 +1,5 @@
 import { ChevronRight } from 'lucide-react'
+import { useEffect } from 'react'
 import { useLanguage } from '../../lib/i18n.jsx'
 
 const LANGUAGE_OPTIONS = [
@@ -24,6 +25,24 @@ export default function LanguageSwitcher({
   const activeLanguageOption =
     languageOptions.find((option) => option.value === language) ?? languageOptions[0]
 
+  useEffect(() => {
+    if (!isOpen) {
+      return undefined
+    }
+
+    const isMobileLayout = window.matchMedia('(max-width: 720px)').matches
+    if (!isMobileLayout) {
+      return undefined
+    }
+
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+
+    return () => {
+      document.body.style.overflow = previousOverflow
+    }
+  }, [isOpen])
+
   return (
     <div className={className} ref={menuRef}>
       <button
@@ -44,9 +63,20 @@ export default function LanguageSwitcher({
         <span className="language-switcher-code">{activeLanguageOption.shortLabel}</span>
       </button>
 
+      {isOpen ? (
+        <button
+          className="language-switcher-backdrop"
+          type="button"
+          aria-label={language === 'id' ? 'Tutup pilihan bahasa' : 'Close language menu'}
+          tabIndex={-1}
+          onClick={() => setIsOpen(false)}
+        />
+      ) : null}
+
       <div
         className={isOpen ? 'language-switcher-menu open' : 'language-switcher-menu'}
         role="dialog"
+        aria-modal={isOpen ? 'true' : undefined}
         aria-label={t('language.switchLabel')}
       >
         <div className="language-switcher-panel">
