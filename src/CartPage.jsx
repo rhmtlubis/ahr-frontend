@@ -44,6 +44,7 @@ import { getLandingChromeContent } from './lib/landingContent'
 import { getRetailHeaderActions } from './lib/storeConfig'
 import { buildOrderDetailPath, clearPendingPayment, getPendingPayment, savePendingPayment } from './lib/pendingPayment'
 import { useMidtransPayment } from './lib/useMidtransPayment'
+import { usePayPalPayment } from './lib/usePayPalPayment'
 import { clearPersonalizationData } from './lib/personalization'
 import { formatCurrencyAmount, getProductPriceDisplay } from './lib/price'
 import { getCountryLabel, isInternationalCountry, isShippingDestinationReady } from './lib/shippingCountries.js'
@@ -608,12 +609,13 @@ function buildCheckoutMessage(items, checkoutForm, language, cartTotals, locatio
     .join('\n')
 }
 
-function buildCheckoutPayload(items, checkoutForm, language, locationOptions, appliedVoucherCode, countryOptions = []) {
+function buildCheckoutPayload(items, checkoutForm, language, locationOptions, appliedVoucherCode, countryOptions = [], storePromo = null) {
   const formattedAddress = buildStructuredAddress(checkoutForm, locationOptions, countryOptions)
   const addressLine = isInternationalCountry(checkoutForm.countryCode)
     ? String(checkoutForm.addressLine || '').trim()
     : stripTrailingRegionsFromAddressLine(checkoutForm.addressLine, locationOptions, checkoutForm)
   const isInternational = isInternationalCountry(checkoutForm.countryCode)
+  const paymentChannel = resolvePaymentChannel(checkoutForm, storePromo)
 
   return {
     name: checkoutForm.name,
@@ -634,6 +636,7 @@ function buildCheckoutPayload(items, checkoutForm, language, locationOptions, ap
     voucher_code: appliedVoucherCode || undefined,
     locale: language,
     currency: getPaymentCurrency(),
+    payment_channel: paymentChannel,
     source_page: window.location.pathname,
     referrer_url: document.referrer || undefined,
     store_hostname: typeof window !== 'undefined' ? window.location.hostname : undefined,
@@ -653,6 +656,18 @@ function buildCheckoutPayload(items, checkoutForm, language, locationOptions, ap
       }
     }),
   }
+}
+
+function resolvePaymentChannel(checkoutForm, storePromo) {
+  if (
+    checkoutForm.fulfillment === 'delivery'
+    && isInternationalCountry(checkoutForm.countryCode)
+    && storePromo?.paypal?.enabled
+  ) {
+    return 'paypal'
+  }
+
+  return 'midtrans'
 }
 
 function buildShippingQuotePayload(items, checkoutForm) {
@@ -814,6 +829,7 @@ export default function CartPage() {
   )
   const { items, itemCount, updateCartItemQuantity, updateCartItemSize, distributeCartItemSizes, removeCartItem, clearCart } = useCart()
   const { payOrder } = useMidtransPayment({ preload: isCheckoutStep })
+  const { payOrder: payPalOrder } = usePayPalPayment()
   const paymentInProgressRef = useRef(false)
   const wasOnCheckoutRef = useRef(false)
   const [storePromo, setStorePromo] = useState(null)
@@ -1531,6 +1547,7 @@ export default function CartPage() {
             locationOptions,
             appliedVoucher?.code,
             countryOptions,
+            storePromo,
           ),
           shipping_option: selectedShippingOption
             ? {
@@ -1597,7 +1614,7 @@ export default function CartPage() {
         currency: conversion.currency,
         value: conversion.value,
         value_source: conversion.source,
-        checkout_channel: 'midtrans',
+        checkout_channel: savedOrder?.checkout_channel || 'midtrans',
         lead_stage: 'pending_payment',
       })
 
@@ -1607,10 +1624,15 @@ export default function CartPage() {
 
       setCheckoutStatus({
         state: 'loading',
-        message: 'Membuka halaman pembayaran...',
+        message:
+          savedOrder?.checkout_channel === 'paypal'
+            ? (language === 'en' ? 'Opening PayPal...' : 'Membuka PayPal...')
+            : (language === 'en' ? 'Opening payment...' : 'Membuka halaman pembayaran...'),
       })
 
-      await payOrder(savedOrder.order_number, savedOrder.payment_access_token, {
+      const openPayment = savedOrder?.checkout_channel === 'paypal' ? payPalOrder : payOrder
+
+      await openPayment(savedOrder.order_number, savedOrder.payment_access_token, {
         onSuccess: () => {
           clearPendingPayment()
           clearCart()
@@ -2188,9 +2210,13 @@ export default function CartPage() {
               <CreditCard size={18} aria-hidden="true" />
             </div>
             <p className="checkout-confirm-payment-copy">
-              {language === 'en'
-                ? 'Pay securely online via Midtrans (bank transfer, e-wallet, QRIS, and more).'
-                : 'Bayar aman secara online via Midtrans (transfer bank, e-wallet, QRIS, dan lainnya).'}
+              {resolvePaymentChannel(checkoutForm, storePromo) === 'paypal'
+                ? (language === 'en'
+                  ? 'Pay securely in USD with PayPal.'
+                  : 'Bayar aman dalam USD via PayPal.')
+                : (language === 'en'
+                  ? 'Pay securely online via Midtrans (bank transfer, e-wallet, QRIS, and more).'
+                  : 'Bayar aman secara online via Midtrans (transfer bank, e-wallet, QRIS, dan lainnya).')}
             </p>
           </div>
 

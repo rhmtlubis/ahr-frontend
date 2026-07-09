@@ -13,6 +13,7 @@ import { useCustomer } from './lib/customer.jsx'
 import { useLanguage } from './lib/i18n.jsx'
 import { getLandingChromeContent } from './lib/landingContent'
 import { useMidtransPayment } from './lib/useMidtransPayment'
+import { usePayPalPayment } from './lib/usePayPalPayment'
 import CheckoutTermsAgreement from './components/checkout/CheckoutTermsAgreement'
 import PostPurchaseReviewPrompt from './components/cart/PostPurchaseReviewPrompt'
 import { formatCurrencyAmount } from './lib/price'
@@ -53,6 +54,7 @@ export default function CustomerOrderDetailPage() {
   const { customer, isLoading: customerLoading, refreshCustomer } = useCustomer()
   const [sessionExpired, setSessionExpired] = useState(false)
   const { payOrder, isSnapReady } = useMidtransPayment({ preload: true })
+  const { payOrder: payPalOrder } = usePayPalPayment()
   const [pageContent, setPageContent] = useState(() =>
     getLandingChromeContent({}, { hashPrefix: '/', locale: language }),
   )
@@ -196,11 +198,16 @@ export default function CustomerOrderDetailPage() {
 
     setPaymentStatus({
       state: 'loading',
-      message: language === 'en' ? 'Opening payment...' : 'Membuka pembayaran...',
+      message:
+        order.checkout_channel === 'paypal'
+          ? (language === 'en' ? 'Opening PayPal...' : 'Membuka PayPal...')
+          : (language === 'en' ? 'Opening payment...' : 'Membuka pembayaran...'),
     })
 
+    const openPayment = order.checkout_channel === 'paypal' ? payPalOrder : payOrder
+
     try {
-      await payOrder(order.order_number, order.payment_access_token || guestToken, {
+      await openPayment(order.order_number, order.payment_access_token || guestToken, {
         onSuccess: () => {
           setPaymentStatus({ state: 'success', message: '' })
           navigate(`/payment/success?order=${order.order_number}`)
@@ -219,20 +226,24 @@ export default function CustomerOrderDetailPage() {
           setPaymentStatus({
             state: 'idle',
             message:
-              language === 'en'
-                ? 'Payment window closed. Tap Pay now to reopen Midtrans or use the payment details below.'
-                : 'Jendela pembayaran ditutup. Tekan Bayar sekarang untuk buka ulang Midtrans atau gunakan detail pembayaran di bawah.',
+              order.checkout_channel === 'paypal'
+                ? (language === 'en'
+                  ? 'Payment window closed. Tap Pay now to reopen PayPal.'
+                  : 'Jendela pembayaran ditutup. Tekan Bayar sekarang untuk buka ulang PayPal.')
+                : (language === 'en'
+                  ? 'Payment window closed. Tap Pay now to reopen Midtrans or use the payment details below.'
+                  : 'Jendela pembayaran ditutup. Tekan Bayar sekarang untuk buka ulang Midtrans atau gunakan detail pembayaran di bawah.'),
           })
           loadOrder()
         },
-      }, { paymentSource: 'order_detail' })
+      }, order.checkout_channel === 'paypal' ? {} : { paymentSource: 'order_detail' })
 
       setPaymentStatus({
         state: 'idle',
         message:
-          language === 'en'
-            ? 'Complete your payment in the Midtrans window.'
-            : 'Selesaikan pembayaran di jendela Midtrans.',
+          order.checkout_channel === 'paypal'
+            ? (language === 'en' ? 'Complete your payment in the PayPal window.' : 'Selesaikan pembayaran di jendela PayPal.')
+            : (language === 'en' ? 'Complete your payment in the Midtrans window.' : 'Selesaikan pembayaran di jendela Midtrans.'),
       })
     } catch (error) {
       setPaymentStatus({ state: 'error', message: error.message })

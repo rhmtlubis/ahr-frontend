@@ -265,6 +265,33 @@ export async function createPaymentTransaction(orderNumber, paymentAccessToken, 
   }
 }
 
+export async function createPayPalOrder(orderNumber, paymentAccessToken) {
+  await ensureCsrfCookie()
+
+  try {
+    const response = await apiClient.post(`/api/catalog/orders/${orderNumber}/paypal/create-order`, {
+      token: paymentAccessToken,
+    })
+    return response.data?.data || null
+  } catch (error) {
+    throw new Error(resolveApiError(error, 'Gagal membuat order PayPal'))
+  }
+}
+
+export async function capturePayPalOrder(orderNumber, paymentAccessToken, paypalOrderId) {
+  await ensureCsrfCookie()
+
+  try {
+    const response = await apiClient.post(`/api/catalog/orders/${orderNumber}/paypal/capture`, {
+      token: paymentAccessToken,
+      paypal_order_id: paypalOrderId,
+    })
+    return response.data?.data || null
+  } catch (error) {
+    throw new Error(resolveApiError(error, 'Gagal menangkap pembayaran PayPal'))
+  }
+}
+
 export async function fetchPaymentStatus(orderNumber, paymentAccessToken) {
   try {
     const response = await apiClient.get(`/api/catalog/orders/${orderNumber}/payment-status`, {
