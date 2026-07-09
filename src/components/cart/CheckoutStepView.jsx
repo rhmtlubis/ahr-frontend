@@ -86,6 +86,7 @@ export default function CheckoutStepView({
             cartTotals={cartTotals}
             promoCartTotals={promoCartTotals}
             fulfillment={fulfillment}
+            exchangeRate={itemHandlers.exchangeRate}
           />
           <section className="checkout-confirm-card">
             <div className="checkout-confirm-card-head">
@@ -101,7 +102,11 @@ export default function CheckoutStepView({
                     <span>
                       {t('common.size')} {item.size} · {t('cart.quantity')}: {item.quantity}
                     </span>
-                    <ProductPrice product={item.product} />
+                    <ProductPrice
+                      product={item.product}
+                      exchangeRate={itemHandlers.exchangeRate}
+                      storePromo={storePromo}
+                    />
                   </div>
                 </li>
               ))}

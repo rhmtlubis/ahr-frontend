@@ -4,7 +4,7 @@ import {
   fetchCatalogProvinces,
   fetchCatalogShippingRates,
 } from './api'
-import { formatCurrencyAmount } from './price'
+import { buildDisplayExchangeRate, formatCurrencyAmount, formatIdrMinorForDisplay } from './price'
 
 let cachedLocationCodes = null
 let cachedEstimateKey = ''
@@ -114,10 +114,22 @@ async function resolveDefaultEstimateLocation() {
   return cachedLocationCodes
 }
 
-function buildEstimateKey(items, language) {
+function buildEstimateKey(items, language, exchangeRate, storePromo) {
   const mode = language === 'en' ? 'intl' : 'id'
+  const markup = storePromo?.foreign_display_price_markup_percent ?? exchangeRate?.display_markup_percent ?? 0
+  const rate = exchangeRate?.value ?? ''
 
-  return `${mode}:${language}:${items.map((item) => `${item.product?.slug || item.id}:${item.quantity}`).join('|')}`
+  return `${mode}:${language}:${rate}:${markup}:${items.map((item) => `${item.product?.slug || item.id}:${item.quantity}`).join('|')}`
+}
+
+function formatShippingEstimatePrice(priceMinor, currency, language, exchangeRate, storePromo) {
+  const normalizedCurrency = String(currency || 'IDR').toUpperCase()
+
+  if (language === 'en' && normalizedCurrency === 'IDR') {
+    return formatIdrMinorForDisplay(priceMinor, language, exchangeRate, storePromo)
+  }
+
+  return formatCurrencyAmount(priceMinor, normalizedCurrency, language)
 }
 
 function pickCheapestRate(rates = []) {
@@ -130,12 +142,12 @@ function pickCheapestRate(rates = []) {
   }, null)
 }
 
-export async function fetchCartShippingEstimate(items, language = 'id') {
+export async function fetchCartShippingEstimate(items, language = 'id', exchangeRate = null, storePromo = null) {
   if (!Array.isArray(items) || items.length === 0) {
     return null
   }
 
-  const estimateKey = buildEstimateKey(items, language)
+  const estimateKey = buildEstimateKey(items, language, exchangeRate, storePromo)
 
   if (estimateKey === cachedEstimateKey && cachedEstimateResult) {
     return cachedEstimateResult
@@ -178,7 +190,13 @@ export async function fetchCartShippingEstimate(items, language = 'id') {
 
     const cheapestRate = pickCheapestRate(rates)
     const currency = cheapestRate.currency || 'IDR'
-    const priceLabel = formatCurrencyAmount(cheapestRate.price, currency, language)
+    const priceLabel = formatShippingEstimatePrice(
+      cheapestRate.price,
+      currency,
+      language,
+      buildDisplayExchangeRate(exchangeRate, storePromo),
+      storePromo,
+    )
 
     cachedEstimateKey = estimateKey
     cachedEstimateResult = {

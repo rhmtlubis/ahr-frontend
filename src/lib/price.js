@@ -1,4 +1,4 @@
-import { getDisplayCurrency } from './currency.js'
+import { convertIdrMinorToUsdMinor, getItemDisplayAmounts } from './currency.js'
 
 const LANGUAGE_TO_LOCALE = {
   id: 'id-ID',
@@ -74,18 +74,49 @@ export function formatCurrencyAmount(amountMinor, currency = 'IDR', language = '
   return normalizeCurrencySpacing(`$${formattedUsd}`)
 }
 
-export function getProductPriceDisplay(product, language = 'id') {
+export function buildDisplayExchangeRate(exchangeRate, storePromo, pricing) {
+  const base = exchangeRate || pricing?.exchange_rate
+
+  if (!base) {
+    return null
+  }
+
+  return {
+    ...base,
+    display_markup_percent:
+      storePromo?.foreign_display_price_markup_percent ??
+      base?.display_markup_percent ??
+      base?.foreign_display_price_markup_percent ??
+      0,
+  }
+}
+
+export function formatIdrMinorForDisplay(amountIdrMinor, language, exchangeRate, storePromo) {
+  const normalizedAmount = Number(amountIdrMinor)
+
+  if (!Number.isFinite(normalizedAmount)) {
+    return null
+  }
+
+  if (language !== 'en') {
+    return formatCurrencyAmount(normalizedAmount, 'IDR', language)
+  }
+
+  const rateMeta = buildDisplayExchangeRate(exchangeRate, storePromo)
+
+  if (!rateMeta) {
+    return formatCurrencyAmount(normalizedAmount, 'IDR', language)
+  }
+
+  return formatCurrencyAmount(convertIdrMinorToUsdMinor(normalizedAmount, rateMeta), 'USD', language)
+}
+
+export function getProductPriceDisplay(product, language = 'id', options = {}) {
   const pricing = product?.pricing || {}
-  const currentAmount = toMinorNumber(pricing.final_amount_minor)
-  const originalAmount = toMinorNumber(pricing.original_amount_minor)
-  const currency =
-    (pricing.currency === 'USD' && !pricing.is_estimated
-      ? pricing.currency
-      : pricing.is_estimated
-        ? getDisplayCurrency(language)
-        : pricing.currency) ||
-    pricing.source_currency ||
-    getDisplayCurrency(language)
+  const exchangeRate = buildDisplayExchangeRate(options.exchangeRate, options.storePromo, pricing)
+  const { currency, unitNetAmount, unitOriginalAmount } = getItemDisplayAmounts(pricing, language, exchangeRate)
+  const currentAmount = unitNetAmount
+  const originalAmount = unitOriginalAmount
 
   const currentPrice =
     formatCurrencyAmount(currentAmount, currency, language) ||

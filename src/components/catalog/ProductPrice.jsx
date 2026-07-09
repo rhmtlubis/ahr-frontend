@@ -1,9 +1,12 @@
 import { useLanguage } from '../../lib/i18n.jsx'
 import { getProductPriceDisplay } from '../../lib/price'
 
-function ProductPrice({ product, variant = 'card' }) {
+function ProductPrice({ product, variant = 'card', exchangeRate = null, storePromo = null }) {
   const { language } = useLanguage()
-  const { currentPrice, originalPrice, promoLabel, hasPromo } = getProductPriceDisplay(product, language)
+  const { currentPrice, originalPrice, promoLabel, hasPromo } = getProductPriceDisplay(product, language, {
+    exchangeRate,
+    storePromo,
+  })
   const wrapperClassName =
     variant === 'detail' ? 'product-detail-price-stack' : 'product-price-stack'
   const currentPriceClassName =

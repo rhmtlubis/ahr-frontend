@@ -1,5 +1,5 @@
 import { useLanguage } from '../../lib/i18n.jsx'
-import { formatCurrencyAmount } from '../../lib/price'
+import { formatIdrMinorForDisplay } from '../../lib/price'
 import { getFreeShippingProgress } from '../../lib/storePromo'
 
 export default function FreeShippingProgressBar({
@@ -7,6 +7,7 @@ export default function FreeShippingProgressBar({
   cartTotals,
   promoCartTotals = null,
   fulfillment = 'delivery',
+  exchangeRate = null,
 }) {
   const { language } = useLanguage()
   const progress = getFreeShippingProgress({
@@ -19,7 +20,8 @@ export default function FreeShippingProgressBar({
     return null
   }
 
-  const thresholdLabel = formatCurrencyAmount(progress.threshold, 'IDR', language)
+  const thresholdLabel = formatIdrMinorForDisplay(progress.threshold, language, exchangeRate, storePromo)
+  const remainingLabel = formatIdrMinorForDisplay(progress.remaining, language, exchangeRate, storePromo)
 
   return (
     <section className="free-shipping-progress" aria-live="polite">
@@ -33,8 +35,8 @@ export default function FreeShippingProgressBar({
         ) : (
           <strong>
             {language === 'en'
-              ? `Add ${formatCurrencyAmount(progress.remaining, 'IDR', language)} more for free shipping`
-              : `Tambah ${formatCurrencyAmount(progress.remaining, 'IDR', language)} lagi untuk gratis ongkir`}
+              ? `Add ${remainingLabel} more for free shipping`
+              : `Tambah ${remainingLabel} lagi untuk gratis ongkir`}
           </strong>
         )}
         <span>

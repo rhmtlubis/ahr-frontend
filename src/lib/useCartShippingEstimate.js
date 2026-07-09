@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { fetchCartShippingEstimate } from './cartShippingEstimate'
 
-export default function useCartShippingEstimate(items, language = 'id') {
+export default function useCartShippingEstimate(items, language = 'id', exchangeRate = null, storePromo = null) {
   const [estimate, setEstimate] = useState(null)
   const [loading, setLoading] = useState(false)
 
@@ -15,7 +15,7 @@ export default function useCartShippingEstimate(items, language = 'id') {
     let cancelled = false
     setLoading(true)
 
-    fetchCartShippingEstimate(items, language)
+    fetchCartShippingEstimate(items, language, exchangeRate, storePromo)
       .then((result) => {
         if (!cancelled) {
           setEstimate(result)
@@ -30,7 +30,7 @@ export default function useCartShippingEstimate(items, language = 'id') {
     return () => {
       cancelled = true
     }
-  }, [items, language])
+  }, [items, language, exchangeRate?.value, exchangeRate?.rate_minor, storePromo?.foreign_display_price_markup_percent])
 
   return { estimate, loading }
 }

@@ -537,7 +537,7 @@ function materializeCheckoutItems(items, mixedSizeDrafts = {}) {
   return Array.from(mergedItems.values())
 }
 
-function buildCheckoutMessage(items, checkoutForm, language, cartTotals, locationOptions) {
+function buildCheckoutMessage(items, checkoutForm, language, cartTotals, locationOptions, exchangeRate = null, storePromo = null) {
   const formattedAddress = buildStructuredAddress(checkoutForm, locationOptions)
   const groupedItems = items.reduce((groups, item) => {
     const groupKey = `${item.product.slug}::${item.product.category || ''}`
@@ -557,7 +557,10 @@ function buildCheckoutMessage(items, checkoutForm, language, cartTotals, locatio
     return groups
   }, new Map())
   const orderLines = Array.from(groupedItems.values()).map((group, index) => {
-    const { currentPrice } = getProductPriceDisplay(group.product, language)
+    const { currentPrice } = getProductPriceDisplay(group.product, language, {
+      exchangeRate: exchangeRateMeta,
+      storePromo,
+    })
     const itemPrice = currentPrice || group.product.price || '-'
     const sizeLabel = group.entries
       .map((entry) => `${entry.size} (${entry.quantity} pcs)`)
@@ -928,7 +931,12 @@ export default function CartPage() {
     () => formatExchangeRateNote(exchangeRateMeta, language, payWithPayPal),
     [exchangeRateMeta, language, payWithPayPal],
   )
-  const { estimate: shippingEstimate, loading: shippingEstimateLoading } = useCartShippingEstimate(checkoutItems, language)
+  const { estimate: shippingEstimate, loading: shippingEstimateLoading } = useCartShippingEstimate(
+    checkoutItems,
+    language,
+    exchangeRateMeta,
+    storePromo,
+  )
   const canPlaceOrder = Boolean(customerSession) || checkoutAuthMode === 'guest'
   const shippingEstimateLabel =
     shippingEstimate?.state === 'ready' && shippingEstimate.priceLabel
@@ -2310,6 +2318,8 @@ export default function CartPage() {
     removeCartItem,
     updateCheckoutForm,
     buildVoucherValidateItems,
+    exchangeRate: exchangeRateMeta,
+    storePromo,
   }
 
   return (

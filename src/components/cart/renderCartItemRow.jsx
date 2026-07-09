@@ -71,6 +71,8 @@ export default function renderCartItemRow({
   updateCartItemQuantity,
   removeCartItem,
   compact = false,
+  exchangeRate = null,
+  storePromo = null,
 }) {
   return (
     <article className={`cart-item-card ${compact ? 'cart-item-card-compact' : ''}`}>
@@ -89,7 +91,7 @@ export default function renderCartItemRow({
       <div className="cart-item-copy">
         <span>{item.product.category || t('common.products')}</span>
         <h3>{item.product.name}</h3>
-        <ProductPrice product={item.product} />
+        <ProductPrice product={item.product} exchangeRate={exchangeRate} storePromo={storePromo} />
 
         {compact ? (
           <div className="cart-item-compact-footer">

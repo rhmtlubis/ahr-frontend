@@ -68,7 +68,12 @@ export default function CartStepView({
             shippingEstimate={shippingEstimate}
             shippingEstimateLoading={shippingEstimateLoading}
           />
-          <FreeShippingProgressBar storePromo={storePromo} cartTotals={cartTotals} promoCartTotals={promoCartTotals} />
+          <FreeShippingProgressBar
+            storePromo={storePromo}
+            cartTotals={cartTotals}
+            promoCartTotals={promoCartTotals}
+            exchangeRate={itemHandlers.exchangeRate}
+          />
         </div>
 
         <div className="cart-drawer-scroll-zone cart-drawer-scroll-zone-secondary">
