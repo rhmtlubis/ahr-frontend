@@ -19,6 +19,7 @@ import PostPurchaseReviewPrompt from './components/cart/PostPurchaseReviewPrompt
 import { formatCurrencyAmount } from './lib/price'
 import { getPendingPayment, savePendingPayment } from './lib/pendingPayment'
 import { getCountryLabel } from './lib/shippingCountries'
+import useDocumentTitle from './lib/useDocumentTitle'
 
 function formatOrderAmount(amountMinor, currency) {
   if (amountMinor === null || amountMinor === undefined) {
