@@ -54,7 +54,7 @@ export function getItemDisplayCurrency(pricing = {}, locale = 'id') {
   return pricing.source_currency || pricing.currency || displayCurrency
 }
 
-export function formatExchangeRateNote(exchangeRate, locale = 'id') {
+export function formatExchangeRateNote(exchangeRate, locale = 'id', payWithPayPal = false) {
   if (!exchangeRate?.value) {
     return null
   }
@@ -69,6 +69,12 @@ export function formatExchangeRateNote(exchangeRate, locale = 'id') {
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
   }).format(rate)
+
+  if (payWithPayPal) {
+    return locale === 'en'
+      ? `USD total is converted from IDR at Rp ${formattedRate} / USD (Bank Indonesia reference), including display markup. You pay in USD via PayPal after placing your order.`
+      : `Total USD dikonversi dari IDR dengan kurs Rp ${formattedRate} / USD (referensi Bank Indonesia), termasuk markup tampilan. Anda membayar dalam USD via PayPal setelah memesan.`
+  }
 
   return locale === 'en'
     ? `USD prices are estimates converted from IDR at Rp ${formattedRate} / USD (Bank Indonesia reference). You pay in IDR at checkout.`

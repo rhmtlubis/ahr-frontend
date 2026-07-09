@@ -908,9 +908,13 @@ export default function CartPage() {
       ),
     [appliedVoucher, cartChargeTotals, checkoutForm.fulfillment, selectedShippingOption, storePromo],
   )
+  const payWithPayPal = useMemo(
+    () => resolvePaymentChannel(checkoutForm, storePromo) === 'paypal',
+    [checkoutForm, storePromo],
+  )
   const exchangeRateNote = useMemo(
-    () => formatExchangeRateNote(exchangeRateMeta, language),
-    [exchangeRateMeta, language],
+    () => formatExchangeRateNote(exchangeRateMeta, language, payWithPayPal),
+    [exchangeRateMeta, language, payWithPayPal],
   )
   const { estimate: shippingEstimate, loading: shippingEstimateLoading } = useCartShippingEstimate(checkoutItems, language)
   const canPlaceOrder = Boolean(customerSession) || checkoutAuthMode === 'guest'
@@ -2210,10 +2214,10 @@ export default function CartPage() {
               <CreditCard size={18} aria-hidden="true" />
             </div>
             <p className="checkout-confirm-payment-copy">
-              {resolvePaymentChannel(checkoutForm, storePromo) === 'paypal'
+              {payWithPayPal
                 ? (language === 'en'
-                  ? 'Pay securely in USD with PayPal.'
-                  : 'Bayar aman dalam USD via PayPal.')
+                  ? 'Pay securely in USD with PayPal. After you place the order, the PayPal window will open.'
+                  : 'Bayar aman dalam USD via PayPal. Setelah memesan, jendela PayPal akan terbuka.')
                 : (language === 'en'
                   ? 'Pay securely online via Midtrans (bank transfer, e-wallet, QRIS, and more).'
                   : 'Bayar aman secara online via Midtrans (transfer bank, e-wallet, QRIS, dan lainnya).')}
