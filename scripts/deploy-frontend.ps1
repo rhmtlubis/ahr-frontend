@@ -41,9 +41,8 @@ if [ -z "$MIDTRANS_CLIENT_KEY" ] && [ -r /opt/ahrcorporation/backend/.env ]; the
   MIDTRANS_CLIENT_KEY="$(grep -E '^MIDTRANS_CLIENT_KEY=' /opt/ahrcorporation/backend/.env | tail -n 1 | cut -d= -f2-)"
 fi
 
-git stash push -m "auto-deploy backup $(date -u +%Y%m%dT%H%M%SZ)" >/dev/null || true
-
-git pull --ff-only origin __BRANCH__
+git fetch origin __BRANCH__
+git reset --hard origin/__BRANCH__
 cat > .env.production <<EOF
 VITE_API_BASE_URL=https://api.ahrcorporation.id
 VITE_PRERENDER_API_BASE_URL=https://api.ahrcorporation.id
