@@ -367,7 +367,7 @@ function OrderDetailContent({
   const paymentChannelLabel = getPaymentChannelLabel(order.checkout_channel, language)
   const isPayPalCheckout = order.checkout_channel === 'paypal'
   const canOpenPayment = isPayPalCheckout || isSnapReady
-  const orderPricingNote = formatOrderHistoryPricingNote(exchangeRateMeta, storePromo, language)
+  const orderPricingNote = formatOrderHistoryPricingNote(exchangeRateMeta, storePromo, language, order)
 
   return (
     <>

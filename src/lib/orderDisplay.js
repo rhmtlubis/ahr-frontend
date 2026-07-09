@@ -14,7 +14,20 @@ export function getPaymentChannelLabel(checkoutChannel, language = 'id') {
   }
 }
 
-export function buildOrderExchangeRateMeta(exchangeRateMeta, storePromo) {
+export function buildOrderExchangeRateMeta(exchangeRateMeta, storePromo, order = null) {
+  const storedRate = order?.charge_exchange_rate
+
+  if (storedRate && typeof storedRate === 'object') {
+    return {
+      ...storedRate,
+      display_markup_percent:
+        order?.charge_markup_percent ??
+        storedRate.display_markup_percent ??
+        storedRate.foreign_display_price_markup_percent ??
+        0,
+    }
+  }
+
   if (!exchangeRateMeta && !storePromo) {
     return null
   }
@@ -35,6 +48,7 @@ export function resolveStoredAmountDisplayMinor(
   language,
   exchangeRateMeta,
   storePromo,
+  order = null,
 ) {
   if (amountMinor === null || amountMinor === undefined) {
     return { amountMinor: null, currency: language === 'en' ? 'USD' : 'IDR' }
@@ -50,7 +64,7 @@ export function resolveStoredAmountDisplayMinor(
     return { amountMinor, currency: 'USD' }
   }
 
-  const rateMeta = buildOrderExchangeRateMeta(exchangeRateMeta, storePromo)
+  const rateMeta = buildOrderExchangeRateMeta(exchangeRateMeta, storePromo, order)
 
   if (normalizedCurrency === 'IDR' && rateMeta) {
     return {
@@ -95,14 +109,21 @@ export function resolveOrderDisplayAmountMinor(order, language, exchangeRateMeta
     return { amountMinor: storedChargeAmount, currency: storedChargeCurrency }
   }
 
-  return resolveStoredAmountDisplayMinor(sourceAmount, sourceCurrency, language, exchangeRateMeta, storePromo)
+  return resolveStoredAmountDisplayMinor(sourceAmount, sourceCurrency, language, exchangeRateMeta, storePromo, order)
 }
 
 export function formatOrderDisplayAmount(order, language, exchangeRateMeta, storePromo, amountMinor, sourceCurrency) {
   const resolved =
     amountMinor === undefined
       ? resolveOrderDisplayAmountMinor(order, language, exchangeRateMeta, storePromo)
-      : resolveStoredAmountDisplayMinor(amountMinor, sourceCurrency || order.currency, language, exchangeRateMeta, storePromo)
+      : resolveStoredAmountDisplayMinor(
+          amountMinor,
+          sourceCurrency || order.currency,
+          language,
+          exchangeRateMeta,
+          storePromo,
+          order,
+        )
 
   if (resolved.amountMinor === null || resolved.amountMinor === undefined) {
     return '-'
@@ -111,12 +132,13 @@ export function formatOrderDisplayAmount(order, language, exchangeRateMeta, stor
   return formatCurrencyAmount(resolved.amountMinor, resolved.currency, language)
 }
 
-export function formatOrderHistoryPricingNote(exchangeRateMeta, storePromo, language) {
+export function formatOrderHistoryPricingNote(exchangeRateMeta, storePromo, language, order = null) {
   if (language !== 'en') {
     return null
   }
 
-  const rate = Number(exchangeRateMeta?.value)
+  const rateMeta = buildOrderExchangeRateMeta(exchangeRateMeta, storePromo, order)
+  const rate = Number(rateMeta?.value)
 
   if (!Number.isFinite(rate) || rate <= 0) {
     return null
@@ -127,7 +149,9 @@ export function formatOrderHistoryPricingNote(exchangeRateMeta, storePromo, lang
     maximumFractionDigits: 0,
   }).format(rate)
 
-  const markupPercent = Number(storePromo?.foreign_display_price_markup_percent ?? 0)
+  const markupPercent = Number(
+    order?.charge_markup_percent ?? storePromo?.foreign_display_price_markup_percent ?? rateMeta?.display_markup_percent ?? 0,
+  )
   const markupSuffix =
     Number.isFinite(markupPercent) && markupPercent > 0
       ? `, including a ${new Intl.NumberFormat('en-US', {
