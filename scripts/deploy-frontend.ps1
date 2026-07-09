@@ -54,8 +54,6 @@ VITE_GOOGLE_AUTH_ENABLED=true
 EOF
 cd __DEPLOY_DIR__
 docker compose up -d --build frontend
-cd __REMOTE_REPO__
-git stash pop --index >/dev/null 2>&1 || true
 '@
 
 $remoteScript = $remoteScript.Replace('__REMOTE_REPO__', $RemoteRepo).Replace('__DEPLOY_DIR__', $DeployDir).Replace('__BRANCH__', $Branch)

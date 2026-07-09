@@ -32,16 +32,46 @@ export function getCatalogRelatedProductsUrl(productSlug, locale = 'id', currenc
   return `/api/catalog/products/${productSlug}/related?${buildCatalogQuery(locale, currency)}`
 }
 
+export function readLanguageFromUrl() {
+  if (typeof window === 'undefined') {
+    return null
+  }
+
+  const candidates = [
+    new URLSearchParams(window.location.search),
+  ]
+
+  const hashQueryIndex = window.location.hash.indexOf('?')
+
+  if (hashQueryIndex >= 0) {
+    candidates.push(new URLSearchParams(window.location.hash.slice(hashQueryIndex + 1)))
+  }
+
+  for (const params of candidates) {
+    const language = String(params.get('lang') || params.get('locale') || '').toLowerCase()
+
+    if (language === 'id' || language === 'en') {
+      return language
+    }
+  }
+
+  return null
+}
+
 export function detectInitialLanguage() {
+  const urlLanguage = readLanguageFromUrl()
+
+  if (urlLanguage) {
+    return urlLanguage
+  }
+
   const storedLanguage = window.localStorage.getItem('ahr-language')
 
   if (storedLanguage === 'id' || storedLanguage === 'en') {
     return storedLanguage
   }
 
-  const browserLanguage = String(navigator.language || 'id').toLowerCase()
-
-  return browserLanguage.startsWith('id') ? 'id' : 'en'
+  return 'id'
 }
 
 export function getItemDisplayCurrency(pricing = {}, locale = 'id') {
