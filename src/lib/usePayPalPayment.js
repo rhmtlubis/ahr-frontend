@@ -107,6 +107,12 @@ function ensurePayPalMount() {
     panel.style.minWidth = 'min(360px, 92vw)'
     panel.style.boxShadow = '0 24px 64px rgba(15, 23, 42, 0.25)'
 
+    const heading = document.createElement('p')
+    heading.textContent = 'Complete your payment with PayPal'
+    heading.style.margin = '0 0 16px'
+    heading.style.fontWeight = '600'
+    heading.style.textAlign = 'center'
+
     const closeButton = document.createElement('button')
     closeButton.type = 'button'
     closeButton.textContent = '×'
@@ -124,6 +130,7 @@ function ensurePayPalMount() {
     container.id = 'paypal-buttons-container'
 
     panel.appendChild(closeButton)
+    panel.appendChild(heading)
     panel.appendChild(container)
     mount.appendChild(panel)
     document.body.appendChild(mount)
@@ -152,6 +159,12 @@ export function usePayPalPayment() {
 
     try {
       const paypalData = await createPayPalOrder(orderNumber, paymentAccessToken)
+
+      if (paypalData.approval_url) {
+        window.location.assign(paypalData.approval_url)
+        return new Promise(() => {})
+      }
+
       const paypal = await loadPayPalSdk(paypalData.client_id, paypalData.is_sandbox)
       setIsPayPalReady(true)
 

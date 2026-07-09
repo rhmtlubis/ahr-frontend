@@ -2216,12 +2216,17 @@ export default function CartPage() {
             <p className="checkout-confirm-payment-copy">
               {payWithPayPal
                 ? (language === 'en'
-                  ? 'Pay securely in USD with PayPal. After you place the order, the PayPal window will open.'
-                  : 'Bayar aman dalam USD via PayPal. Setelah memesan, jendela PayPal akan terbuka.')
+                  ? 'You will be redirected to PayPal to complete payment in USD.'
+                  : 'Anda akan diarahkan ke PayPal untuk menyelesaikan pembayaran dalam USD.')
                 : (language === 'en'
                   ? 'Pay securely online via Midtrans (bank transfer, e-wallet, QRIS, and more).'
                   : 'Bayar aman secara online via Midtrans (transfer bank, e-wallet, QRIS, dan lainnya).')}
             </p>
+            {payWithPayPal ? (
+              <div className="checkout-paypal-badge" aria-hidden="true">
+                PayPal
+              </div>
+            ) : null}
           </div>
 
           {customerSession ? (
@@ -2305,7 +2310,14 @@ export default function CartPage() {
             shippingEstimateLoading={shippingEstimateLoading}
             storePromo={storePromo}
             promoCartTotals={cartChargeTotals}
-            fulfillment={checkoutForm.fulfillment}
+            payWithPayPal={payWithPayPal}
+            checkoutSubmitLabel={
+              payWithPayPal
+                ? (language === 'en'
+                  ? `Pay with PayPal · ${checkoutTotals?.grandTotalLabel || ''}`
+                  : `Bayar dengan PayPal · ${checkoutTotals?.grandTotalLabel || ''}`)
+                : ''
+            }
           />
         ) : (
           <CartStepView

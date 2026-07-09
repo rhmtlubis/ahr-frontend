@@ -42,6 +42,8 @@ export default function CheckoutStepView({
   storePromo,
   promoCartTotals = null,
   fulfillment = 'delivery',
+  payWithPayPal = false,
+  checkoutSubmitLabel = '',
 }) {
   const [showAllItems, setShowAllItems] = useState(false)
   const previewItems = showAllItems ? items : items.slice(0, 2)
@@ -56,6 +58,8 @@ export default function CheckoutStepView({
     exchangeRateNote || (language === 'en' && checkoutTotals?.currency === 'USD'),
   )
   const isSubmitting = checkoutStatus.state === 'loading'
+  const submitLabel = checkoutSubmitLabel
+    || (isSubmitting ? t('common.submitting') : t('cart.checkoutPlaceOrder'))
 
   return (
     <form className="checkout-confirm-page checkout-confirm-page--marketplace" onSubmit={handleCheckoutSubmit}>
@@ -188,14 +192,12 @@ export default function CheckoutStepView({
                 error={termsError}
               />
               <button
-                className="cart-drawer-checkout-btn checkout-confirm-submit"
+                className={`cart-drawer-checkout-btn checkout-confirm-submit${payWithPayPal ? ' checkout-confirm-submit--paypal' : ''}`}
                 type="submit"
                 disabled={checkoutStatus.state === 'loading' || !termsAccepted}
               >
-                <CreditCard size={18} />
-                <span>
-                  {checkoutStatus.state === 'loading' ? t('common.submitting') : t('cart.checkoutPlaceOrder')}
-                </span>
+                {!payWithPayPal ? <CreditCard size={18} /> : null}
+                <span>{submitLabel}</span>
               </button>
               <p className="checkout-confirm-payment-window">
                 {language === 'en'
@@ -261,11 +263,12 @@ export default function CheckoutStepView({
               language={language}
               totalLabel={totalLabel}
               itemCount={itemCount}
-              buttonLabel={isSubmitting ? t('common.submitting') : t('cart.checkoutPlaceOrder')}
+              buttonLabel={submitLabel}
               type="submit"
               disabled={!termsAccepted}
               loading={isSubmitting}
-              icon={CreditCard}
+              icon={payWithPayPal ? null : CreditCard}
+              buttonClassName={payWithPayPal ? 'checkout-confirm-submit--paypal' : ''}
             />
           </div>
         </div>

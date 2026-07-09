@@ -10,6 +10,7 @@ export default function CartMarketplaceFooter({
   disabled = false,
   loading = false,
   icon: Icon = ChevronRight,
+  buttonClassName = '',
 }) {
   const countSuffix =
     itemCount > 0
@@ -33,7 +34,7 @@ export default function CartMarketplaceFooter({
           ) : null}
         </div>
         <button
-          className="cart-marketplace-footer-cta"
+          className={`cart-marketplace-footer-cta${buttonClassName ? ` ${buttonClassName}` : ''}`}
           type={type}
           onClick={onClick}
           disabled={disabled || loading}
@@ -42,7 +43,7 @@ export default function CartMarketplaceFooter({
             {buttonLabel}
             {countSuffix}
           </span>
-          <Icon size={18} aria-hidden="true" />
+          {Icon ? <Icon size={18} aria-hidden="true" /> : null}
         </button>
       </div>
     </footer>

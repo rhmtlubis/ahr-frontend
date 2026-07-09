@@ -8925,6 +8925,33 @@ main {
   margin-top: 12px;
 }
 
+.checkout-confirm-submit--paypal,
+.cart-marketplace-footer-cta.checkout-confirm-submit--paypal {
+  background: #0070ba;
+  border-color: #0070ba;
+  color: #fff;
+}
+
+.checkout-confirm-submit--paypal:hover:not(:disabled),
+.cart-marketplace-footer-cta.checkout-confirm-submit--paypal:hover:not(:disabled) {
+  background: #005ea6;
+  border-color: #005ea6;
+}
+
+.checkout-paypal-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 12px;
+  padding: 10px 18px;
+  border-radius: 6px;
+  background: #ffc439;
+  color: #003087;
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
 .checkout-confirm-payment-window {
   margin: 10px 0 0;
   font-size: 0.78rem;
