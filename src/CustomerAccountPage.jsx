@@ -30,7 +30,12 @@ import { getLandingChromeContent } from './lib/landingContent'
 import { getRetailHeaderActions, getStoreBrandName, isCssStore } from './lib/storeConfig'
 import useDocumentTitle from './lib/useDocumentTitle'
 import { clearPersonalizationData } from './lib/personalization'
-import { formatCurrencyAmount } from './lib/price'
+import { fetchStorePromo } from './lib/storePromo'
+import {
+  formatOrderDisplayAmount,
+  formatOrderHistoryPricingNote,
+  getPaymentChannelLabel,
+} from './lib/orderDisplay'
 import { getCountryLabel, isInternationalCountry } from './lib/shippingCountries'
 
 const ORDER_STATUS_FILTERS = [
@@ -72,16 +77,24 @@ function formatOrderDate(isoDate, language) {
   })
 }
 
-function CustomerOrderRow({ order, language }) {
+function CustomerOrderRow({ order, language, exchangeRateMeta, storePromo }) {
   const statusLabel = getOrderStatusLabel(order.status, language)
   const tracking = order.shipment_tracking
   const trackingLabel = tracking ? getShipmentPhaseLabel(tracking.phase, language) : null
+  const paymentChannelLabel = getPaymentChannelLabel(order.checkout_channel, language)
 
   return (
     <Link className="customer-order-row" to={`/akun/pesanan/${order.order_number}`}>
       <div className="customer-order-row-order">
         <strong>{order.order_number}</strong>
         <span>{formatOrderDate(order.created_at, language)}</span>
+        {paymentChannelLabel ? (
+          <span
+            className={`customer-order-payment-channel customer-order-payment-channel-${order.checkout_channel || 'unknown'}`}
+          >
+            {paymentChannelLabel}
+          </span>
+        ) : null}
         {trackingLabel ? (
           <span className={`customer-order-row-tracking customer-order-row-tracking-${tracking.phase}`}>
             <Truck size={14} aria-hidden="true" />
@@ -93,7 +106,7 @@ function CustomerOrderRow({ order, language }) {
       <span className={`customer-order-status customer-order-status-${order.status}`}>{statusLabel}</span>
 
       <span className="customer-order-row-amount">
-        {formatCurrencyAmount(order.grand_total_amount_minor, order.currency || 'IDR')}
+        {formatOrderDisplayAmount(order, language, exchangeRateMeta, storePromo)}
       </span>
 
       <span className="customer-order-row-action">
@@ -197,6 +210,8 @@ export default function CustomerAccountPage() {
   const [orders, setOrders] = useState([])
   const [ordersStatus, setOrdersStatus] = useState({ state: 'idle', message: '' })
   const [orderStatusFilter, setOrderStatusFilter] = useState('all')
+  const [exchangeRateMeta, setExchangeRateMeta] = useState(null)
+  const [storePromo, setStorePromo] = useState(null)
 
   const handleGoogleAuthStatus = useCallback(
     (status) => {
@@ -251,11 +266,28 @@ export default function CustomerAccountPage() {
         if (payload?.data) {
           setPageContent(getLandingChromeContent(payload.data, { hashPrefix: '/', locale: language }))
         }
+
+        setExchangeRateMeta(payload?.meta?.exchange_rate || null)
       })
       .catch(() => {
         setPageContent(getLandingChromeContent({}, { hashPrefix: '/', locale: language }))
+        setExchangeRateMeta(null)
       })
   }, [language])
+
+  useEffect(() => {
+    let cancelled = false
+
+    fetchStorePromo().then((promo) => {
+      if (!cancelled) {
+        setStorePromo(promo)
+      }
+    })
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   useEffect(() => {
     if (!customer) {
@@ -428,6 +460,11 @@ export default function CustomerAccountPage() {
       source_page: '/akun',
     })
   }
+
+  const orderPricingNote = useMemo(
+    () => formatOrderHistoryPricingNote(exchangeRateMeta, storePromo, language),
+    [exchangeRateMeta, language, storePromo],
+  )
 
   const orderStatusCounts = useMemo(() => {
     const counts = { all: orders.length }
@@ -889,10 +926,19 @@ export default function CustomerAccountPage() {
                       </div>
                       <div className="customer-orders-table-body">
                         {filteredOrders.map((order) => (
-                          <CustomerOrderRow key={order.order_number} order={order} language={language} />
+                          <CustomerOrderRow
+                            key={order.order_number}
+                            order={order}
+                            language={language}
+                            exchangeRateMeta={exchangeRateMeta}
+                            storePromo={storePromo}
+                          />
                         ))}
                       </div>
                     </div>
+                    {orderPricingNote ? (
+                      <p className="customer-orders-pricing-note">{orderPricingNote}</p>
+                    ) : null}
                   </div>
                 )}
               </section>

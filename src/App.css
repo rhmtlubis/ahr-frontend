@@ -6346,6 +6346,46 @@ main {
   font-size: 0.8rem;
 }
 
+.customer-order-payment-channel {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.customer-order-payment-channel-midtrans {
+  background: rgba(0, 166, 81, 0.12);
+  color: #007a3d;
+}
+
+.customer-order-payment-channel-paypal {
+  background: rgba(0, 112, 186, 0.12);
+  color: #0070ba;
+}
+
+.customer-order-payment-channel-whatsapp {
+  background: rgba(37, 211, 102, 0.14);
+  color: #128c7e;
+}
+
+.customer-orders-pricing-note {
+  margin: 0;
+  padding: 12px 20px 16px;
+  color: var(--text-600);
+  font-size: 0.78rem;
+  line-height: 1.5;
+  border-top: 1px solid rgba(2, 37, 84, 0.06);
+}
+
+.customer-order-detail-header-main .customer-order-payment-channel {
+  margin-top: 6px;
+}
+
 .customer-order-row .customer-order-status {
   justify-self: start;
   padding: 6px 10px;
@@ -6657,6 +6697,17 @@ main {
 
 .customer-order-pay-button span {
   text-align: center;
+}
+
+.customer-order-pay-button--paypal {
+  background: #0070ba;
+  border-color: #0070ba;
+  color: #fff;
+}
+
+.customer-order-pay-button--paypal:hover:not(:disabled) {
+  background: #005ea6;
+  border-color: #005ea6;
 }
 
 .cart-voucher-field {
@@ -8950,6 +9001,51 @@ main {
   font-size: 1rem;
   font-weight: 700;
   letter-spacing: 0.02em;
+}
+
+.checkout-payment-channel-picker {
+  display: grid;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.checkout-payment-channel-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  border: 1px solid rgba(2, 37, 84, 0.12);
+  border-radius: 14px;
+  background: #fff;
+  cursor: pointer;
+  transition:
+    border-color 160ms ease,
+    background-color 160ms ease;
+}
+
+.checkout-payment-channel-option.is-selected {
+  border-color: rgba(0, 112, 186, 0.45);
+  background: rgba(0, 112, 186, 0.06);
+}
+
+.checkout-payment-channel-option input {
+  margin-top: 3px;
+}
+
+.checkout-payment-channel-option span {
+  display: grid;
+  gap: 2px;
+}
+
+.checkout-payment-channel-option strong {
+  color: var(--navy-900);
+  font-size: 0.92rem;
+}
+
+.checkout-payment-channel-option em {
+  color: var(--text-600);
+  font-size: 0.78rem;
+  font-style: normal;
 }
 
 .checkout-confirm-payment-window {

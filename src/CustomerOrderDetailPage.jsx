@@ -16,17 +16,22 @@ import { useMidtransPayment } from './lib/useMidtransPayment'
 import { usePayPalPayment } from './lib/usePayPalPayment'
 import CheckoutTermsAgreement from './components/checkout/CheckoutTermsAgreement'
 import PostPurchaseReviewPrompt from './components/cart/PostPurchaseReviewPrompt'
-import { formatCurrencyAmount } from './lib/price'
+import { fetchStorePromo } from './lib/storePromo'
+import {
+  formatOrderDisplayAmount,
+  formatOrderHistoryPricingNote,
+  getPaymentChannelLabel,
+} from './lib/orderDisplay'
 import { getPendingPayment, savePendingPayment } from './lib/pendingPayment'
 import { getCountryLabel } from './lib/shippingCountries'
 import useDocumentTitle from './lib/useDocumentTitle'
 
-function formatOrderAmount(amountMinor, currency) {
+function formatOrderAmount(order, language, exchangeRateMeta, storePromo, amountMinor, sourceCurrency) {
   if (amountMinor === null || amountMinor === undefined) {
     return '-'
   }
 
-  return formatCurrencyAmount(amountMinor, currency || 'IDR')
+  return formatOrderDisplayAmount(order, language, exchangeRateMeta, storePromo, amountMinor, sourceCurrency)
 }
 
 function getStatusLabel(status, language) {
@@ -66,6 +71,8 @@ export default function CustomerOrderDetailPage() {
   const [termsAccepted, setTermsAccepted] = useState(false)
   const [termsError, setTermsError] = useState('')
   const [consentPreferences, setConsentPreferencesState] = useState(() => getConsentPreferences())
+  const [exchangeRateMeta, setExchangeRateMeta] = useState(null)
+  const [storePromo, setStorePromo] = useState(null)
 
   const urlToken = searchParams.get('token')?.trim() || ''
   const guestToken = urlToken || getPendingPayment(orderNumber)?.paymentAccessToken || ''
@@ -165,11 +172,28 @@ export default function CustomerOrderDetailPage() {
         if (payload?.data) {
           setPageContent(getLandingChromeContent(payload.data, { hashPrefix: '/', locale: language }))
         }
+
+        setExchangeRateMeta(payload?.meta?.exchange_rate || null)
       })
       .catch(() => {
         setPageContent(getLandingChromeContent({}, { hashPrefix: '/', locale: language }))
+        setExchangeRateMeta(null)
       })
   }, [language])
+
+  useEffect(() => {
+    let cancelled = false
+
+    fetchStorePromo().then((promo) => {
+      if (!cancelled) {
+        setStorePromo(promo)
+      }
+    })
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   useEffect(() => {
     if (customerLoading) {
@@ -312,6 +336,8 @@ export default function CustomerOrderDetailPage() {
                 termsError={termsError}
                 whatsappNumber={pageContent.brand?.whatsapp_number}
                 isGuestView={isGuestView}
+                exchangeRateMeta={exchangeRateMeta}
+                storePromo={storePromo}
               />
             )}
           </section>
@@ -335,13 +361,27 @@ function OrderDetailContent({
   termsError,
   whatsappNumber,
   isGuestView,
+  exchangeRateMeta,
+  storePromo,
 }) {
+  const paymentChannelLabel = getPaymentChannelLabel(order.checkout_channel, language)
+  const isPayPalCheckout = order.checkout_channel === 'paypal'
+  const canOpenPayment = isPayPalCheckout || isSnapReady
+  const orderPricingNote = formatOrderHistoryPricingNote(exchangeRateMeta, storePromo, language)
+
   return (
     <>
       <div className="customer-order-detail-header">
         <div className="customer-order-detail-header-main">
           <span>{language === 'en' ? 'Order number' : 'Nomor order'}</span>
           <p className="customer-order-number">{order.order_number}</p>
+          {paymentChannelLabel ? (
+            <span
+              className={`customer-order-payment-channel customer-order-payment-channel-${order.checkout_channel || 'unknown'}`}
+            >
+              {paymentChannelLabel}
+            </span>
+          ) : null}
         </div>
         <OrderStatusBadge order={order} language={language} />
       </div>
@@ -374,7 +414,14 @@ function OrderDetailContent({
               </p>
             </div>
             <span className="customer-order-item-price">
-              {formatOrderAmount(item.line_net_amount_minor, item.currency || order.currency)}
+              {formatOrderAmount(
+                order,
+                language,
+                exchangeRateMeta,
+                storePromo,
+                item.line_net_amount_minor,
+                item.currency || order.currency,
+              )}
             </span>
           </article>
         ))}
@@ -385,10 +432,24 @@ function OrderDetailContent({
       <div className="customer-order-summary">
         <div>
           <span>{language === 'en' ? 'Subtotal' : 'Subtotal'}</span>
-          <strong>{formatOrderAmount(order.summary?.net_total_amount_minor, order.currency)}</strong>
+          <strong>
+            {formatOrderAmount(
+              order,
+              language,
+              exchangeRateMeta,
+              storePromo,
+              order.summary?.net_total_amount_minor,
+              order.currency,
+            )}
+          </strong>
         </div>
         {order.summary?.shipping_fee_amount_minor ? (
-          <ShippingFeeRow order={order} language={language} />
+          <ShippingFeeRow
+            order={order}
+            language={language}
+            exchangeRateMeta={exchangeRateMeta}
+            storePromo={storePromo}
+          />
         ) : null}
         {order.summary?.voucher_discount_amount_minor || order.voucher_discount_amount_minor ? (
           <div>
@@ -398,6 +459,10 @@ function OrderDetailContent({
             <strong>
               -
               {formatOrderAmount(
+                order,
+                language,
+                exchangeRateMeta,
+                storePromo,
                 order.summary?.voucher_discount_amount_minor ?? order.voucher_discount_amount_minor,
                 order.currency,
               )}
@@ -410,6 +475,10 @@ function OrderDetailContent({
             <strong>
               -
               {formatOrderAmount(
+                order,
+                language,
+                exchangeRateMeta,
+                storePromo,
                 order.summary?.voucher_shipping_discount_amount_minor ?? order.voucher_shipping_discount_amount_minor,
                 order.currency,
               )}
@@ -419,10 +488,19 @@ function OrderDetailContent({
         <div className="customer-order-grand-total">
           <span>{language === 'en' ? 'Grand total' : 'Total bayar'}</span>
           <strong>
-            {formatOrderAmount(order.summary?.grand_total_amount_minor ?? order.grand_total_amount_minor, order.currency)}
+            {formatOrderAmount(
+              order,
+              language,
+              exchangeRateMeta,
+              storePromo,
+              order.summary?.grand_total_amount_minor ?? order.grand_total_amount_minor,
+              order.currency,
+            )}
           </strong>
         </div>
       </div>
+
+      {orderPricingNote ? <p className="customer-orders-pricing-note">{orderPricingNote}</p> : null}
 
       {order.payment_expires_at && order.can_pay ? (
         <p className="customer-order-expiry-note">
@@ -456,7 +534,12 @@ function OrderDetailContent({
         </div>
       ) : null}
 
-      <OrderPaymentInfo order={order} language={language} />
+      <OrderPaymentInfo
+        order={order}
+        language={language}
+        exchangeRateMeta={exchangeRateMeta}
+        storePromo={storePromo}
+      />
 
       <OrderShipmentTracking
         order={order}
@@ -467,7 +550,7 @@ function OrderDetailContent({
 
       {order.can_pay ? (
         <div className="customer-order-pay">
-          {!isSnapReady ? (
+          {!canOpenPayment ? (
             <p className="cart-status error">
               {language === 'en'
                 ? 'Online payment is not ready yet. Refresh the page or contact support if this persists.'
@@ -482,18 +565,22 @@ function OrderDetailContent({
             error={termsError}
           />
           <button
-            className="cart-submit-button customer-order-pay-button"
+            className={`cart-submit-button customer-order-pay-button${isPayPalCheckout ? ' customer-order-pay-button--paypal' : ''}`}
             type="button"
-            disabled={paymentStatus.state === 'loading' || !isSnapReady || !termsAccepted}
+            disabled={paymentStatus.state === 'loading' || !canOpenPayment || !termsAccepted}
             onClick={onPayAgain}
           >
             <CreditCard size={18} />
             <span>
               {paymentStatus.state === 'loading'
                 ? t('common.submitting')
-                : language === 'en'
-                  ? 'Pay now'
-                  : 'Bayar sekarang'}
+                : isPayPalCheckout
+                  ? language === 'en'
+                    ? 'Pay with PayPal'
+                    : 'Bayar dengan PayPal'
+                  : language === 'en'
+                    ? 'Pay now'
+                    : 'Bayar sekarang'}
             </span>
           </button>
           {paymentStatus.message ? (
@@ -596,8 +683,53 @@ function OrderFulfillmentInfo({ order, language }) {
   )
 }
 
-function OrderPaymentInfo({ order, language }) {
+function OrderPaymentInfo({ order, language, exchangeRateMeta, storePromo }) {
   const payment = order.payment
+  const isPayPal = order.checkout_channel === 'paypal'
+
+  if (isPayPal) {
+    const paypalAmountLabel =
+      payment?.paypal_amount_minor !== null && payment?.paypal_amount_minor !== undefined
+        ? formatOrderDisplayAmount(order, language, exchangeRateMeta, storePromo)
+        : null
+
+    return (
+      <section className="customer-order-payment-info">
+        <div className="customer-order-payment-info-head">
+          <Wallet size={18} />
+          <div>
+            <strong>{language === 'en' ? 'Payment details' : 'Detail pembayaran'}</strong>
+            <p>
+              {language === 'en'
+                ? 'This order is paid via PayPal in USD.'
+                : 'Pesanan ini dibayar melalui PayPal dalam USD.'}
+            </p>
+          </div>
+        </div>
+
+        <div className="customer-order-payment-info-meta">
+          <span>
+            {language === 'en' ? 'Method' : 'Metode'}: <strong>PayPal</strong>
+          </span>
+          {paypalAmountLabel ? (
+            <span>
+              {language === 'en' ? 'Charge' : 'Nominal'}: <strong>{paypalAmountLabel}</strong>
+            </span>
+          ) : null}
+          {(order.payment_expires_at || payment?.expiry_time) && order.can_pay ? (
+            <span>
+              {language === 'en' ? 'Pay before' : 'Bayar sebelum'}:{' '}
+              <strong>
+                {new Date(order.payment_expires_at || payment.expiry_time).toLocaleString(
+                  language === 'en' ? 'en-ID' : 'id-ID',
+                )}
+              </strong>
+            </span>
+          ) : null}
+        </div>
+      </section>
+    )
+  }
 
   if (!payment?.has_midtrans_transaction && !payment?.instructions?.length) {
     return null
@@ -676,11 +808,20 @@ function OrderStatusBadge({ order, language }) {
   )
 }
 
-function ShippingFeeRow({ order, language }) {
+function ShippingFeeRow({ order, language, exchangeRateMeta, storePromo }) {
   return (
     <div>
       <span>{language === 'en' ? 'Shipping' : 'Ongkir'}</span>
-      <strong>{formatOrderAmount(order.summary.shipping_fee_amount_minor, order.currency)}</strong>
+      <strong>
+        {formatOrderAmount(
+          order,
+          language,
+          exchangeRateMeta,
+          storePromo,
+          order.summary.shipping_fee_amount_minor,
+          order.currency,
+        )}
+      </strong>
     </div>
   )
 }

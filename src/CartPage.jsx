@@ -42,6 +42,12 @@ import { useGoogleAuthCallback } from './lib/googleAuth'
 import { useLanguage } from './lib/i18n.jsx'
 import { getLandingChromeContent } from './lib/landingContent'
 import { getRetailHeaderActions } from './lib/storeConfig'
+import {
+  isInternationalCheckout,
+  isPayPalPaymentChannel,
+  resolvePaymentChannel,
+  shouldShowInternationalPaymentPicker,
+} from './lib/internationalPayment'
 import { buildOrderDetailPath, clearPendingPayment, getPendingPayment, savePendingPayment } from './lib/pendingPayment'
 import { useMidtransPayment } from './lib/useMidtransPayment'
 import { usePayPalPayment } from './lib/usePayPalPayment'
@@ -609,13 +615,22 @@ function buildCheckoutMessage(items, checkoutForm, language, cartTotals, locatio
     .join('\n')
 }
 
-function buildCheckoutPayload(items, checkoutForm, language, locationOptions, appliedVoucherCode, countryOptions = [], storePromo = null) {
+function buildCheckoutPayload(
+  items,
+  checkoutForm,
+  language,
+  locationOptions,
+  appliedVoucherCode,
+  countryOptions = [],
+  storePromo = null,
+  internationalPaymentChannel = null,
+) {
   const formattedAddress = buildStructuredAddress(checkoutForm, locationOptions, countryOptions)
   const addressLine = isInternationalCountry(checkoutForm.countryCode)
     ? String(checkoutForm.addressLine || '').trim()
     : stripTrailingRegionsFromAddressLine(checkoutForm.addressLine, locationOptions, checkoutForm)
   const isInternational = isInternationalCountry(checkoutForm.countryCode)
-  const paymentChannel = resolvePaymentChannel(checkoutForm, storePromo)
+  const paymentChannel = resolvePaymentChannel(checkoutForm, storePromo, internationalPaymentChannel)
 
   return {
     name: checkoutForm.name,
@@ -656,18 +671,6 @@ function buildCheckoutPayload(items, checkoutForm, language, locationOptions, ap
       }
     }),
   }
-}
-
-function resolvePaymentChannel(checkoutForm, storePromo) {
-  if (
-    checkoutForm.fulfillment === 'delivery'
-    && isInternationalCountry(checkoutForm.countryCode)
-    && storePromo?.paypal?.enabled
-  ) {
-    return 'paypal'
-  }
-
-  return 'midtrans'
 }
 
 function buildShippingQuotePayload(items, checkoutForm) {
@@ -833,6 +836,7 @@ export default function CartPage() {
   const paymentInProgressRef = useRef(false)
   const wasOnCheckoutRef = useRef(false)
   const [storePromo, setStorePromo] = useState(null)
+  const [internationalPaymentChannel, setInternationalPaymentChannel] = useState('paypal')
   const [pageContent, setPageContent] = useState(() =>
     getLandingChromeContent({}, { hashPrefix: '/', locale: language }),
   )
@@ -908,9 +912,17 @@ export default function CartPage() {
       ),
     [appliedVoucher, cartChargeTotals, checkoutForm.fulfillment, selectedShippingOption, storePromo],
   )
+  const activePaymentChannel = useMemo(
+    () => resolvePaymentChannel(checkoutForm, storePromo, internationalPaymentChannel),
+    [checkoutForm, storePromo, internationalPaymentChannel],
+  )
   const payWithPayPal = useMemo(
-    () => resolvePaymentChannel(checkoutForm, storePromo) === 'paypal',
-    [checkoutForm, storePromo],
+    () => isPayPalPaymentChannel(activePaymentChannel),
+    [activePaymentChannel],
+  )
+  const showInternationalPaymentPicker = useMemo(
+    () => shouldShowInternationalPaymentPicker(storePromo) && isInternationalCheckout(checkoutForm),
+    [storePromo, checkoutForm],
   )
   const exchangeRateNote = useMemo(
     () => formatExchangeRateNote(exchangeRateMeta, language, payWithPayPal),
@@ -958,6 +970,14 @@ export default function CartPage() {
       cancelled = true
     }
   }, [])
+
+  useEffect(() => {
+    const defaultChannel = storePromo?.international_payment?.default_channel
+
+    if (defaultChannel) {
+      setInternationalPaymentChannel(defaultChannel)
+    }
+  }, [storePromo?.international_payment?.default_channel, storePromo?.international_payment?.mode])
 
   useEffect(() => {
     if (isCheckoutStep) {
@@ -1552,6 +1572,7 @@ export default function CartPage() {
             appliedVoucher?.code,
             countryOptions,
             storePromo,
+            internationalPaymentChannel,
           ),
           shipping_option: selectedShippingOption
             ? {
@@ -2218,10 +2239,44 @@ export default function CartPage() {
                 ? (language === 'en'
                   ? 'You will be redirected to PayPal to complete payment in USD.'
                   : 'Anda akan diarahkan ke PayPal untuk menyelesaikan pembayaran dalam USD.')
-                : (language === 'en'
-                  ? 'Pay securely online via Midtrans (bank transfer, e-wallet, QRIS, and more).'
-                  : 'Bayar aman secara online via Midtrans (transfer bank, e-wallet, QRIS, dan lainnya).')}
+                : showInternationalPaymentPicker
+                  ? (language === 'en'
+                    ? 'Pay securely with your credit or debit card via Midtrans in USD.'
+                    : 'Bayar aman dengan kartu kredit/debit via Midtrans dalam USD.')
+                  : (language === 'en'
+                    ? 'Pay securely online via Midtrans (bank transfer, e-wallet, QRIS, and more).'
+                    : 'Bayar aman secara online via Midtrans (transfer bank, e-wallet, QRIS, dan lainnya).')}
             </p>
+            {showInternationalPaymentPicker ? (
+              <div className="checkout-payment-channel-picker" role="radiogroup" aria-label={language === 'en' ? 'International payment method' : 'Metode pembayaran internasional'}>
+                <label className={`checkout-payment-channel-option${internationalPaymentChannel === 'paypal' ? ' is-selected' : ''}`}>
+                  <input
+                    type="radio"
+                    name="international-payment-channel"
+                    value="paypal"
+                    checked={internationalPaymentChannel === 'paypal'}
+                    onChange={() => setInternationalPaymentChannel('paypal')}
+                  />
+                  <span>
+                    <strong>PayPal</strong>
+                    <em>{language === 'en' ? 'Pay in USD' : 'Bayar dalam USD'}</em>
+                  </span>
+                </label>
+                <label className={`checkout-payment-channel-option${internationalPaymentChannel === 'midtrans' ? ' is-selected' : ''}`}>
+                  <input
+                    type="radio"
+                    name="international-payment-channel"
+                    value="midtrans"
+                    checked={internationalPaymentChannel === 'midtrans'}
+                    onChange={() => setInternationalPaymentChannel('midtrans')}
+                  />
+                  <span>
+                    <strong>Midtrans</strong>
+                    <em>{language === 'en' ? 'Credit / debit card (USD)' : 'Kartu kredit / debit (USD)'}</em>
+                  </span>
+                </label>
+              </div>
+            ) : null}
             {payWithPayPal ? (
               <div className="checkout-paypal-badge" aria-hidden="true">
                 PayPal
