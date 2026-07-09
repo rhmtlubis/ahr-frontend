@@ -1,35 +1,10 @@
 import { useCallback, useEffect, useState } from 'react'
 import { ChevronRight, Tag, X } from 'lucide-react'
 import { listCatalogVouchers, validateCatalogVoucher } from '../../lib/api'
-import { formatCurrencyAmount } from '../../lib/price'
-
-function formatVoucherSuccessMessage(preview, language) {
-  const parts = []
-
-  if (preview.order_discount_amount_minor > 0) {
-    parts.push(
-      language === 'en'
-        ? `product -${formatCurrencyAmount(preview.order_discount_amount_minor, preview.currency, language)}`
-        : `produk -${formatCurrencyAmount(preview.order_discount_amount_minor, preview.currency, language)}`,
-    )
-  }
-
-  if (preview.shipping_discount_amount_minor > 0) {
-    parts.push(
-      language === 'en'
-        ? `shipping -${formatCurrencyAmount(preview.shipping_discount_amount_minor, preview.currency, language)}`
-        : `ongkir -${formatCurrencyAmount(preview.shipping_discount_amount_minor, preview.currency, language)}`,
-    )
-  }
-
-  if (parts.length === 0 && preview.discount_amount_minor > 0) {
-    parts.push(`-${formatCurrencyAmount(preview.discount_amount_minor, preview.currency, language)}`)
-  }
-
-  const detail = parts.length > 0 ? parts.join(', ') : preview.benefit_type_label || ''
-
-  return language === 'en' ? `Voucher applied: ${detail}` : `Voucher aktif: ${detail}`
-}
+import {
+  formatVoucherListEntry,
+  formatVoucherSuccessMessage,
+} from '../../lib/voucherDisplay'
 
 function buildListPayload({ items, locale, currency, fulfillment, shippingFeeAmountMinor }) {
   return {
@@ -52,6 +27,8 @@ export default function VoucherCodeField({
   onApplied,
   onClear,
   disabled = false,
+  exchangeRate = null,
+  storePromo = null,
 }) {
   const [sheetOpen, setSheetOpen] = useState(false)
   const [manualCode, setManualCode] = useState(appliedVoucher?.code || '')
@@ -86,7 +63,7 @@ export default function VoucherCodeField({
     setSelectedCode(preview.code)
     setStatus({
       state: 'success',
-      message: formatVoucherSuccessMessage(preview, language),
+      message: formatVoucherSuccessMessage(preview, language, exchangeRate, storePromo),
     })
     setSheetOpen(false)
   }
@@ -138,14 +115,16 @@ export default function VoucherCodeField({
       const entries = await listCatalogVouchers(
         buildListPayload({ items, locale, currency, fulfillment, shippingFeeAmountMinor }),
       )
-      setVoucherList(entries)
+      setVoucherList(
+        entries.map((entry) => formatVoucherListEntry(entry, language, exchangeRate, storePromo)),
+      )
       setListState('ready')
     } catch (error) {
       setVoucherList([])
       setListState('error')
       setStatus({ state: 'error', message: error.message })
     }
-  }, [currency, fulfillment, items, locale, shippingFeeAmountMinor])
+  }, [currency, exchangeRate, fulfillment, items, language, locale, shippingFeeAmountMinor, storePromo])
 
   const openSheet = () => {
     if (disabled) {

@@ -159,6 +159,8 @@ export default function CheckoutStepView({
                 onApplied={setAppliedVoucher}
                 onClear={() => setAppliedVoucher(null)}
                 disabled={checkoutStatus.state === 'loading'}
+                exchangeRate={itemHandlers.exchangeRate}
+                storePromo={storePromo}
               />
             </>
           ) : null}
