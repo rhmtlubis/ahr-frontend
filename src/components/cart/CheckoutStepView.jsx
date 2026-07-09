@@ -23,6 +23,7 @@ export default function CheckoutStepView({
   exchangeRateNote,
   checkoutForm,
   checkoutItems,
+  voucherValidateItems = [],
   customerSession,
   canPlaceOrder = false,
   appliedVoucher,
@@ -154,7 +155,7 @@ export default function CheckoutStepView({
                     ? selectedShippingOption.price
                     : 0
                 }
-                items={itemHandlers.buildVoucherValidateItems(checkoutItems)}
+                items={voucherValidateItems}
                 appliedVoucher={appliedVoucher}
                 onApplied={setAppliedVoucher}
                 onClear={() => setAppliedVoucher(null)}

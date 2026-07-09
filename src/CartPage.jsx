@@ -870,6 +870,10 @@ export default function CartPage() {
   })
 
   const checkoutItems = useMemo(() => materializeCheckoutItems(items, mixedSizeDrafts), [items, mixedSizeDrafts])
+  const voucherValidateItems = useMemo(
+    () => buildVoucherValidateItems(checkoutItems),
+    [checkoutItems],
+  )
   const cartTotals = useMemo(
     () => getCartTotals(items, language, exchangeRateMeta),
     [items, language, exchangeRateMeta],
@@ -2357,6 +2361,7 @@ export default function CartPage() {
             exchangeRateNote={exchangeRateNote}
             checkoutForm={checkoutForm}
             checkoutItems={checkoutItems}
+            voucherValidateItems={voucherValidateItems}
             customerSession={customerSession}
             canPlaceOrder={canPlaceOrder}
             appliedVoucher={appliedVoucher}

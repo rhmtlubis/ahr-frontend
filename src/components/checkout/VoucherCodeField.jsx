@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { ChevronRight, Tag, X } from 'lucide-react'
 import { listCatalogVouchers, validateCatalogVoucher } from '../../lib/api'
 import {
@@ -14,6 +14,20 @@ function buildListPayload({ items, locale, currency, fulfillment, shippingFeeAmo
     fulfillment,
     shippingFeeAmountMinor,
   }
+}
+
+function buildItemsPayloadKey(items) {
+  if (!Array.isArray(items) || items.length === 0) {
+    return ''
+  }
+
+  return JSON.stringify(
+    items.map((item) => ({
+      product_slug: item.product_slug,
+      quantity: item.quantity,
+      expected_unit_amount_minor: item.expected_unit_amount_minor ?? null,
+    })),
+  )
 }
 
 export default function VoucherCodeField({
@@ -33,9 +47,19 @@ export default function VoucherCodeField({
   const [sheetOpen, setSheetOpen] = useState(false)
   const [manualCode, setManualCode] = useState(appliedVoucher?.code || '')
   const [status, setStatus] = useState({ state: 'idle', message: '' })
-  const [voucherList, setVoucherList] = useState([])
+  const [rawVoucherList, setRawVoucherList] = useState([])
   const [listState, setListState] = useState('idle')
   const [selectedCode, setSelectedCode] = useState(appliedVoucher?.code || '')
+  const listFetchKeyRef = useRef('')
+
+  const itemsPayloadKey = buildItemsPayloadKey(items)
+  const listFetchKey = `${locale}|${currency}|${fulfillment}|${shippingFeeAmountMinor}|${itemsPayloadKey}`
+
+  const voucherList = useMemo(
+    () =>
+      rawVoucherList.map((entry) => formatVoucherListEntry(entry, language, exchangeRate, storePromo)),
+    [rawVoucherList, language, exchangeRate, storePromo],
+  )
 
   useEffect(() => {
     if (appliedVoucher?.code) {
@@ -108,24 +132,6 @@ export default function VoucherCodeField({
     setStatus({ state: 'idle', message: '' })
   }
 
-  const loadVoucherList = useCallback(async () => {
-    setListState('loading')
-
-    try {
-      const entries = await listCatalogVouchers(
-        buildListPayload({ items, locale, currency, fulfillment, shippingFeeAmountMinor }),
-      )
-      setVoucherList(
-        entries.map((entry) => formatVoucherListEntry(entry, language, exchangeRate, storePromo)),
-      )
-      setListState('ready')
-    } catch (error) {
-      setVoucherList([])
-      setListState('error')
-      setStatus({ state: 'error', message: error.message })
-    }
-  }, [currency, exchangeRate, fulfillment, items, language, locale, shippingFeeAmountMinor, storePromo])
-
   const openSheet = () => {
     if (disabled) {
       return
@@ -136,11 +142,41 @@ export default function VoucherCodeField({
 
   useEffect(() => {
     if (!sheetOpen) {
-      return
+      listFetchKeyRef.current = ''
+      return undefined
     }
 
-    loadVoucherList()
-  }, [loadVoucherList, sheetOpen])
+    if (listFetchKey === listFetchKeyRef.current) {
+      return undefined
+    }
+
+    let cancelled = false
+    setListState('loading')
+
+    listCatalogVouchers(buildListPayload({ items, locale, currency, fulfillment, shippingFeeAmountMinor }))
+      .then((entries) => {
+        if (cancelled) {
+          return
+        }
+
+        listFetchKeyRef.current = listFetchKey
+        setRawVoucherList(Array.isArray(entries) ? entries : [])
+        setListState('ready')
+      })
+      .catch((error) => {
+        if (cancelled) {
+          return
+        }
+
+        setRawVoucherList([])
+        setListState('error')
+        setStatus({ state: 'error', message: error.message })
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [sheetOpen, listFetchKey, items, locale, currency, fulfillment, shippingFeeAmountMinor])
 
   const closeSheet = () => {
     setSheetOpen(false)

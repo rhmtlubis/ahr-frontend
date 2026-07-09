@@ -620,6 +620,18 @@
   color: #ffffff;
 }
 
+:root[data-brand-skin='css'] .cart-voucher-apply {
+  background: #111111;
+  border-color: #111111;
+  color: #ffffff;
+}
+
+:root[data-brand-skin='css'] .cart-voucher-apply:hover:not(:disabled) {
+  background: #000000;
+  border-color: #000000;
+  color: #ffffff;
+}
+
 :root[data-brand-skin='css'] .cart-submit-button:hover:not(:disabled),
 :root[data-brand-skin='css'] .cart-auth-tab.active:hover {
   background: #000000;
