@@ -75,6 +75,23 @@ export function formatExchangeRateNote(exchangeRate, locale = 'id') {
     : `Harga USD adalah estimasi konversi dari IDR dengan kurs Rp ${formattedRate} / USD (referensi Bank Indonesia). Pembayaran tetap dalam Rupiah.`
 }
 
+export function formatDisplayMarkupNote(markupPercent, locale = 'id') {
+  const normalizedMarkup = Number(markupPercent)
+
+  if (!Number.isFinite(normalizedMarkup) || normalizedMarkup <= 0) {
+    return null
+  }
+
+  const formattedMarkup = new Intl.NumberFormat(locale === 'en' ? 'en-US' : 'id-ID', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+  }).format(normalizedMarkup)
+
+  return locale === 'en'
+    ? `USD display prices include a ${formattedMarkup}% international display markup. Checkout is still charged in IDR.`
+    : `Harga tampilan USD sudah termasuk markup internasional ${formattedMarkup}%. Pembayaran checkout tetap dalam Rupiah.`
+}
+
 function resolveRateMinor(exchangeRate) {
   const rateMinor = Number(exchangeRate?.rate_minor)
 
@@ -91,6 +108,16 @@ function resolveRateMinor(exchangeRate) {
   return Math.round(rate * 100)
 }
 
+function applyDisplayMarkup(amountMinor, markupPercent = 0) {
+  const normalizedMarkup = Number(markupPercent)
+
+  if (!Number.isFinite(normalizedMarkup) || normalizedMarkup <= 0) {
+    return amountMinor
+  }
+
+  return Math.round(amountMinor * (1 + normalizedMarkup / 100))
+}
+
 /** Convert IDR minor units to USD cents using the same rounding as the backend PriceService. */
 export function convertIdrMinorToUsdMinor(amountIdr, exchangeRate) {
   const normalizedAmount = Number(amountIdr)
@@ -105,7 +132,11 @@ export function convertIdrMinorToUsdMinor(amountIdr, exchangeRate) {
     return 0
   }
 
-  return Math.floor(((normalizedAmount * 100 * 100) + (rateMinor / 2)) / rateMinor)
+  const converted = Math.floor(((normalizedAmount * 100 * 100) + (rateMinor / 2)) / rateMinor)
+  const markupPercent =
+    exchangeRate?.display_markup_percent ?? exchangeRate?.foreign_display_price_markup_percent ?? 0
+
+  return applyDisplayMarkup(converted, markupPercent)
 }
 
 export function convertAmountMinorForDisplay(amountMinor, fromCurrency, toCurrency, exchangeRate) {
