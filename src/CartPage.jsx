@@ -870,6 +870,34 @@ export default function CartPage() {
   })
 
   const checkoutItems = useMemo(() => materializeCheckoutItems(items, mixedSizeDrafts), [items, mixedSizeDrafts])
+  const shippingRatesQueryKey = useMemo(
+    () =>
+      JSON.stringify({
+        fulfillment: checkoutForm.fulfillment,
+        countryCode: checkoutForm.countryCode,
+        provinceCode: checkoutForm.provinceCode,
+        cityCode: checkoutForm.cityCode,
+        districtCode: checkoutForm.districtCode,
+        cityName: checkoutForm.cityName?.trim() || '',
+        stateRegion: checkoutForm.stateRegion?.trim() || '',
+        postalCode: checkoutForm.postalCode?.trim() || '',
+        items: checkoutItems.map((item) => ({
+          slug: item.product.slug,
+          qty: item.quantity,
+        })),
+      }),
+    [
+      checkoutForm.fulfillment,
+      checkoutForm.countryCode,
+      checkoutForm.provinceCode,
+      checkoutForm.cityCode,
+      checkoutForm.districtCode,
+      checkoutForm.cityName,
+      checkoutForm.stateRegion,
+      checkoutForm.postalCode,
+      checkoutItems,
+    ],
+  )
   const voucherValidateItems = useMemo(
     () => buildVoucherValidateItems(checkoutItems),
     [checkoutItems],
@@ -1324,71 +1352,75 @@ export default function CartPage() {
 
     let isActive = true
 
-    setShippingStatus({ state: 'loading', message: '' })
+    const timeoutId = window.setTimeout(() => {
+      if (!isActive) {
+        return
+      }
 
-    fetchCatalogShippingRates(buildShippingQuotePayload(checkoutItems, checkoutForm))
-      .then((data) => {
-        if (!isActive) {
-          return
-        }
+      setShippingStatus({ state: 'loading', message: '' })
 
-        const rates = Array.isArray(data?.rates)
-          ? data.rates.map((rate, index) => ({
-              ...rate,
-              key: `${rate.company || rate.courier_code}-${rate.courier_type}-${rate.courier_service_code || index}`,
-            }))
-          : []
-
-        setShippingOptions(rates)
-        setSelectedShippingOptionKey((current) => {
-          if (current && rates.some((rate) => rate.key === current)) {
-            return current
+      fetchCatalogShippingRates(buildShippingQuotePayload(checkoutItems, checkoutForm))
+        .then((data) => {
+          if (!isActive) {
+            return
           }
 
-          return rates[0]?.key || ''
-        })
-        setShippingStatus(
-          rates.length > 0
-            ? { state: 'success', message: '' }
-            : {
-                state: 'error',
-                message:
-                  language === 'en'
-                    ? 'No shipping service is currently available for this destination.'
-                    : 'Belum ada layanan pengiriman yang tersedia untuk tujuan ini.',
-              },
-        )
-      })
-      .catch((error) => {
-        if (!isActive) {
-          return
-        }
+          const rates = Array.isArray(data?.rates)
+            ? data.rates.map((rate, index) => ({
+                ...rate,
+                key: `${rate.company || rate.courier_code}-${rate.courier_type}-${rate.courier_service_code || index}`,
+              }))
+            : []
 
-        setShippingOptions([])
-        setSelectedShippingOptionKey('')
-        setShippingStatus({
-          state: 'error',
-          message: error.message,
+          setShippingOptions(rates)
+          setSelectedShippingOptionKey((current) => {
+            if (current && rates.some((rate) => rate.key === current)) {
+              return current
+            }
+
+            return rates[0]?.key || ''
+          })
+          setShippingStatus(
+            rates.length > 0
+              ? { state: 'success', message: '' }
+              : {
+                  state: 'error',
+                  message:
+                    language === 'en'
+                      ? 'No shipping service is currently available for this destination.'
+                      : 'Belum ada layanan pengiriman yang tersedia untuk tujuan ini.',
+                },
+          )
         })
-      })
+        .catch((error) => {
+          if (!isActive) {
+            return
+          }
+
+          const rateLimitMessage =
+            language === 'en'
+              ? 'Too many requests. Please wait a moment and try again.'
+              : 'Terlalu banyak permintaan. Tunggu sebentar lalu coba lagi.'
+
+          setShippingOptions([])
+          setSelectedShippingOptionKey('')
+          setShippingStatus({
+            state: 'error',
+            message:
+              error.message === rateLimitMessage ||
+              error.message === 'Terlalu banyak permintaan. Tunggu sebentar lalu coba lagi.' ||
+              error.message === 'Too Many Attempts.'
+                ? rateLimitMessage
+                : error.message,
+          })
+        })
+    }, 400)
 
     return () => {
       isActive = false
+      window.clearTimeout(timeoutId)
     }
-  }, [
-    isCheckoutStep,
-    checkoutForm.fulfillment,
-    checkoutForm.countryCode,
-    checkoutForm.provinceCode,
-    checkoutForm.cityCode,
-    checkoutForm.districtCode,
-    checkoutForm.cityName,
-    checkoutForm.stateRegion,
-    checkoutForm.postalCode,
-    checkoutForm.addressLine,
-    checkoutItems,
-    language,
-  ])
+  }, [isCheckoutStep, shippingRatesQueryKey, language])
 
   const getMixedSizeDraft = (item) => {
     const savedDraft = mixedSizeDrafts[item.id]

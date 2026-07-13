@@ -323,6 +323,10 @@ export async function fetchOrderConversionContext(orderNumber, paymentAccessToke
 }
 
 function resolveApiError(error, fallbackMessage) {
+  if (error?.response?.status === 429) {
+    return 'Terlalu banyak permintaan. Tunggu sebentar lalu coba lagi.'
+  }
+
   const responsePayload = error?.response?.data
   const firstFieldError = Object.values(responsePayload?.errors || {}).flat()[0]
 
@@ -330,7 +334,13 @@ function resolveApiError(error, fallbackMessage) {
     return firstFieldError
   }
 
-  return responsePayload?.message || error?.message || fallbackMessage
+  const responseMessage = responsePayload?.message || error?.message
+
+  if (responseMessage === 'Too Many Attempts.') {
+    return 'Terlalu banyak permintaan. Tunggu sebentar lalu coba lagi.'
+  }
+
+  return responseMessage || fallbackMessage
 }
 
 function parseApiFieldErrors(error) {
