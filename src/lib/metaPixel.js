@@ -7,21 +7,28 @@ export function getCssMetaPixelId() {
   return String(import.meta.env.VITE_META_PIXEL_CSS_ID || '').trim()
 }
 
-function canTrackCssMetaPixel() {
+export function getAhrMetaPixelId() {
+  return String(import.meta.env.VITE_META_PIXEL_AHR_ID || '').trim()
+}
+
+export function getActiveStoreMetaPixelId() {
+  return isCssStore() ? getCssMetaPixelId() : getAhrMetaPixelId()
+}
+
+function canTrackStoreMetaPixel() {
   return (
-    isCssStore() &&
-    Boolean(getCssMetaPixelId()) &&
+    Boolean(getActiveStoreMetaPixelId()) &&
     getConsentPreferences().analytics === 'accepted' &&
     typeof window !== 'undefined'
   )
 }
 
-function ensureCssMetaPixelReady() {
-  if (!canTrackCssMetaPixel()) {
+function ensureStoreMetaPixelReady() {
+  if (!canTrackStoreMetaPixel()) {
     return false
   }
 
-  initializeMetaPixel(getCssMetaPixelId())
+  initializeMetaPixel(getActiveStoreMetaPixelId())
 
   return Boolean(window.fbq)
 }
@@ -130,8 +137,28 @@ export function initializeMetaPixel(pixelId) {
   return true
 }
 
-export function trackMetaPixelEvent(eventName, params = {}) {
-  if (!eventName || !ensureCssMetaPixelReady()) {
+export function trackMetaPixelEvent(eventName, params = {}, options = {}) {
+  if (!eventName || typeof window === 'undefined') {
+    return
+  }
+
+  const targetPixelId = String(options.pixelId || '').trim()
+
+  if (targetPixelId) {
+    initializeMetaPixel(targetPixelId)
+
+    if (!window.fbq) {
+      return
+    }
+
+    if (typeof window.fbq === 'function') {
+      window.fbq('trackSingle', targetPixelId, eventName, params)
+    }
+
+    return
+  }
+
+  if (!ensureStoreMetaPixelReady()) {
     return
   }
 
@@ -139,7 +166,7 @@ export function trackMetaPixelEvent(eventName, params = {}) {
 }
 
 export function syncMetaPixelEcommerceEvent(eventName, params = {}) {
-  if (!ensureCssMetaPixelReady()) {
+  if (!ensureStoreMetaPixelReady()) {
     return
   }
 
@@ -161,7 +188,7 @@ export function syncMetaPixelEcommerceEvent(eventName, params = {}) {
 }
 
 export function syncMetaPixelStandardEvent(eventName, params = {}) {
-  if (!ensureCssMetaPixelReady()) {
+  if (!ensureStoreMetaPixelReady()) {
     return
   }
 
@@ -180,17 +207,20 @@ export function syncMetaPixelStandardEvent(eventName, params = {}) {
         value: parseTrackingValue(params.product_price),
       })
       break
+    case 'b2b_landing_lead_submitted':
+      trackMetaPixelEvent('Lead', {
+        content_name: 'B2B Landing Lead',
+        content_category: params.buyer_type || 'b2b',
+        currency: 'IDR',
+      })
+      break
     default:
       break
   }
 }
 
-export function syncCssMetaPixelTracking(consentPreferences = {}) {
-  if (!isCssStore()) {
-    return false
-  }
-
-  const pixelId = getCssMetaPixelId()
+export function syncStoreMetaPixelTracking(consentPreferences = {}) {
+  const pixelId = getActiveStoreMetaPixelId()
 
   if (!pixelId || consentPreferences.analytics !== 'accepted') {
     return false
@@ -198,9 +228,18 @@ export function syncCssMetaPixelTracking(consentPreferences = {}) {
 
   const isNew = initializeMetaPixel(pixelId)
 
-  if (!isNew) {
-    trackMetaPixelEvent('PageView')
+  if (!isNew && window.fbq) {
+    window.fbq('track', 'PageView')
   }
 
   return true
+}
+
+/** @deprecated Prefer syncStoreMetaPixelTracking */
+export function syncCssMetaPixelTracking(consentPreferences = {}) {
+  if (!isCssStore()) {
+    return false
+  }
+
+  return syncStoreMetaPixelTracking(consentPreferences)
 }

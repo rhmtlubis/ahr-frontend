@@ -8,7 +8,7 @@ import { CartProvider } from './lib/cart.jsx'
 import { CustomerProvider } from './lib/customer.jsx'
 import { LanguageProvider } from './lib/i18n.jsx'
 import { initializeAnalytics, sanitizeAnalyticsPath, trackPageView, updateConsent } from './lib/analytics'
-import { syncCssMetaPixelTracking } from './lib/metaPixel'
+import { syncStoreMetaPixelTracking } from './lib/metaPixel'
 import { getBackendUrl } from './lib/api'
 import { captureMarketingAttribution } from './lib/attribution'
 import { getConsentPreferences } from './lib/consent'
@@ -91,9 +91,7 @@ function AnalyticsRouteTracker() {
       trackPageView(sanitizeAnalyticsPath(location.pathname, location.search))
     }
 
-    if (isCssStore()) {
-      syncCssMetaPixelTracking(consentPreferences)
-    }
+    syncStoreMetaPixelTracking(consentPreferences)
   }, [location.pathname, location.search])
 
   return null

@@ -56,10 +56,14 @@ export default function OrianaChannelPage() {
   }, [])
 
   const handleChannelClick = (label) => {
-    trackMetaPixelEvent('Lead', {
-      content_name: label,
-      content_category: 'oriana_channel_link',
-    })
+    trackMetaPixelEvent(
+      'Lead',
+      {
+        content_name: label,
+        content_category: 'oriana_channel_link',
+      },
+      { pixelId: ORIANA_META_PIXEL_ID },
+    )
   }
 
   return (

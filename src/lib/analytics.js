@@ -1,6 +1,5 @@
 import { getConsentPreferences } from './consent'
-import { syncCssMetaPixelTracking, syncMetaPixelEcommerceEvent, syncMetaPixelStandardEvent } from './metaPixel'
-import { isCssStore } from './storeConfig'
+import { syncMetaPixelEcommerceEvent, syncMetaPixelStandardEvent, syncStoreMetaPixelTracking } from './metaPixel'
 
 const measurementId = import.meta.env.VITE_GA_MEASUREMENT_ID
 const googleAdsId = import.meta.env.VITE_GOOGLE_ADS_ID
@@ -195,9 +194,7 @@ export function updateConsent(preferences = {}) {
   // (storage denied) for modeled reporting.
   flushPendingGoogleAdsConversions()
 
-  if (isCssStore()) {
-    syncCssMetaPixelTracking(preferences)
-  }
+  syncStoreMetaPixelTracking(preferences)
 }
 
 function buildGoogleAdsConversionParams(conversionLabel, params = {}) {
@@ -275,9 +272,7 @@ export function trackEcommerceEvent(eventName, params = {}) {
     window.dataLayer.push({ event: eventName, ...payload })
   }
 
-  if (isCssStore()) {
-    syncMetaPixelEcommerceEvent(eventName, payload)
-  }
+  syncMetaPixelEcommerceEvent(eventName, payload)
 }
 
 export function trackPurchaseConversion(context = {}) {
@@ -321,9 +316,7 @@ export function trackEvent(name, params = {}) {
     window.dataLayer.push({ event: name, ...params })
   }
 
-  if (isCssStore()) {
-    syncMetaPixelStandardEvent(name, params)
-  }
+  syncMetaPixelStandardEvent(name, params)
 }
 
 export function sanitizeAnalyticsPath(pathname, search = '') {
