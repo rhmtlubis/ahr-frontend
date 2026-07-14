@@ -77,8 +77,13 @@ async function main() {
     filePath: path.join(distRoot, 'produk', product.slug, 'index.html'),
     title: `${product.name}${product.category ? ` - ${product.category} Custom Sublimasi` : ''}`,
     description: truncateText(
-      product.summary ||
-        `Lihat detail ${product.name}, spesifikasi, dan informasi order custom bersama AHR.`,
+      [
+        product.priceHint ? `Harga ${product.priceHint}` : null,
+        product.summary ||
+          `Lihat detail ${product.name}, spesifikasi, dan informasi order custom bersama ${isCssStore ? 'CS Studio / AHR' : 'AHR'}.`,
+      ]
+        .filter(Boolean)
+        .join(' · '),
       200,
     ),
     image: resolveAbsoluteUrl(product.image || siteData.defaultImage),
@@ -605,17 +610,26 @@ function buildSiteData(payload) {
   }
 
   const products = Array.isArray(payload.catalog_items)
-    ? payload.catalog_items.map((product) => ({
-        slug: String(product.slug || product.id || '').trim(),
-        name: String(product.name || 'Produk AHR').trim(),
-        category: String(product.category_label || product.category || '').trim(),
-        summary: String(product.summary || product.lead || '').trim(),
-        image: fallbackSiteData.defaultImage,
-        audience: String(product.audience || '').trim(),
-        material: String(product.material || '').trim(),
-        moq: String(product.moq || '').trim(),
-        productionEstimate: String(product.production_estimate || '').trim(),
-      }))
+    ? payload.catalog_items
+        .map((product) => {
+          const priceHint = String(
+            product.promo_price_hint || product.price_hint || product.pricing?.formatted_final || '',
+          ).trim()
+          const summary = String(product.summary || product.lead || '').trim()
+
+          return {
+            slug: String(product.slug || product.id || '').trim(),
+            name: String(product.name || 'Produk AHR').trim(),
+            category: String(product.category_label || product.category || '').trim(),
+            summary,
+            priceHint,
+            image: resolveCatalogProductImage(product) || fallbackSiteData.defaultImage,
+            audience: String(product.audience || '').trim(),
+            material: String(product.material || '').trim(),
+            moq: String(product.moq || '').trim(),
+            productionEstimate: String(product.production_estimate || '').trim(),
+          }
+        })
         .filter((product) => product.slug)
     : fallbackSiteData.products
   const categories = Array.isArray(payload.catalog_categories)
@@ -743,6 +757,25 @@ function resolveAbsoluteUrl(value) {
   }
 
   return `${siteUrl}${raw.startsWith('/') ? raw : `/${raw}`}`
+}
+
+function resolveCatalogProductImage(product) {
+  const galleryFirst = Array.isArray(product?.gallery) ? product.gallery[0] : null
+  const candidates = [
+    product?.image,
+    product?.featured_image?.url,
+    typeof galleryFirst === 'string' ? galleryFirst : galleryFirst?.url,
+  ]
+
+  for (const candidate of candidates) {
+    const value = String(candidate || '').trim()
+
+    if (value) {
+      return value
+    }
+  }
+
+  return ''
 }
 
 function truncateText(value, maxLength) {

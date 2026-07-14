@@ -133,7 +133,7 @@ export default function ProductDetailPage() {
         : 'Lihat detail produk jersey custom, spesifikasi, dan informasi pemesanan dari AHR.',
     {
       canonicalPath: `/produk/${productSlug}`,
-      image: product?.image || product?.gallery?.[0] || '/ahr-brand-logo.webp',
+      image: product?.image || product?.gallery?.[0] || product?.featured_image?.url || '/og-preview.png',
       imageAlt: product?.name || 'Detail produk AHR',
       keywords: product
         ? [
