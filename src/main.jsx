@@ -51,6 +51,7 @@ const ProductDetailPage = lazy(() => import('./ProductDetailPage.jsx'))
 const PaymentResultPage = lazy(() => import('./PaymentResultPage.jsx'))
 const TermsAndConditionsPage = lazy(() => import('./TermsAndConditionsPage.jsx'))
 const InternationalShippingPage = lazy(() => import('./InternationalShippingPage.jsx'))
+const ReturnPolicyPage = lazy(() => import('./ReturnPolicyPage.jsx'))
 
 function LegacyAdminRedirect() {
   useEffect(() => {
@@ -133,6 +134,8 @@ createRoot(document.getElementById('root')).render(
               <Route path="/terms-and-conditions" element={<TermsAndConditionsPage />} />
               <Route path="/pengiriman-internasional" element={<InternationalShippingPage />} />
               <Route path="/international-shipping" element={<InternationalShippingPage />} />
+              <Route path="/kebijakan-pengembalian" element={<ReturnPolicyPage />} />
+              <Route path="/return-policy" element={<ReturnPolicyPage />} />
               <Route path="/produk/:productSlug" element={<ProductDetailPage />} />
               <Route path="/payment/success" element={<PaymentResultPage status="success" />} />
               <Route path="/payment/pending" element={<PaymentResultPage status="pending" />} />
