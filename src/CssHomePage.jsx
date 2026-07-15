@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { ArrowRight, ExternalLink } from 'lucide-react'
+import { ArrowRight, CircleHelp, ExternalLink } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import './App.css'
 import ArticleCategoryStrip from './components/articles/ArticleCategoryStrip'
@@ -9,6 +9,7 @@ import CssTrustBar from './components/css/CssTrustBar.jsx'
 import CookieConsentBanner from './components/layout/CookieConsentBanner'
 import SiteFooter from './components/layout/SiteFooter'
 import SiteHeader from './components/layout/SiteHeader'
+import WebsiteTour, { startTour } from './components/WebsiteTour'
 import { initializeAnalyticsAndTrackCurrentPage, trackEvent, updateConsent } from './lib/analytics'
 import { fetchCatalogLandingPage } from './lib/api'
 import { fetchArticles } from './lib/articles.js'
@@ -331,6 +332,16 @@ export default function CssHomePage() {
           }}
         />
       ) : null}
+
+      <WebsiteTour />
+      <button
+        className="ahr-tour-trigger"
+        type="button"
+        aria-label="Mulai tur website"
+        onClick={() => startTour(true)}
+      >
+        <CircleHelp />
+      </button>
     </div>
   )
 }
