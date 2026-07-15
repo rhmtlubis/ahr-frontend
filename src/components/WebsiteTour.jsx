@@ -5,6 +5,7 @@ import '../styles/tour.css'
 
 const STORAGE_KEY = 'ahr_tour_completed'
 const CART_TOUR_KEY = 'ahr_cart_tour_completed'
+const CHECKOUT_TOUR_KEY = 'ahr_checkout_tour_completed'
 const TOUR_VERSION = '1'
 
 function hasCompletedTour() {
@@ -245,11 +246,29 @@ const cartSteps = [
 
 const checkoutSteps = [
   {
-    element: '.cart-checkout-form',
+    element: '.checkout-flow-steps',
     popover: {
-      title: 'Form Data Pemesanan',
-      description: 'Isi nama, WhatsApp, dan alamat pengiriman Anda di sini. Pastikan nomor WhatsApp aktif untuk menerima konfirmasi.',
-      side: 'right',
+      title: 'Langkah Pemesanan',
+      description: 'Anda sekarang di tahap Checkout. Setelah ini tinggal bayar dan pesanan selesai.',
+      side: 'bottom',
+      align: 'center',
+    },
+  },
+  {
+    element: '.checkout-confirm-main',
+    popover: {
+      title: 'Isi Data Anda',
+      description: 'Lengkapi nama, email, nomor WhatsApp, dan alamat pengiriman. Pastikan nomor WA aktif untuk menerima konfirmasi pesanan.',
+      side: 'left',
+      align: 'start',
+    },
+  },
+  {
+    element: '.checkout-confirm-sidebar',
+    popover: {
+      title: 'Ringkasan Pesanan',
+      description: 'Cek kembali produk, ongkir, dan total yang harus dibayar. Anda juga bisa masukkan kode voucher di sini.',
+      side: 'left',
       align: 'start',
     },
   },
@@ -257,7 +276,7 @@ const checkoutSteps = [
     element: '.checkout-confirm-submit',
     popover: {
       title: 'Bayar Sekarang',
-      description: 'Setelah semua data lengkap, klik tombol ini untuk melanjutkan ke pembayaran.',
+      description: 'Setelah data lengkap dan setuju syarat ketentuan, klik tombol ini. Anda akan diarahkan ke halaman pembayaran.',
       side: 'top',
       align: 'center',
     },
@@ -278,8 +297,21 @@ function markCartTourCompleted() {
   } catch {}
 }
 
-export function startCartTour(isCheckoutStep = false) {
-  const steps = isCheckoutStep ? checkoutSteps : cartSteps
+function hasCompletedCheckoutTour() {
+  try {
+    return localStorage.getItem(CHECKOUT_TOUR_KEY) === TOUR_VERSION
+  } catch {
+    return false
+  }
+}
+
+function markCheckoutTourCompleted() {
+  try {
+    localStorage.setItem(CHECKOUT_TOUR_KEY, TOUR_VERSION)
+  } catch {}
+}
+
+export function startCartTour() {
   const d = driver({
     showProgress: true,
     animate: true,
@@ -292,21 +324,47 @@ export function startCartTour(isCheckoutStep = false) {
     doneBtnText: 'Mengerti',
     progressText: '{{current}} dari {{total}}',
     onDestroyed: () => markCartTourCompleted(),
-    steps,
+    steps: cartSteps,
+  })
+  d.drive()
+}
+
+export function startCheckoutTour() {
+  const d = driver({
+    showProgress: true,
+    animate: true,
+    overlayColor: 'rgba(0, 0, 0, 0.75)',
+    stagePadding: 8,
+    stageRadius: 8,
+    popoverClass: 'ahr-tour-popover',
+    nextBtnText: 'Lanjut',
+    prevBtnText: 'Kembali',
+    doneBtnText: 'Mengerti',
+    progressText: '{{current}} dari {{total}}',
+    onDestroyed: () => markCheckoutTourCompleted(),
+    steps: checkoutSteps,
   })
   d.drive()
 }
 
 export function CartTour({ isCheckoutStep = false }) {
-  const hasTriggered = useRef(false)
+  const cartTriggered = useRef(false)
+  const checkoutTriggered = useRef(false)
 
   useEffect(() => {
-    if (hasTriggered.current) return
-    if (hasCompletedCartTour()) return
-    hasTriggered.current = true
-
-    const timer = setTimeout(() => startCartTour(isCheckoutStep), 1500)
-    return () => clearTimeout(timer)
+    if (!isCheckoutStep) {
+      if (cartTriggered.current) return
+      if (hasCompletedCartTour()) return
+      cartTriggered.current = true
+      const timer = setTimeout(() => startCartTour(), 1500)
+      return () => clearTimeout(timer)
+    } else {
+      if (checkoutTriggered.current) return
+      if (hasCompletedCheckoutTour()) return
+      checkoutTriggered.current = true
+      const timer = setTimeout(() => startCheckoutTour(), 1500)
+      return () => clearTimeout(timer)
+    }
   }, [isCheckoutStep])
 
   return null
