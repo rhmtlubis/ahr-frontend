@@ -1,0 +1,247 @@
+/* Driver.js popover overrides for AHR brand */
+.ahr-tour-popover {
+  --djs-arrow-bg: var(--navy-900, #022554);
+}
+
+.ahr-tour-popover .driver-popover {
+  background: var(--navy-900, #022554);
+  color: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 20px 60px rgba(2, 37, 84, 0.4);
+  max-width: 340px;
+}
+
+.ahr-tour-popover .driver-popover-title {
+  font-family: var(--font-heading, 'Franklin Gothic Medium', sans-serif);
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--gold-500, #dcb13a);
+}
+
+.ahr-tour-popover .driver-popover-description {
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 0.9rem;
+  line-height: 1.6;
+  margin-top: 6px;
+}
+
+.ahr-tour-popover .driver-popover-progress-text {
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.75rem;
+}
+
+.ahr-tour-popover .driver-popover-navigation-btns {
+  gap: 8px;
+}
+
+.ahr-tour-popover .driver-popover-next-btn {
+  background: var(--gold-500, #dcb13a);
+  color: var(--navy-900, #022554);
+  border: none;
+  border-radius: 6px;
+  padding: 8px 16px;
+  font-weight: 600;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.ahr-tour-popover .driver-popover-next-btn:hover {
+  background: var(--gold-700, #b18b23);
+}
+
+.ahr-tour-popover .driver-popover-prev-btn {
+  background: transparent;
+  color: rgba(255, 255, 255, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 6px;
+  padding: 8px 16px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.ahr-tour-popover .driver-popover-prev-btn:hover {
+  color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+.ahr-tour-popover .driver-popover-close-btn {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.ahr-tour-popover .driver-popover-close-btn:hover {
+  color: #ffffff;
+}
+
+.ahr-tour-popover .driver-popover-arrow-side-left .driver-popover-arrow,
+.ahr-tour-popover .driver-popover-arrow-side-right .driver-popover-arrow,
+.ahr-tour-popover .driver-popover-arrow-side-top .driver-popover-arrow,
+.ahr-tour-popover .driver-popover-arrow-side-bottom .driver-popover-arrow {
+  background: var(--navy-900, #022554);
+}
+
+/* Choice modal overlay */
+.ahr-tour-choice-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0);
+  backdrop-filter: blur(0);
+  transition: background 0.3s ease, backdrop-filter 0.3s ease;
+  padding: 16px;
+}
+
+.ahr-tour-choice-overlay.visible {
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(4px);
+}
+
+.ahr-tour-choice-modal {
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 32px;
+  max-width: 480px;
+  width: 100%;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.3);
+  transform: scale(0.9) translateY(20px);
+  opacity: 0;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.ahr-tour-choice-overlay.visible .ahr-tour-choice-modal {
+  transform: scale(1) translateY(0);
+  opacity: 1;
+}
+
+.ahr-tour-choice-header {
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.ahr-tour-choice-header h2 {
+  font-family: var(--font-heading, 'Franklin Gothic Medium', sans-serif);
+  font-size: 1.4rem;
+  color: var(--navy-900, #022554);
+  margin: 0 0 8px;
+}
+
+.ahr-tour-choice-header p {
+  color: var(--text-500, #667085);
+  font-size: 0.9rem;
+  margin: 0;
+}
+
+.ahr-tour-choice-options {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.ahr-tour-choice-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  padding: 16px 20px;
+  border: 2px solid #e5e7eb;
+  border-radius: 12px;
+  background: #ffffff;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.2s;
+}
+
+.ahr-tour-choice-btn:hover {
+  border-color: var(--gold-500, #dcb13a);
+  background: rgba(220, 177, 58, 0.05);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(220, 177, 58, 0.15);
+}
+
+.ahr-tour-choice-icon {
+  font-size: 1.5rem;
+  line-height: 1;
+}
+
+.ahr-tour-choice-label {
+  font-weight: 700;
+  font-size: 1rem;
+  color: var(--navy-900, #022554);
+}
+
+.ahr-tour-choice-desc {
+  font-size: 0.82rem;
+  color: var(--text-500, #667085);
+  line-height: 1.4;
+}
+
+.ahr-tour-choice-skip {
+  display: block;
+  width: 100%;
+  text-align: center;
+  background: none;
+  border: none;
+  color: var(--text-500, #667085);
+  font-size: 0.82rem;
+  cursor: pointer;
+  padding: 8px;
+  transition: color 0.2s;
+}
+
+.ahr-tour-choice-skip:hover {
+  color: var(--navy-900, #022554);
+}
+
+/* Help/tour trigger button */
+.ahr-tour-trigger {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 50;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: none;
+  background: var(--navy-900, #022554);
+  color: #ffffff;
+  box-shadow: 0 4px 16px rgba(2, 37, 84, 0.3);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.ahr-tour-trigger:hover {
+  background: var(--gold-500, #dcb13a);
+  color: var(--navy-900, #022554);
+  transform: scale(1.08);
+  box-shadow: 0 6px 20px rgba(220, 177, 58, 0.3);
+}
+
+.ahr-tour-trigger svg {
+  width: 20px;
+  height: 20px;
+}
+
+@media (max-width: 640px) {
+  .ahr-tour-choice-modal {
+    padding: 24px 20px;
+  }
+
+  .ahr-tour-choice-header h2 {
+    font-size: 1.2rem;
+  }
+
+  .ahr-tour-trigger {
+    bottom: 16px;
+    right: 16px;
+    width: 40px;
+    height: 40px;
+  }
+}

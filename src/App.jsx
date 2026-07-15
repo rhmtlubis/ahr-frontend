@@ -4,6 +4,7 @@ import {
   ArrowRight,
   ChevronDown,
   ChevronRight,
+  CircleHelp,
   FileCheck2,
   MessageSquareMore,
   MapPin,
@@ -41,6 +42,7 @@ import ProductPrice from './components/catalog/ProductPrice'
 import CookieConsentBanner from './components/layout/CookieConsentBanner'
 import SiteFooter from './components/layout/SiteFooter'
 import SiteHeader from './components/layout/SiteHeader'
+import WebsiteTour, { startTour } from './components/WebsiteTour'
 import { getConsentPreferences, setConsentPreferences } from './lib/consent'
 import { useLanguage } from './lib/i18n.jsx'
 import { getLandingChromeContent, normalizeCompanyProfile } from './lib/landingContent'
@@ -1456,6 +1458,16 @@ function App() {
           }
         />
       ) : null}
+
+      <WebsiteTour />
+      <button
+        className="ahr-tour-trigger"
+        type="button"
+        aria-label="Mulai tur website"
+        onClick={() => startTour(true)}
+      >
+        <CircleHelp />
+      </button>
     </div>
   )
 }
