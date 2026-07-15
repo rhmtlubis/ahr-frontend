@@ -4,6 +4,7 @@ import 'driver.js/dist/driver.css'
 import '../styles/tour.css'
 
 const STORAGE_KEY = 'ahr_tour_completed'
+const CART_TOUR_KEY = 'ahr_cart_tour_completed'
 const TOUR_VERSION = '1'
 
 function hasCompletedTour() {
@@ -210,6 +211,105 @@ function showChoiceModal(tourDriver) {
       markTourCompleted()
     }
   })
+}
+
+const cartSteps = [
+  {
+    element: '.cart-item-list',
+    popover: {
+      title: 'Daftar Produk',
+      description: 'Ini produk yang sudah Anda pilih. Anda bisa ubah jumlah, ukuran, atau hapus item di sini.',
+      side: 'bottom',
+      align: 'center',
+    },
+  },
+  {
+    element: '.cart-drawer-scroll-zone-promo',
+    popover: {
+      title: 'Info Ongkir & Promo',
+      description: 'Lihat estimasi ongkos kirim dan progress gratis ongkir di sini.',
+      side: 'top',
+      align: 'center',
+    },
+  },
+  {
+    element: '.cart-marketplace-footer',
+    popover: {
+      title: 'Checkout',
+      description: 'Klik tombol ini untuk lanjut ke halaman checkout dan isi data pengiriman.',
+      side: 'top',
+      align: 'center',
+    },
+  },
+]
+
+const checkoutSteps = [
+  {
+    element: '.cart-checkout-form',
+    popover: {
+      title: 'Form Data Pemesanan',
+      description: 'Isi nama, WhatsApp, dan alamat pengiriman Anda di sini. Pastikan nomor WhatsApp aktif untuk menerima konfirmasi.',
+      side: 'right',
+      align: 'start',
+    },
+  },
+  {
+    element: '.checkout-confirm-submit',
+    popover: {
+      title: 'Bayar Sekarang',
+      description: 'Setelah semua data lengkap, klik tombol ini untuk melanjutkan ke pembayaran.',
+      side: 'top',
+      align: 'center',
+    },
+  },
+]
+
+function hasCompletedCartTour() {
+  try {
+    return localStorage.getItem(CART_TOUR_KEY) === TOUR_VERSION
+  } catch {
+    return false
+  }
+}
+
+function markCartTourCompleted() {
+  try {
+    localStorage.setItem(CART_TOUR_KEY, TOUR_VERSION)
+  } catch {}
+}
+
+export function startCartTour(isCheckoutStep = false) {
+  const steps = isCheckoutStep ? checkoutSteps : cartSteps
+  const d = driver({
+    showProgress: true,
+    animate: true,
+    overlayColor: 'rgba(0, 0, 0, 0.75)',
+    stagePadding: 8,
+    stageRadius: 8,
+    popoverClass: 'ahr-tour-popover',
+    nextBtnText: 'Lanjut',
+    prevBtnText: 'Kembali',
+    doneBtnText: 'Mengerti',
+    progressText: '{{current}} dari {{total}}',
+    onDestroyed: () => markCartTourCompleted(),
+    steps,
+  })
+  d.drive()
+}
+
+export function CartTour({ isCheckoutStep = false }) {
+  const hasTriggered = useRef(false)
+
+  useEffect(() => {
+    if (hasTriggered.current) return
+    if (hasCompletedCartTour()) return
+    hasTriggered.current = true
+
+    const timer = setTimeout(() => startCartTour(isCheckoutStep), 1500)
+    return () => clearTimeout(timer)
+  }, [isCheckoutStep])
+
+  return null
 }
 
 export default function WebsiteTour() {

@@ -58,6 +58,7 @@ import useDocumentTitle from './lib/useDocumentTitle'
 import useCartShippingEstimate from './lib/useCartShippingEstimate'
 import CartStepView, { CartEmptyView } from './components/cart/CartStepView'
 import CheckoutStepView from './components/cart/CheckoutStepView'
+import { CartTour } from './components/WebsiteTour'
 
 const defaultCheckoutForm = {
   name: '',
@@ -2480,6 +2481,8 @@ export default function CartPage() {
           }
         />
       ) : null}
+
+      {items.length > 0 ? <CartTour isCheckoutStep={isCheckoutStep} /> : null}
     </div>
   )
 }
