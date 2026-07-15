@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react'
 import { driver } from 'driver.js'
 import 'driver.js/dist/driver.css'
 import '../styles/tour.css'
+import { isCssStore } from '../lib/storeConfig'
 
 const STORAGE_KEY = 'ahr_tour_completed'
 const CART_TOUR_KEY = 'ahr_cart_tour_completed'
@@ -242,6 +243,11 @@ function createDriverConfig(onDestroyed, steps) {
 }
 
 export function startTour(forceChoice = true) {
+  if (isCssStore()) {
+    const d = driver(createDriverConfig(markTourCompleted, b2cSteps))
+    d.drive()
+    return
+  }
   if (forceChoice) {
     showChoiceModal()
   }
