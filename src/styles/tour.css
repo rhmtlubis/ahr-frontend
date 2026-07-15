@@ -6,28 +6,63 @@
 .ahr-tour-popover .driver-popover {
   background: var(--navy-900, #022554);
   color: #ffffff;
-  border-radius: 12px;
-  box-shadow: 0 20px 60px rgba(2, 37, 84, 0.4);
-  max-width: 340px;
+  border-radius: 16px;
+  box-shadow:
+    0 24px 80px rgba(2, 37, 84, 0.5),
+    0 0 0 1px rgba(220, 177, 58, 0.15);
+  max-width: 380px;
+  padding: 24px 24px 20px;
 }
 
 .ahr-tour-popover .driver-popover-title {
   font-family: var(--font-heading, 'Franklin Gothic Medium', sans-serif);
-  font-size: 1.1rem;
+  font-size: 1.2rem;
   font-weight: 700;
-  color: var(--gold-500, #dcb13a);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 4px;
 }
 
 .ahr-tour-popover .driver-popover-description {
-  color: rgba(255, 255, 255, 0.9);
+  color: rgba(255, 255, 255, 0.85);
   font-size: 0.9rem;
-  line-height: 1.6;
-  margin-top: 6px;
+  line-height: 1.7;
+  margin-top: 8px;
+}
+
+.ahr-tour-popover .driver-popover-description .tour-tip {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-top: 12px;
+  padding: 10px 12px;
+  background: rgba(220, 177, 58, 0.12);
+  border-radius: 8px;
+  border-left: 3px solid var(--gold-500, #dcb13a);
+  font-size: 0.82rem;
+  color: rgba(255, 255, 255, 0.9);
+  line-height: 1.5;
+}
+
+.ahr-tour-popover .driver-popover-description .tour-tip-icon {
+  flex-shrink: 0;
+  font-size: 1rem;
+  line-height: 1.4;
+}
+
+.ahr-tour-popover .driver-popover-footer {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .ahr-tour-popover .driver-popover-progress-text {
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(255, 255, 255, 0.45);
   font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
 }
 
 .ahr-tour-popover .driver-popover-navigation-btns {
@@ -38,40 +73,53 @@
   background: var(--gold-500, #dcb13a);
   color: var(--navy-900, #022554);
   border: none;
-  border-radius: 6px;
-  padding: 8px 16px;
-  font-weight: 600;
-  font-size: 0.85rem;
+  border-radius: 8px;
+  padding: 10px 20px;
+  font-weight: 700;
+  font-size: 0.88rem;
   cursor: pointer;
-  transition: background 0.2s;
+  transition: all 0.2s;
+  box-shadow: 0 2px 8px rgba(220, 177, 58, 0.3);
 }
 
 .ahr-tour-popover .driver-popover-next-btn:hover {
   background: var(--gold-700, #b18b23);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(220, 177, 58, 0.4);
 }
 
 .ahr-tour-popover .driver-popover-prev-btn {
-  background: transparent;
-  color: rgba(255, 255, 255, 0.7);
-  border: 1px solid rgba(255, 255, 255, 0.25);
-  border-radius: 6px;
-  padding: 8px 16px;
-  font-size: 0.85rem;
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  padding: 10px 20px;
+  font-size: 0.88rem;
+  font-weight: 500;
   cursor: pointer;
   transition: all 0.2s;
 }
 
 .ahr-tour-popover .driver-popover-prev-btn:hover {
   color: #ffffff;
-  border-color: rgba(255, 255, 255, 0.5);
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.4);
 }
 
 .ahr-tour-popover .driver-popover-close-btn {
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(255, 255, 255, 0.4);
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.2s;
 }
 
 .ahr-tour-popover .driver-popover-close-btn:hover {
   color: #ffffff;
+  background: rgba(255, 255, 255, 0.1);
 }
 
 .ahr-tour-popover .driver-popover-arrow-side-left .driver-popover-arrow,
@@ -102,8 +150,8 @@
 
 .ahr-tour-choice-modal {
   background: #ffffff;
-  border-radius: 16px;
-  padding: 32px;
+  border-radius: 20px;
+  padding: 36px 32px;
   max-width: 480px;
   width: 100%;
   box-shadow: 0 24px 80px rgba(0, 0, 0, 0.3);
@@ -119,37 +167,37 @@
 
 .ahr-tour-choice-header {
   text-align: center;
-  margin-bottom: 24px;
+  margin-bottom: 28px;
 }
 
 .ahr-tour-choice-header h2 {
   font-family: var(--font-heading, 'Franklin Gothic Medium', sans-serif);
-  font-size: 1.4rem;
+  font-size: 1.5rem;
   color: var(--navy-900, #022554);
   margin: 0 0 8px;
 }
 
 .ahr-tour-choice-header p {
   color: var(--text-500, #667085);
-  font-size: 0.9rem;
+  font-size: 0.92rem;
   margin: 0;
+  line-height: 1.5;
 }
 
 .ahr-tour-choice-options {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  margin-bottom: 20px;
+  margin-bottom: 24px;
 }
 
 .ahr-tour-choice-btn {
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 4px;
-  padding: 16px 20px;
+  align-items: center;
+  gap: 16px;
+  padding: 18px 20px;
   border: 2px solid #e5e7eb;
-  border-radius: 12px;
+  border-radius: 14px;
   background: #ffffff;
   cursor: pointer;
   text-align: left;
@@ -158,14 +206,28 @@
 
 .ahr-tour-choice-btn:hover {
   border-color: var(--gold-500, #dcb13a);
-  background: rgba(220, 177, 58, 0.05);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(220, 177, 58, 0.15);
+  background: rgba(220, 177, 58, 0.04);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(220, 177, 58, 0.15);
 }
 
 .ahr-tour-choice-icon {
-  font-size: 1.5rem;
+  font-size: 2rem;
   line-height: 1;
+  flex-shrink: 0;
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--paper-deep, #f6f8fc);
+  border-radius: 12px;
+}
+
+.ahr-tour-choice-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
 .ahr-tour-choice-label {
@@ -189,12 +251,14 @@
   color: var(--text-500, #667085);
   font-size: 0.82rem;
   cursor: pointer;
-  padding: 8px;
-  transition: color 0.2s;
+  padding: 10px;
+  border-radius: 8px;
+  transition: all 0.2s;
 }
 
 .ahr-tour-choice-skip:hover {
   color: var(--navy-900, #022554);
+  background: var(--paper-deep, #f6f8fc);
 }
 
 /* Help/tour trigger button */
@@ -203,13 +267,15 @@
   bottom: 24px;
   right: 24px;
   z-index: 50;
-  width: 44px;
-  height: 44px;
+  width: 48px;
+  height: 48px;
   border-radius: 50%;
   border: none;
   background: var(--navy-900, #022554);
   color: #ffffff;
-  box-shadow: 0 4px 16px rgba(2, 37, 84, 0.3);
+  box-shadow:
+    0 4px 16px rgba(2, 37, 84, 0.3),
+    0 0 0 3px rgba(2, 37, 84, 0.1);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -220,28 +286,43 @@
 .ahr-tour-trigger:hover {
   background: var(--gold-500, #dcb13a);
   color: var(--navy-900, #022554);
-  transform: scale(1.08);
-  box-shadow: 0 6px 20px rgba(220, 177, 58, 0.3);
+  transform: scale(1.1);
+  box-shadow:
+    0 8px 24px rgba(220, 177, 58, 0.35),
+    0 0 0 3px rgba(220, 177, 58, 0.15);
 }
 
 .ahr-tour-trigger svg {
-  width: 20px;
-  height: 20px;
+  width: 22px;
+  height: 22px;
 }
 
 @media (max-width: 640px) {
+  .ahr-tour-popover .driver-popover {
+    max-width: 300px;
+    padding: 20px 18px 16px;
+  }
+
+  .ahr-tour-popover .driver-popover-title {
+    font-size: 1.05rem;
+  }
+
+  .ahr-tour-popover .driver-popover-description {
+    font-size: 0.85rem;
+  }
+
   .ahr-tour-choice-modal {
-    padding: 24px 20px;
+    padding: 28px 20px;
   }
 
   .ahr-tour-choice-header h2 {
-    font-size: 1.2rem;
+    font-size: 1.25rem;
   }
 
   .ahr-tour-trigger {
     bottom: 16px;
     right: 16px;
-    width: 40px;
-    height: 40px;
+    width: 44px;
+    height: 44px;
   }
 }

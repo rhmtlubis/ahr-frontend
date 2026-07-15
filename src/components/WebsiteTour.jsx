@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from 'react'
+import { useEffect, useRef } from 'react'
 import { driver } from 'driver.js'
 import 'driver.js/dist/driver.css'
 import '../styles/tour.css'
@@ -22,21 +22,19 @@ function markTourCompleted() {
   } catch {}
 }
 
-const welcomeStep = {
-  popover: {
-    title: 'Selamat Datang di AHR Corporation!',
-    description: 'Kami bantu Anda menemukan yang Anda cari. Mari mulai tur singkat untuk memahami website kami.',
-    side: 'over',
-    align: 'center',
-  },
+function tip(icon, text) {
+  return `<div class="tour-tip"><span class="tour-tip-icon">${icon}</span><span>${text}</span></div>`
 }
 
 const b2cSteps = [
   {
     element: '#products',
     popover: {
-      title: 'Katalog Produk',
-      description: 'Ini koleksi produk kami. Gunakan filter kategori di atas untuk menemukan yang Anda cari.',
+      title: '🛍️ Katalog Produk',
+      description: `
+        <p>Ini koleksi produk ready-stock kami. Gunakan <strong>filter kategori</strong> di atas untuk menyaring berdasarkan jenis produk.</p>
+        ${tip('💡', 'Geser ke kanan untuk melihat lebih banyak, atau klik "Lihat Semua" untuk katalog lengkap.')}
+      `,
       side: 'top',
       align: 'center',
     },
@@ -44,8 +42,12 @@ const b2cSteps = [
   {
     element: '.product-card',
     popover: {
-      title: 'Pilih Produk',
-      description: 'Klik produk untuk lihat detail, pilihan ukuran, dan harga. Anda bisa langsung order dari sana.',
+      title: '👕 Detail Produk',
+      description: `
+        <p>Klik produk mana saja untuk melihat:</p>
+        <p>• Foto detail dari berbagai sudut<br>• Pilihan ukuran S hingga 4XL<br>• Harga dan ketersediaan stok</p>
+        ${tip('🏷️', 'Produk dengan label "SALE" sedang ada diskon khusus!')}
+      `,
       side: 'right',
       align: 'start',
     },
@@ -53,16 +55,23 @@ const b2cSteps = [
   {
     element: '.header-cart-button',
     popover: {
-      title: 'Keranjang Belanja',
-      description: 'Produk yang Anda pilih masuk ke sini. Klik untuk review pesanan dan checkout.',
+      title: '🛒 Keranjang Belanja',
+      description: `
+        <p>Setelah memilih produk dan ukuran, item masuk ke sini. Angka merah menunjukkan jumlah item di keranjang.</p>
+        ${tip('✨', 'Checkout mudah — isi data, pilih pengiriman, dan bayar. Pesanan langsung diproses!')}
+      `,
       side: 'bottom',
       align: 'end',
     },
   },
   {
     popover: {
-      title: 'Selamat Berbelanja!',
-      description: 'Anda siap menjelajahi koleksi kami. Jika butuh bantuan, klik tombol WhatsApp kapan saja.',
+      title: '🎉 Selamat Berbelanja!',
+      description: `
+        <p>Anda siap menjelajahi koleksi kami:</p>
+        <p>• Gratis ongkir untuk pembelian tertentu<br>• Pembayaran aman via Midtrans<br>• Konfirmasi otomatis via WhatsApp</p>
+        ${tip('❓', 'Klik tombol <strong>?</strong> di pojok kanan bawah kapan saja untuk mengulang tur ini.')}
+      `,
       side: 'over',
       align: 'center',
     },
@@ -73,8 +82,11 @@ const b2bSteps = [
   {
     element: '.header-cta',
     popover: {
-      title: 'Konsultasi Langsung',
-      description: 'Klik tombol ini untuk langsung chat dengan tim kami via WhatsApp. Respon cepat dalam 5-15 menit.',
+      title: '💬 Konsultasi Langsung',
+      description: `
+        <p>Klik tombol ini untuk <strong>langsung chat</strong> dengan tim sales kami via WhatsApp.</p>
+        ${tip('⚡', 'Respon cepat 5-15 menit pada jam kerja (Senin-Sabtu, 08:00-17:00).')}
+      `,
       side: 'bottom',
       align: 'end',
     },
@@ -82,8 +94,11 @@ const b2bSteps = [
   {
     element: '#pricing',
     popover: {
-      title: 'Paket Harga Grosir',
-      description: 'Lihat paket harga custom kami mulai dari 20 pcs. Semakin banyak, semakin hemat.',
+      title: '📦 Paket Harga Grosir',
+      description: `
+        <p>Paket custom kami mulai dari <strong>20 pcs</strong>. Semakin banyak pesanan, semakin hemat per-unitnya.</p>
+        ${tip('💰', 'Termasuk: desain, sablon/sublimasi, dan packaging. Tidak ada biaya tersembunyi.')}
+      `,
       side: 'top',
       align: 'center',
     },
@@ -91,67 +106,173 @@ const b2bSteps = [
   {
     element: '#final-cta',
     popover: {
-      title: 'Form Penawaran',
-      description: 'Isi form ini untuk permintaan penawaran khusus. Tim kami akan menghubungi Anda via WhatsApp.',
+      title: '📋 Form Penawaran Khusus',
+      description: `
+        <p>Isi form singkat ini untuk mendapatkan <strong>penawaran harga</strong> yang disesuaikan dengan kebutuhan Anda.</p>
+        ${tip('📱', 'Tim kami akan menghubungi via WhatsApp dengan penawaran lengkap + sample desain.')}
+      `,
       side: 'top',
       align: 'center',
     },
   },
   {
     popover: {
-      title: 'Tim Kami Siap Membantu!',
-      description: 'Hubungi kami untuk konsultasi gratis. Kami bantu dari desain sampai pengiriman.',
+      title: '🤝 Tim Kami Siap Membantu!',
+      description: `
+        <p>Hubungi kami untuk:</p>
+        <p>• Konsultasi desain gratis<br>• Penawaran harga custom<br>• Sample produk<br>• Estimasi produksi & pengiriman</p>
+        ${tip('❓', 'Klik tombol <strong>?</strong> di pojok kanan bawah kapan saja untuk mengulang tur ini.')}
+      `,
       side: 'over',
       align: 'center',
     },
   },
 ]
 
-export function startTour(forceChoice = true) {
-  const tourDriver = driver({
+const cartSteps = [
+  {
+    element: '.cart-item-list',
+    popover: {
+      title: '📋 Daftar Pesanan Anda',
+      description: `
+        <p>Ini produk yang sudah Anda pilih. Di sini Anda bisa:</p>
+        <p>• Ubah jumlah pesanan<br>• Ganti ukuran<br>• Hapus item yang tidak jadi</p>
+        ${tip('💡', 'Pesan lebih dari 1 ukuran? Klik "Ukuran Campur" untuk mengatur distribusi ukuran.')}
+      `,
+      side: 'bottom',
+      align: 'center',
+    },
+  },
+  {
+    element: '.cart-drawer-scroll-zone-promo',
+    popover: {
+      title: '🚚 Estimasi Ongkir & Promo',
+      description: `
+        <p>Lihat estimasi ongkos kirim berdasarkan lokasi Anda dan progress menuju <strong>gratis ongkir</strong>.</p>
+        ${tip('🎁', 'Tambah sedikit lagi item untuk unlock gratis ongkir! Lihat progress bar-nya.')}
+      `,
+      side: 'top',
+      align: 'center',
+    },
+  },
+  {
+    element: '.cart-marketplace-footer',
+    popover: {
+      title: '✅ Lanjut ke Checkout',
+      description: `
+        <p>Sudah yakin dengan pesanan? Klik tombol ini untuk lanjut ke pengisian data pengiriman dan pembayaran.</p>
+        ${tip('🔒', 'Pembayaran aman & terenkripsi. Didukung oleh Midtrans (bank transfer, e-wallet, kartu kredit).')}
+      `,
+      side: 'top',
+      align: 'center',
+    },
+  },
+]
+
+const checkoutSteps = [
+  {
+    element: '.checkout-flow-steps',
+    popover: {
+      title: '📍 Anda Di Sini',
+      description: `
+        <p>Sekarang di tahap <strong>Checkout</strong>. Tinggal 2 langkah lagi:</p>
+        <p>1. Isi data pengiriman<br>2. Bayar — selesai!</p>
+        ${tip('⏱️', 'Proses checkout hanya butuh 1-2 menit.')}
+      `,
+      side: 'bottom',
+      align: 'center',
+    },
+  },
+  {
+    element: '.checkout-confirm-main',
+    popover: {
+      title: '📝 Data Pengiriman',
+      description: `
+        <p>Lengkapi informasi berikut:</p>
+        <p>• <strong>Nama</strong> penerima<br>• <strong>WhatsApp</strong> aktif (untuk konfirmasi & resi)<br>• <strong>Alamat</strong> lengkap pengiriman</p>
+        ${tip('📱', 'Pastikan nomor WhatsApp benar — kami kirim update pesanan ke sana.')}
+      `,
+      side: 'left',
+      align: 'start',
+    },
+  },
+  {
+    element: '.checkout-confirm-sidebar',
+    popover: {
+      title: '🧾 Ringkasan & Voucher',
+      description: `
+        <p>Cek kembali pesanan Anda di sini:</p>
+        <p>• Daftar produk & ukuran<br>• Ongkos kirim<br>• Total pembayaran</p>
+        ${tip('🎟️', 'Punya kode voucher? Masukkan di kolom voucher untuk dapat diskon tambahan!')}
+      `,
+      side: 'left',
+      align: 'start',
+    },
+  },
+  {
+    element: '.checkout-confirm-submit',
+    popover: {
+      title: '💳 Bayar Sekarang',
+      description: `
+        <p>Setelah data lengkap dan centang persetujuan, klik tombol ini. Anda akan diarahkan ke halaman pembayaran yang aman.</p>
+        ${tip('🔒', 'Tersedia: Transfer Bank, QRIS, GoPay, OVO, ShopeePay, dan Kartu Kredit.')}
+      `,
+      side: 'top',
+      align: 'center',
+    },
+  },
+]
+
+function createDriverConfig(onDestroyed, steps) {
+  return {
     showProgress: true,
     animate: true,
+    allowHTML: true,
     overlayColor: 'rgba(0, 0, 0, 0.75)',
-    stagePadding: 8,
-    stageRadius: 8,
+    stagePadding: 10,
+    stageRadius: 10,
     popoverClass: 'ahr-tour-popover',
-    nextBtnText: 'Lanjut',
-    prevBtnText: 'Kembali',
-    doneBtnText: 'Selesai',
-    progressText: '{{current}} dari {{total}}',
-    onDestroyed: () => markTourCompleted(),
-    steps: [welcomeStep],
-  })
-
-  if (forceChoice) {
-    showChoiceModal(tourDriver)
-  } else {
-    tourDriver.drive()
+    nextBtnText: 'Lanjut →',
+    prevBtnText: '← Kembali',
+    doneBtnText: 'Selesai ✓',
+    progressText: 'Langkah {{current}} dari {{total}}',
+    onDestroyed,
+    steps,
   }
 }
 
-function showChoiceModal(tourDriver) {
+export function startTour(forceChoice = true) {
+  if (forceChoice) {
+    showChoiceModal()
+  }
+}
+
+function showChoiceModal() {
   const overlay = document.createElement('div')
   overlay.className = 'ahr-tour-choice-overlay'
   overlay.innerHTML = `
     <div class="ahr-tour-choice-modal">
       <div class="ahr-tour-choice-header">
-        <h2>Apa yang Anda cari?</h2>
-        <p>Pilih tujuan Anda agar kami bisa mengarahkan ke tempat yang tepat.</p>
+        <h2>👋 Hai, selamat datang!</h2>
+        <p>Bantu kami mengarahkan Anda ke tempat yang tepat. Apa tujuan Anda hari ini?</p>
       </div>
       <div class="ahr-tour-choice-options">
         <button class="ahr-tour-choice-btn" data-choice="b2c">
           <span class="ahr-tour-choice-icon">🛒</span>
-          <span class="ahr-tour-choice-label">Beli Satuan / Retail</span>
-          <span class="ahr-tour-choice-desc">Saya ingin beli produk langsung dari katalog</span>
+          <span class="ahr-tour-choice-text">
+            <span class="ahr-tour-choice-label">Beli Satuan / Retail</span>
+            <span class="ahr-tour-choice-desc">Saya ingin beli produk langsung dari katalog untuk pemakaian pribadi atau tim kecil</span>
+          </span>
         </button>
         <button class="ahr-tour-choice-btn" data-choice="b2b">
           <span class="ahr-tour-choice-icon">🏢</span>
-          <span class="ahr-tour-choice-label">Custom / Grosir / Korporat</span>
-          <span class="ahr-tour-choice-desc">Saya butuh produk custom atau order dalam jumlah besar</span>
+          <span class="ahr-tour-choice-text">
+            <span class="ahr-tour-choice-label">Custom / Grosir / Korporat</span>
+            <span class="ahr-tour-choice-desc">Saya butuh produk custom dengan desain sendiri atau order dalam jumlah besar (20+ pcs)</span>
+          </span>
         </button>
       </div>
-      <button class="ahr-tour-choice-skip">Lewati tur ini</button>
+      <button class="ahr-tour-choice-skip">Tidak, terima kasih — saya sudah tahu</button>
     </div>
   `
 
@@ -165,39 +286,13 @@ function showChoiceModal(tourDriver) {
 
   overlay.querySelector('[data-choice="b2c"]').addEventListener('click', () => {
     cleanup()
-    const d = driver({
-      showProgress: true,
-      animate: true,
-      overlayColor: 'rgba(0, 0, 0, 0.75)',
-      stagePadding: 8,
-      stageRadius: 8,
-      popoverClass: 'ahr-tour-popover',
-      nextBtnText: 'Lanjut',
-      prevBtnText: 'Kembali',
-      doneBtnText: 'Selesai',
-      progressText: '{{current}} dari {{total}}',
-      onDestroyed: () => markTourCompleted(),
-      steps: b2cSteps,
-    })
+    const d = driver(createDriverConfig(markTourCompleted, b2cSteps))
     setTimeout(() => d.drive(), 350)
   })
 
   overlay.querySelector('[data-choice="b2b"]').addEventListener('click', () => {
     cleanup()
-    const d = driver({
-      showProgress: true,
-      animate: true,
-      overlayColor: 'rgba(0, 0, 0, 0.75)',
-      stagePadding: 8,
-      stageRadius: 8,
-      popoverClass: 'ahr-tour-popover',
-      nextBtnText: 'Lanjut',
-      prevBtnText: 'Kembali',
-      doneBtnText: 'Selesai',
-      progressText: '{{current}} dari {{total}}',
-      onDestroyed: () => markTourCompleted(),
-      steps: b2bSteps,
-    })
+    const d = driver(createDriverConfig(markTourCompleted, b2bSteps))
     setTimeout(() => d.drive(), 350)
   })
 
@@ -213,75 +308,6 @@ function showChoiceModal(tourDriver) {
     }
   })
 }
-
-const cartSteps = [
-  {
-    element: '.cart-item-list',
-    popover: {
-      title: 'Daftar Produk',
-      description: 'Ini produk yang sudah Anda pilih. Anda bisa ubah jumlah, ukuran, atau hapus item di sini.',
-      side: 'bottom',
-      align: 'center',
-    },
-  },
-  {
-    element: '.cart-drawer-scroll-zone-promo',
-    popover: {
-      title: 'Info Ongkir & Promo',
-      description: 'Lihat estimasi ongkos kirim dan progress gratis ongkir di sini.',
-      side: 'top',
-      align: 'center',
-    },
-  },
-  {
-    element: '.cart-marketplace-footer',
-    popover: {
-      title: 'Checkout',
-      description: 'Klik tombol ini untuk lanjut ke halaman checkout dan isi data pengiriman.',
-      side: 'top',
-      align: 'center',
-    },
-  },
-]
-
-const checkoutSteps = [
-  {
-    element: '.checkout-flow-steps',
-    popover: {
-      title: 'Langkah Pemesanan',
-      description: 'Anda sekarang di tahap Checkout. Setelah ini tinggal bayar dan pesanan selesai.',
-      side: 'bottom',
-      align: 'center',
-    },
-  },
-  {
-    element: '.checkout-confirm-main',
-    popover: {
-      title: 'Isi Data Anda',
-      description: 'Lengkapi nama, email, nomor WhatsApp, dan alamat pengiriman. Pastikan nomor WA aktif untuk menerima konfirmasi pesanan.',
-      side: 'left',
-      align: 'start',
-    },
-  },
-  {
-    element: '.checkout-confirm-sidebar',
-    popover: {
-      title: 'Ringkasan Pesanan',
-      description: 'Cek kembali produk, ongkir, dan total yang harus dibayar. Anda juga bisa masukkan kode voucher di sini.',
-      side: 'left',
-      align: 'start',
-    },
-  },
-  {
-    element: '.checkout-confirm-submit',
-    popover: {
-      title: 'Bayar Sekarang',
-      description: 'Setelah data lengkap dan setuju syarat ketentuan, klik tombol ini. Anda akan diarahkan ke halaman pembayaran.',
-      side: 'top',
-      align: 'center',
-    },
-  },
-]
 
 function hasCompletedCartTour() {
   try {
@@ -312,38 +338,12 @@ function markCheckoutTourCompleted() {
 }
 
 export function startCartTour() {
-  const d = driver({
-    showProgress: true,
-    animate: true,
-    overlayColor: 'rgba(0, 0, 0, 0.75)',
-    stagePadding: 8,
-    stageRadius: 8,
-    popoverClass: 'ahr-tour-popover',
-    nextBtnText: 'Lanjut',
-    prevBtnText: 'Kembali',
-    doneBtnText: 'Mengerti',
-    progressText: '{{current}} dari {{total}}',
-    onDestroyed: () => markCartTourCompleted(),
-    steps: cartSteps,
-  })
+  const d = driver(createDriverConfig(markCartTourCompleted, cartSteps))
   d.drive()
 }
 
 export function startCheckoutTour() {
-  const d = driver({
-    showProgress: true,
-    animate: true,
-    overlayColor: 'rgba(0, 0, 0, 0.75)',
-    stagePadding: 8,
-    stageRadius: 8,
-    popoverClass: 'ahr-tour-popover',
-    nextBtnText: 'Lanjut',
-    prevBtnText: 'Kembali',
-    doneBtnText: 'Mengerti',
-    progressText: '{{current}} dari {{total}}',
-    onDestroyed: () => markCheckoutTourCompleted(),
-    steps: checkoutSteps,
-  })
+  const d = driver(createDriverConfig(markCheckoutTourCompleted, checkoutSteps))
   d.drive()
 }
 
