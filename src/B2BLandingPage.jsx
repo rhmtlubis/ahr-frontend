@@ -237,6 +237,28 @@ export default function B2BLandingPage() {
     [form],
   )
 
+  const trackB2bLeadConversion = (buttonLocation) => {
+    trackEvent('b2b_landing_lead_submitted', {
+      button_location: buttonLocation,
+      buyer_type: form.buyer_type,
+      market_type: form.market_type,
+    })
+  }
+
+  const openB2bWhatsApp = (ctaContext, message = formMessage) => {
+    trackB2bLeadConversion(ctaContext)
+    window.open(
+      buildWhatsAppUrl(contactProfile.whatsapp_number, message, ctaContext),
+      '_blank',
+      'noopener,noreferrer',
+    )
+  }
+
+  const handleWhatsAppCtaClick = (event, ctaContext) => {
+    event.preventDefault()
+    openB2bWhatsApp(ctaContext)
+  }
+
   const handleSubmit = async (event) => {
     event.preventDefault()
     setStatus({ state: 'loading', message: 'Mengirim data prospek...' })
@@ -252,16 +274,7 @@ export default function B2BLandingPage() {
 
     try {
       await saveB2BLead(payload)
-      trackEvent('b2b_landing_lead_submitted', {
-        button_location: 'b2b-landing-form',
-        buyer_type: form.buyer_type,
-        market_type: form.market_type,
-      })
-      window.open(
-        buildWhatsAppUrl(contactProfile.whatsapp_number, formMessage, 'b2b-landing-form'),
-        '_blank',
-        'noopener,noreferrer',
-      )
+      openB2bWhatsApp('b2b-landing-form')
       setStatus({ state: 'success', message: 'Lead tersimpan. WhatsApp sudah dibuka.' })
       setForm(defaultForm)
     } catch (error) {
@@ -269,11 +282,7 @@ export default function B2BLandingPage() {
         state: 'error',
         message: error.message || 'Lead gagal tersimpan. Anda tetap bisa lanjut ke WhatsApp.',
       })
-      window.open(
-        buildWhatsAppUrl(contactProfile.whatsapp_number, formMessage, 'b2b-landing-form-fallback'),
-        '_blank',
-        'noopener,noreferrer',
-      )
+      openB2bWhatsApp('b2b-landing-form-fallback')
     }
   }
 
@@ -302,7 +311,11 @@ export default function B2BLandingPage() {
               <a className="cta-button cta-button-dark" href="#final-cta">
                 {pageContent.hero.primaryCta}
               </a>
-              <a className="cta-button cta-button-light" href={buildWhatsAppUrl(contactProfile.whatsapp_number, formMessage, 'hero-whatsapp')}>
+              <a
+                className="cta-button cta-button-light"
+                href={buildWhatsAppUrl(contactProfile.whatsapp_number, formMessage, 'hero-whatsapp')}
+                onClick={(event) => handleWhatsAppCtaClick(event, 'hero-whatsapp')}
+              >
                 {pageContent.hero.secondaryCta}
               </a>
             </div>
@@ -356,7 +369,12 @@ export default function B2BLandingPage() {
               <span>{pageContent.section_content.final_cta_eyebrow}</span>
               <h2>{pageContent.section_content.final_cta_title}</h2>
             </div>
-            <a href={buildWhatsAppUrl(contactProfile.whatsapp_number, formMessage, 'final-cta')}>Respon cepat ke WhatsApp <ArrowRight size={16} /></a>
+            <a
+              href={buildWhatsAppUrl(contactProfile.whatsapp_number, formMessage, 'final-cta')}
+              onClick={(event) => handleWhatsAppCtaClick(event, 'final-cta')}
+            >
+              Respon cepat ke WhatsApp <ArrowRight size={16} />
+            </a>
           </div>
 
           <div className="b2b-form-layout">
@@ -439,6 +457,7 @@ export default function B2BLandingPage() {
                 href={buildWhatsAppUrl(contactProfile.whatsapp_number, formMessage, 'contact-card')}
                 target="_blank"
                 rel="noreferrer"
+                onClick={(event) => handleWhatsAppCtaClick(event, 'contact-card')}
               >
                 Hubungi Kami
               </a>
@@ -470,7 +489,7 @@ export default function B2BLandingPage() {
         footerMessage={formMessage}
         bottomText={pageContent.footerBottomText}
         onWhatsAppClick={(message) => {
-          window.open(buildWhatsAppUrl(contactProfile.whatsapp_number, message, 'footer'), '_blank', 'noopener,noreferrer')
+          openB2bWhatsApp('footer', message)
         }}
       />
 
