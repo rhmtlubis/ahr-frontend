@@ -440,6 +440,21 @@ export async function updateCustomerProfile(payload) {
   }
 }
 
+export async function changeCustomerPassword(payload) {
+  await ensureCsrfCookie()
+
+  try {
+    const response = await apiClient.put('/api/customer/auth/password', payload)
+
+    return {
+      data: response.data?.data || null,
+      message: response.data?.message || 'Password berhasil diubah.',
+    }
+  } catch (error) {
+    throw createApiError(error, 'Gagal mengubah password')
+  }
+}
+
 export async function logoutCustomer() {
   await ensureCsrfCookie()
 

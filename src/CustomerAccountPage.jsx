@@ -16,6 +16,7 @@ import {
   fetchCustomerOrders,
   fetchCatalogLandingPage,
   getApiUrl,
+  changeCustomerPassword,
   loginCustomer,
   logoutCustomer,
   registerCustomer,
@@ -146,6 +147,12 @@ const defaultAuthForm = {
   passwordConfirmation: '',
 }
 
+const defaultPasswordForm = {
+  currentPassword: '',
+  password: '',
+  passwordConfirmation: '',
+}
+
 function buildWhatsAppUrl(phoneNumber, message) {
   return `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`
 }
@@ -196,6 +203,9 @@ export default function CustomerAccountPage() {
   const [profileForm, setProfileForm] = useState(defaultProfileForm)
   const [authStatus, setAuthStatus] = useState({ state: 'idle', message: '' })
   const [profileStatus, setProfileStatus] = useState({ state: 'idle', message: '' })
+  const [passwordForm, setPasswordForm] = useState(defaultPasswordForm)
+  const [passwordStatus, setPasswordStatus] = useState({ state: 'idle', message: '' })
+  const [passwordFieldErrors, setPasswordFieldErrors] = useState({})
   const [profileFieldErrors, setProfileFieldErrors] = useState({})
   const [consentPreferences, setConsentPreferencesState] = useState(() => getConsentPreferences())
   const [provinceOptions, setProvinceOptions] = useState([])
@@ -557,6 +567,21 @@ export default function CustomerAccountPage() {
     }))
   }
 
+  const updatePasswordForm = (updates) => {
+    if (passwordStatus.message) {
+      setPasswordStatus({ state: 'idle', message: '' })
+    }
+
+    if (Object.keys(passwordFieldErrors).length > 0) {
+      setPasswordFieldErrors({})
+    }
+
+    setPasswordForm((current) => ({
+      ...current,
+      ...updates,
+    }))
+  }
+
   const handleLogin = async (event) => {
     event.preventDefault()
     setAuthStatus({ state: 'loading', message: '' })
@@ -601,6 +626,9 @@ export default function CustomerAccountPage() {
     try {
       await logoutCustomer()
       setCustomer(null)
+      setPasswordForm(defaultPasswordForm)
+      setPasswordStatus({ state: 'idle', message: '' })
+      setPasswordFieldErrors({})
       setProfileStatus({ state: 'idle', message: '' })
       setAuthStatus({ state: 'idle', message: '' })
     } catch (error) {
@@ -665,6 +693,39 @@ export default function CustomerAccountPage() {
       if (error.fieldErrors?.whatsapp) {
         document.getElementById('profile-whatsapp')?.focus()
       }
+    }
+  }
+
+  const handlePasswordSave = async (event) => {
+    event.preventDefault()
+    setPasswordStatus({
+      state: 'loading',
+      message: language === 'en' ? 'Updating password...' : 'Mengubah password...',
+    })
+    setPasswordFieldErrors({})
+
+    try {
+      const payload = {
+        password: passwordForm.password,
+        password_confirmation: passwordForm.passwordConfirmation,
+      }
+
+      if (customer?.has_password) {
+        payload.current_password = passwordForm.currentPassword
+      }
+
+      const result = await changeCustomerPassword(payload)
+      setCustomer(result.data)
+      setPasswordForm(defaultPasswordForm)
+      setPasswordStatus({
+        state: 'success',
+        message:
+          result.message ||
+          (language === 'en' ? 'Password updated successfully.' : 'Password berhasil diubah.'),
+      })
+    } catch (error) {
+      setPasswordFieldErrors(error.fieldErrors || {})
+      setPasswordStatus({ state: 'error', message: error.message })
     }
   }
 
@@ -1198,6 +1259,133 @@ export default function CustomerAccountPage() {
                 </div>
               )}
             </section>
+
+            {customer ? (
+              <section className="cart-items-panel customer-account-profile-panel">
+                <div className="customer-section-heading">
+                  <div>
+                    <span>{language === 'en' ? 'Security' : 'Keamanan'}</span>
+                    <h2>
+                      {customer.has_password
+                        ? language === 'en'
+                          ? 'Change password'
+                          : 'Ganti password'
+                        : language === 'en'
+                          ? 'Create password'
+                          : 'Buat password'}
+                    </h2>
+                  </div>
+                </div>
+
+                <form className="cart-checkout-form" onSubmit={handlePasswordSave}>
+                  <p className="cart-field-hint">
+                    {customer.has_password
+                      ? language === 'en'
+                        ? 'Use a password with at least 8 characters.'
+                        : 'Gunakan password minimal 8 karakter.'
+                      : language === 'en'
+                        ? 'Your account was created with Google. Set a password so you can also sign in with email.'
+                        : 'Akun Anda dibuat via Google. Buat password agar bisa login dengan email juga.'}
+                  </p>
+
+                  {customer.has_password ? (
+                    <div className="cart-form-field">
+                      <label htmlFor="account-current-password">
+                        {language === 'en' ? 'Current password' : 'Password saat ini'}
+                      </label>
+                      <input
+                        id="account-current-password"
+                        type="password"
+                        autoComplete="current-password"
+                        className={passwordFieldErrors.current_password ? 'has-error' : undefined}
+                        value={passwordForm.currentPassword}
+                        onChange={(event) => updatePasswordForm({ currentPassword: event.target.value })}
+                        required
+                        aria-invalid={passwordFieldErrors.current_password ? 'true' : undefined}
+                        aria-describedby={
+                          passwordFieldErrors.current_password ? 'account-current-password-error' : undefined
+                        }
+                      />
+                      {passwordFieldErrors.current_password ? (
+                        <p className="cart-field-error" id="account-current-password-error">
+                          {passwordFieldErrors.current_password}
+                        </p>
+                      ) : null}
+                    </div>
+                  ) : null}
+
+                  <div className="cart-form-grid">
+                    <div className="cart-form-field">
+                      <label htmlFor="account-new-password">
+                        {language === 'en' ? 'New password' : 'Password baru'}
+                      </label>
+                      <input
+                        id="account-new-password"
+                        type="password"
+                        autoComplete="new-password"
+                        minLength={8}
+                        className={passwordFieldErrors.password ? 'has-error' : undefined}
+                        value={passwordForm.password}
+                        onChange={(event) => updatePasswordForm({ password: event.target.value })}
+                        required
+                        aria-invalid={passwordFieldErrors.password ? 'true' : undefined}
+                        aria-describedby={passwordFieldErrors.password ? 'account-new-password-error' : undefined}
+                      />
+                      {passwordFieldErrors.password ? (
+                        <p className="cart-field-error" id="account-new-password-error">
+                          {passwordFieldErrors.password}
+                        </p>
+                      ) : null}
+                    </div>
+
+                    <div className="cart-form-field">
+                      <label htmlFor="account-new-password-confirm">
+                        {language === 'en' ? 'Confirm new password' : 'Konfirmasi password baru'}
+                      </label>
+                      <input
+                        id="account-new-password-confirm"
+                        type="password"
+                        autoComplete="new-password"
+                        minLength={8}
+                        className={passwordFieldErrors.password_confirmation ? 'has-error' : undefined}
+                        value={passwordForm.passwordConfirmation}
+                        onChange={(event) => updatePasswordForm({ passwordConfirmation: event.target.value })}
+                        required
+                        aria-invalid={passwordFieldErrors.password_confirmation ? 'true' : undefined}
+                        aria-describedby={
+                          passwordFieldErrors.password_confirmation
+                            ? 'account-new-password-confirm-error'
+                            : undefined
+                        }
+                      />
+                      {passwordFieldErrors.password_confirmation ? (
+                        <p className="cart-field-error" id="account-new-password-confirm-error">
+                          {passwordFieldErrors.password_confirmation}
+                        </p>
+                      ) : null}
+                    </div>
+                  </div>
+
+                  <button className="cart-submit-button" type="submit" disabled={passwordStatus.state === 'loading'}>
+                    <LockKeyhole size={18} />
+                    <span>
+                      {passwordStatus.state === 'loading'
+                        ? t('common.submitting')
+                        : customer.has_password
+                          ? language === 'en'
+                            ? 'Update password'
+                            : 'Simpan password baru'
+                          : language === 'en'
+                            ? 'Create password'
+                            : 'Buat password'}
+                    </span>
+                  </button>
+                  {passwordStatus.message ? (
+                    <p className={`cart-status ${passwordStatus.state}`}>{passwordStatus.message}</p>
+                  ) : null}
+                </form>
+              </section>
+            ) : null}
           </div>
         </section>
       </main>
