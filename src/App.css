@@ -4889,6 +4889,22 @@ main {
   gap: 12px;
 }
 
+.cart-forgot-password-link {
+  margin-top: 8px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--text-700, #314158);
+  font-size: 0.875rem;
+  text-decoration: underline;
+  cursor: pointer;
+  text-align: left;
+}
+
+.cart-forgot-password-link:hover {
+  color: var(--text-900, #04142f);
+}
+
 .cart-field-error {
   color: #b42318;
   font-size: 0.84rem;

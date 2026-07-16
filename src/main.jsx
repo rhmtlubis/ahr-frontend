@@ -113,6 +113,7 @@ createRoot(document.getElementById('root')).render(
               <Route path="/kategori/:categoryId" element={<CategoryPage />} />
               <Route path="/cart/*" element={<CartPage />} />
               <Route path="/akun" element={<CustomerAccountPage />} />
+              <Route path="/akun/reset-password" element={<CustomerAccountPage />} />
               <Route path="/akun/pesanan/:orderNumber" element={<CustomerOrderDetailPage />} />
               <Route path="/artikel" element={<ArticlesPage />} />
               <Route path="/artikel/:articleSlug" element={<ArticleDetailPage />} />

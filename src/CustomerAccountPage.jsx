@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { ArrowLeft, ChevronRight, LockKeyhole, LogOut, Mail, MapPin, Package, Truck } from 'lucide-react'
 import { getShipmentPhaseLabel } from './lib/shipmentTracking'
-import { Link, useLocation } from 'react-router-dom'
+import { Link, useLocation, useSearchParams } from 'react-router-dom'
 import './App.css'
 import CustomerGoogleAuthButton from './components/auth/CustomerGoogleAuthButton'
 import CookieConsentBanner from './components/layout/CookieConsentBanner'
@@ -20,6 +20,8 @@ import {
   loginCustomer,
   logoutCustomer,
   registerCustomer,
+  requestCustomerPasswordReset,
+  resetCustomerPassword,
   updateCustomerProfile,
 } from './lib/api'
 import { useCart } from './lib/cart.jsx'
@@ -195,11 +197,25 @@ export default function CustomerAccountPage() {
   const { itemCount } = useCart()
   const location = useLocation()
   const { customer, isLoading: customerLoading, setCustomer, refreshCustomer } = useCustomer()
+  const [searchParams] = useSearchParams()
+  const isResetPasswordPage = location.pathname === '/akun/reset-password'
   const [pageContent, setPageContent] = useState(() =>
     getLandingChromeContent({}, { hashPrefix: '/', locale: language }),
   )
-  const [authMode, setAuthMode] = useState('login')
+  const [authMode, setAuthMode] = useState(() => {
+    if (isResetPasswordPage) {
+      return 'reset'
+    }
+
+    return searchParams.get('auth') === 'forgot' ? 'forgot' : 'login'
+  })
   const [authForm, setAuthForm] = useState(defaultAuthForm)
+  const [resetForm, setResetForm] = useState({
+    email: searchParams.get('email') || '',
+    token: searchParams.get('token') || '',
+    password: '',
+    passwordConfirmation: '',
+  })
   const [profileForm, setProfileForm] = useState(defaultProfileForm)
   const [authStatus, setAuthStatus] = useState({ state: 'idle', message: '' })
   const [profileStatus, setProfileStatus] = useState({ state: 'idle', message: '' })
@@ -248,6 +264,22 @@ export default function CustomerAccountPage() {
     setCustomer,
     onStatus: handleGoogleAuthStatus,
   })
+
+  useEffect(() => {
+    if (isResetPasswordPage) {
+      setAuthMode('reset')
+      setResetForm((current) => ({
+        ...current,
+        email: searchParams.get('email') || current.email,
+        token: searchParams.get('token') || current.token,
+      }))
+      return
+    }
+
+    if (searchParams.get('auth') === 'forgot') {
+      setAuthMode('forgot')
+    }
+  }, [isResetPasswordPage, searchParams])
 
   useDocumentTitle(
     language === 'en' ? 'Customer Account' : 'Akun Customer',
@@ -599,6 +631,47 @@ export default function CustomerAccountPage() {
     }
   }
 
+  const handleForgotPassword = async (event) => {
+    event.preventDefault()
+    setAuthStatus({ state: 'loading', message: '' })
+
+    try {
+      const result = await requestCustomerPasswordReset({
+        email: authForm.email,
+        frontendUrl: window.location.origin,
+      })
+
+      setAuthStatus({
+        state: 'success',
+        message: result.message,
+      })
+    } catch (error) {
+      setAuthStatus({ state: 'error', message: error.message })
+    }
+  }
+
+  const handleResetPassword = async (event) => {
+    event.preventDefault()
+    setAuthStatus({ state: 'loading', message: '' })
+
+    try {
+      const result = await resetCustomerPassword({
+        email: resetForm.email,
+        token: resetForm.token,
+        password: resetForm.password,
+        password_confirmation: resetForm.passwordConfirmation,
+      })
+
+      setCustomer(result.data)
+      setAuthStatus({
+        state: 'success',
+        message: result.message,
+      })
+    } catch (error) {
+      setAuthStatus({ state: 'error', message: error.message })
+    }
+  }
+
   const handleRegister = async (event) => {
     event.preventDefault()
     setAuthStatus({ state: 'loading', message: '' })
@@ -780,107 +853,258 @@ export default function CustomerAccountPage() {
                 <div className="cart-auth-heading">
                   <div>
                     <span>{t('cart.summaryEyebrow')}</span>
-                    <h3>{t('cart.loginTitle')}</h3>
+                    <h3>
+                      {authMode === 'forgot'
+                        ? t('cart.forgotPasswordTitle')
+                        : authMode === 'reset'
+                          ? t('cart.resetPasswordTitle')
+                          : t('cart.loginTitle')}
+                    </h3>
                   </div>
                   <LockKeyhole size={18} />
                 </div>
-                <p className="cart-auth-copy">{t('cart.loginBody')}</p>
+                <p className="cart-auth-copy">
+                  {authMode === 'forgot'
+                    ? t('cart.forgotPasswordBody')
+                    : authMode === 'reset'
+                      ? t('cart.resetPasswordBody')
+                      : t('cart.loginBody')}
+                </p>
 
-                <div className="cart-auth-tabs">
-                  <button
-                    className={authMode === 'login' ? 'cart-auth-tab active' : 'cart-auth-tab'}
-                    type="button"
-                    onClick={() => setAuthMode('login')}
-                  >
-                    {t('cart.loginTab')}
-                  </button>
-                  <button
-                    className={authMode === 'register' ? 'cart-auth-tab active' : 'cart-auth-tab'}
-                    type="button"
-                    onClick={() => setAuthMode('register')}
-                  >
-                    {t('cart.registerTab')}
-                  </button>
-                </div>
-
-                <CustomerGoogleAuthButton
-                  returnPath="/akun"
-                  disabled={authStatus.state === 'loading'}
-                  label={t('cart.googleLoginCta')}
-                />
-
-                <div className="cart-auth-divider">
-                  <span>{t('cart.authOrDivider')}</span>
-                </div>
-
-                <form className="cart-auth-form" onSubmit={authMode === 'login' ? handleLogin : handleRegister}>
-                  {authMode === 'register' ? (
-                    <div className="cart-form-field">
-                      <label htmlFor="account-register-name">{t('cart.customerName')}</label>
-                      <input
-                        id="account-register-name"
-                        value={authForm.name}
-                        onChange={(event) => updateAuthForm('name', event.target.value)}
-                        required
-                      />
+                {authMode === 'login' || authMode === 'register' ? (
+                  <>
+                    <div className="cart-auth-tabs">
+                      <button
+                        className={authMode === 'login' ? 'cart-auth-tab active' : 'cart-auth-tab'}
+                        type="button"
+                        onClick={() => {
+                          setAuthMode('login')
+                          setAuthStatus({ state: 'idle', message: '' })
+                        }}
+                      >
+                        {t('cart.loginTab')}
+                      </button>
+                      <button
+                        className={authMode === 'register' ? 'cart-auth-tab active' : 'cart-auth-tab'}
+                        type="button"
+                        onClick={() => {
+                          setAuthMode('register')
+                          setAuthStatus({ state: 'idle', message: '' })
+                        }}
+                      >
+                        {t('cart.registerTab')}
+                      </button>
                     </div>
-                  ) : null}
 
-                  <div className="cart-form-field">
-                    <label htmlFor="account-email">{t('cart.customerEmail')}</label>
-                    <input
-                      id="account-email"
-                      type="email"
-                      value={authForm.email}
-                      onChange={(event) => updateAuthForm('email', event.target.value)}
-                      required
+                    <CustomerGoogleAuthButton
+                      returnPath="/akun"
+                      disabled={authStatus.state === 'loading'}
+                      label={t('cart.googleLoginCta')}
                     />
-                  </div>
 
-                  {authMode === 'register' ? (
-                    <div className="cart-form-field">
-                      <label htmlFor="account-whatsapp">{t('cart.customerWhatsapp')}</label>
-                      <input
-                        id="account-whatsapp"
-                        value={authForm.whatsapp}
-                        onChange={(event) => updateAuthForm('whatsapp', event.target.value)}
-                        required
-                      />
-                    </div>
-                  ) : null}
-
-                  <div className="cart-form-grid">
-                    <div className="cart-form-field">
-                      <label htmlFor="account-password">{t('cart.password')}</label>
-                      <input
-                        id="account-password"
-                        type="password"
-                        value={authForm.password}
-                        onChange={(event) => updateAuthForm('password', event.target.value)}
-                        required
-                      />
+                    <div className="cart-auth-divider">
+                      <span>{t('cart.authOrDivider')}</span>
                     </div>
 
-                    {authMode === 'register' ? (
+                    <form className="cart-auth-form" onSubmit={authMode === 'login' ? handleLogin : handleRegister}>
+                      {authMode === 'register' ? (
+                        <div className="cart-form-field">
+                          <label htmlFor="account-register-name">{t('cart.customerName')}</label>
+                          <input
+                            id="account-register-name"
+                            value={authForm.name}
+                            onChange={(event) => updateAuthForm('name', event.target.value)}
+                            required
+                          />
+                        </div>
+                      ) : null}
+
                       <div className="cart-form-field">
-                        <label htmlFor="account-password-confirm">{t('cart.passwordConfirmation')}</label>
+                        <label htmlFor="account-email">{t('cart.customerEmail')}</label>
                         <input
-                          id="account-password-confirm"
-                          type="password"
-                          value={authForm.passwordConfirmation}
-                          onChange={(event) => updateAuthForm('passwordConfirmation', event.target.value)}
+                          id="account-email"
+                          type="email"
+                          value={authForm.email}
+                          onChange={(event) => updateAuthForm('email', event.target.value)}
                           required
                         />
                       </div>
-                    ) : null}
-                  </div>
 
-                  <button className="cart-submit-button" type="submit" disabled={authStatus.state === 'loading'}>
-                    <Mail size={18} />
-                    <span>{authStatus.state === 'loading' ? t('common.submitting') : authMode === 'login' ? t('cart.loginCta') : t('cart.registerCta')}</span>
-                  </button>
-                  {authStatus.message ? <p className={`cart-status ${authStatus.state}`}>{authStatus.message}</p> : null}
-                </form>
+                      {authMode === 'register' ? (
+                        <div className="cart-form-field">
+                          <label htmlFor="account-whatsapp">{t('cart.customerWhatsapp')}</label>
+                          <input
+                            id="account-whatsapp"
+                            value={authForm.whatsapp}
+                            onChange={(event) => updateAuthForm('whatsapp', event.target.value)}
+                            required
+                          />
+                        </div>
+                      ) : null}
+
+                      <div className="cart-form-grid">
+                        <div className="cart-form-field">
+                          <label htmlFor="account-password">{t('cart.password')}</label>
+                          <input
+                            id="account-password"
+                            type="password"
+                            value={authForm.password}
+                            onChange={(event) => updateAuthForm('password', event.target.value)}
+                            required
+                          />
+                          {authMode === 'login' ? (
+                            <button
+                              className="cart-forgot-password-link"
+                              type="button"
+                              onClick={() => {
+                                setAuthMode('forgot')
+                                setAuthStatus({ state: 'idle', message: '' })
+                              }}
+                            >
+                              {t('cart.forgotPasswordLink')}
+                            </button>
+                          ) : null}
+                        </div>
+
+                        {authMode === 'register' ? (
+                          <div className="cart-form-field">
+                            <label htmlFor="account-password-confirm">{t('cart.passwordConfirmation')}</label>
+                            <input
+                              id="account-password-confirm"
+                              type="password"
+                              value={authForm.passwordConfirmation}
+                              onChange={(event) => updateAuthForm('passwordConfirmation', event.target.value)}
+                              required
+                            />
+                          </div>
+                        ) : null}
+                      </div>
+
+                      <button className="cart-submit-button" type="submit" disabled={authStatus.state === 'loading'}>
+                        <Mail size={18} />
+                        <span>
+                          {authStatus.state === 'loading'
+                            ? t('common.submitting')
+                            : authMode === 'login'
+                              ? t('cart.loginCta')
+                              : t('cart.registerCta')}
+                        </span>
+                      </button>
+                      {authStatus.message ? <p className={`cart-status ${authStatus.state}`}>{authStatus.message}</p> : null}
+                    </form>
+                  </>
+                ) : null}
+
+                {authMode === 'forgot' ? (
+                  <form className="cart-auth-form" onSubmit={handleForgotPassword}>
+                    <div className="cart-form-field">
+                      <label htmlFor="account-forgot-email">{t('cart.customerEmail')}</label>
+                      <input
+                        id="account-forgot-email"
+                        type="email"
+                        value={authForm.email}
+                        onChange={(event) => updateAuthForm('email', event.target.value)}
+                        required
+                      />
+                    </div>
+
+                    <button className="cart-submit-button" type="submit" disabled={authStatus.state === 'loading'}>
+                      <Mail size={18} />
+                      <span>
+                        {authStatus.state === 'loading' ? t('common.submitting') : t('cart.forgotPasswordCta')}
+                      </span>
+                    </button>
+                    <button
+                      className="cart-forgot-password-link"
+                      type="button"
+                      onClick={() => {
+                        setAuthMode('login')
+                        setAuthStatus({ state: 'idle', message: '' })
+                      }}
+                    >
+                      {t('cart.forgotPasswordBack')}
+                    </button>
+                    {authStatus.message ? <p className={`cart-status ${authStatus.state}`}>{authStatus.message}</p> : null}
+                  </form>
+                ) : null}
+
+                {authMode === 'reset' ? (
+                  <form className="cart-auth-form" onSubmit={handleResetPassword}>
+                    <div className="cart-form-field">
+                      <label htmlFor="account-reset-email">{t('cart.customerEmail')}</label>
+                      <input
+                        id="account-reset-email"
+                        type="email"
+                        value={resetForm.email}
+                        onChange={(event) =>
+                          setResetForm((current) => ({ ...current, email: event.target.value }))
+                        }
+                        required
+                      />
+                    </div>
+
+                    <div className="cart-form-grid">
+                      <div className="cart-form-field">
+                        <label htmlFor="account-reset-password">{t('cart.password')}</label>
+                        <input
+                          id="account-reset-password"
+                          type="password"
+                          minLength={8}
+                          value={resetForm.password}
+                          onChange={(event) =>
+                            setResetForm((current) => ({ ...current, password: event.target.value }))
+                          }
+                          required
+                        />
+                      </div>
+                      <div className="cart-form-field">
+                        <label htmlFor="account-reset-password-confirm">{t('cart.passwordConfirmation')}</label>
+                        <input
+                          id="account-reset-password-confirm"
+                          type="password"
+                          minLength={8}
+                          value={resetForm.passwordConfirmation}
+                          onChange={(event) =>
+                            setResetForm((current) => ({
+                              ...current,
+                              passwordConfirmation: event.target.value,
+                            }))
+                          }
+                          required
+                        />
+                      </div>
+                    </div>
+
+                    <button
+                      className="cart-submit-button"
+                      type="submit"
+                      disabled={authStatus.state === 'loading' || !resetForm.token}
+                    >
+                      <LockKeyhole size={18} />
+                      <span>
+                        {authStatus.state === 'loading' ? t('common.submitting') : t('cart.resetPasswordCta')}
+                      </span>
+                    </button>
+                    {!resetForm.token ? (
+                      <p className="cart-status error">
+                        {language === 'en'
+                          ? 'Reset link is invalid. Please request a new one.'
+                          : 'Link reset tidak valid. Silakan minta link baru.'}
+                      </p>
+                    ) : null}
+                    <button
+                      className="cart-forgot-password-link"
+                      type="button"
+                      onClick={() => {
+                        setAuthMode('forgot')
+                        setAuthStatus({ state: 'idle', message: '' })
+                      }}
+                    >
+                      {t('cart.forgotPasswordBack')}
+                    </button>
+                    {authStatus.message ? <p className={`cart-status ${authStatus.state}`}>{authStatus.message}</p> : null}
+                  </form>
+                ) : null}
               </div>
             ) : (
               <div className="cart-auth-card customer-account-card">

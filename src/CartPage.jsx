@@ -1908,6 +1908,9 @@ export default function CartPage() {
                   onChange={(event) => updateAuthForm('password', event.target.value)}
                   required
                 />
+                <Link className="cart-forgot-password-link" to="/akun?auth=forgot">
+                  {t('cart.forgotPasswordLink')}
+                </Link>
               </div>
               <button
                 className="cart-submit-button"

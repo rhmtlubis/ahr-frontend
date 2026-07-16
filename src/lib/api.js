@@ -455,6 +455,40 @@ export async function changeCustomerPassword(payload) {
   }
 }
 
+export async function requestCustomerPasswordReset({ email, frontendUrl }) {
+  await ensureCsrfCookie()
+
+  try {
+    const response = await apiClient.post('/api/customer/auth/forgot-password', {
+      email,
+      ...(frontendUrl ? { frontend_url: frontendUrl } : {}),
+    })
+
+    return {
+      message:
+        response.data?.message ||
+        'Jika email terdaftar, link reset password sudah dikirim. Cek inbox atau folder spam.',
+    }
+  } catch (error) {
+    throw createApiError(error, 'Gagal mengirim link reset password')
+  }
+}
+
+export async function resetCustomerPassword(payload) {
+  await ensureCsrfCookie()
+
+  try {
+    const response = await apiClient.post('/api/customer/auth/reset-password', payload)
+
+    return {
+      data: response.data?.data || null,
+      message: response.data?.message || 'Password berhasil diubah.',
+    }
+  } catch (error) {
+    throw createApiError(error, 'Gagal mengatur ulang password')
+  }
+}
+
 export async function logoutCustomer() {
   await ensureCsrfCookie()
 
