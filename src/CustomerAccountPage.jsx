@@ -218,6 +218,7 @@ export default function CustomerAccountPage() {
   })
   const [profileForm, setProfileForm] = useState(defaultProfileForm)
   const [authStatus, setAuthStatus] = useState({ state: 'idle', message: '' })
+  const [authFieldErrors, setAuthFieldErrors] = useState({})
   const [profileStatus, setProfileStatus] = useState({ state: 'idle', message: '' })
   const [passwordForm, setPasswordForm] = useState(defaultPasswordForm)
   const [passwordStatus, setPasswordStatus] = useState({ state: 'idle', message: '' })
@@ -578,6 +579,10 @@ export default function CustomerAccountPage() {
       setAuthStatus({ state: 'idle', message: '' })
     }
 
+    if (Object.keys(authFieldErrors).length > 0) {
+      setAuthFieldErrors({})
+    }
+
     setAuthForm((current) => ({
       ...current,
       [field]: value,
@@ -634,6 +639,7 @@ export default function CustomerAccountPage() {
   const handleForgotPassword = async (event) => {
     event.preventDefault()
     setAuthStatus({ state: 'loading', message: '' })
+    setAuthFieldErrors({})
 
     try {
       const result = await requestCustomerPasswordReset({
@@ -646,6 +652,7 @@ export default function CustomerAccountPage() {
         message: result.message,
       })
     } catch (error) {
+      setAuthFieldErrors(error.fieldErrors || {})
       setAuthStatus({ state: 'error', message: error.message })
     }
   }
@@ -1002,10 +1009,18 @@ export default function CustomerAccountPage() {
                       <input
                         id="account-forgot-email"
                         type="email"
+                        className={authFieldErrors.email ? 'has-error' : undefined}
                         value={authForm.email}
                         onChange={(event) => updateAuthForm('email', event.target.value)}
                         required
+                        aria-invalid={authFieldErrors.email ? 'true' : undefined}
+                        aria-describedby={authFieldErrors.email ? 'account-forgot-email-error' : undefined}
                       />
+                      {authFieldErrors.email ? (
+                        <p className="cart-field-error" id="account-forgot-email-error">
+                          {authFieldErrors.email}
+                        </p>
+                      ) : null}
                     </div>
 
                     <button className="cart-submit-button" type="submit" disabled={authStatus.state === 'loading'}>
