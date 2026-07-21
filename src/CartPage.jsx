@@ -36,6 +36,7 @@ import {
 } from './lib/currency.js'
 import { getAttributionParams } from './lib/attribution'
 import { getProductSizeOptions, useCart } from './lib/cart.jsx'
+import { useCartMerchantDeepLink } from './lib/useCartMerchantDeepLink'
 import { getConsentPreferences, setConsentPreferences } from './lib/consent'
 import { useCustomer } from './lib/customer.jsx'
 import { useGoogleAuthCallback } from './lib/googleAuth'
@@ -835,6 +836,7 @@ export default function CartPage() {
     },
   )
   const { items, itemCount, updateCartItemQuantity, updateCartItemSize, distributeCartItemSizes, removeCartItem, clearCart } = useCart()
+  const merchantDeepLinkStatus = useCartMerchantDeepLink()
   const { payOrder } = useMidtransPayment({ preload: isCheckoutStep })
   const { payOrder: payPalOrder } = usePayPalPayment()
   const paymentInProgressRef = useRef(false)
@@ -2383,7 +2385,26 @@ export default function CartPage() {
       />
 
       <main className={`cart-page ${isCheckoutStep ? 'cart-page--checkout' : 'cart-page--cart'}`}>
-        {items.length === 0 ? (
+        {merchantDeepLinkStatus.state !== 'idle' && merchantDeepLinkStatus.message ? (
+          <p
+            className={`cart-status cart-deeplink-status ${
+              merchantDeepLinkStatus.state === 'error'
+                ? 'error'
+                : merchantDeepLinkStatus.state === 'ready'
+                  ? 'success'
+                  : ''
+            }`}
+            role="status"
+            aria-live="polite"
+          >
+            {merchantDeepLinkStatus.message}
+          </p>
+        ) : null}
+        {items.length === 0 && merchantDeepLinkStatus.state === 'loading' ? (
+          <div className="cart-empty" style={{ padding: '48px 24px', textAlign: 'center' }}>
+            <p style={{ margin: 0 }}>{merchantDeepLinkStatus.message}</p>
+          </div>
+        ) : items.length === 0 ? (
           <CartEmptyView language={language} t={t} />
         ) : isCheckoutStep ? (
           <CheckoutStepView
