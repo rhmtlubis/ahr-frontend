@@ -7,7 +7,12 @@ import SiteFooter from './components/layout/SiteFooter'
 import SiteHeader from './components/layout/SiteHeader'
 import { getApiUrl, saveB2BLead } from './lib/api'
 import { captureMarketingAttribution, getAttributionParams } from './lib/attribution'
-import { initializeAnalyticsAndTrackCurrentPage, trackEvent, updateConsent } from './lib/analytics'
+import {
+  initializeAnalyticsAndTrackCurrentPage,
+  setEnhancedConversionUserData,
+  trackEvent,
+  updateConsent,
+} from './lib/analytics'
 import { getConsentPreferences, setConsentPreferences } from './lib/consent'
 import { useLanguage } from './lib/i18n.jsx'
 import { getLandingChromeContent } from './lib/landingContent'
@@ -237,7 +242,12 @@ export default function B2BLandingPage() {
     [form],
   )
 
-  const trackB2bLeadConversion = (buttonLocation) => {
+  const trackB2bLeadConversion = async (buttonLocation) => {
+    // Enhanced Conversions: hash phone before Ads conversion fires.
+    if (form.phone?.trim()) {
+      await setEnhancedConversionUserData({ phone: form.phone })
+    }
+
     trackEvent('b2b_landing_lead_submitted', {
       button_location: buttonLocation,
       buyer_type: form.buyer_type,
@@ -245,8 +255,8 @@ export default function B2BLandingPage() {
     })
   }
 
-  const openB2bWhatsApp = (ctaContext, message = formMessage) => {
-    trackB2bLeadConversion(ctaContext)
+  const openB2bWhatsApp = async (ctaContext, message = formMessage) => {
+    await trackB2bLeadConversion(ctaContext)
     window.open(
       buildWhatsAppUrl(contactProfile.whatsapp_number, message, ctaContext),
       '_blank',
@@ -256,7 +266,7 @@ export default function B2BLandingPage() {
 
   const handleWhatsAppCtaClick = (event, ctaContext) => {
     event.preventDefault()
-    openB2bWhatsApp(ctaContext)
+    void openB2bWhatsApp(ctaContext)
   }
 
   const handleSubmit = async (event) => {
@@ -274,7 +284,7 @@ export default function B2BLandingPage() {
 
     try {
       await saveB2BLead(payload)
-      openB2bWhatsApp('b2b-landing-form')
+      await openB2bWhatsApp('b2b-landing-form')
       setStatus({ state: 'success', message: 'Lead tersimpan. WhatsApp sudah dibuka.' })
       setForm(defaultForm)
     } catch (error) {
@@ -282,7 +292,7 @@ export default function B2BLandingPage() {
         state: 'error',
         message: error.message || 'Lead gagal tersimpan. Anda tetap bisa lanjut ke WhatsApp.',
       })
-      openB2bWhatsApp('b2b-landing-form-fallback')
+      await openB2bWhatsApp('b2b-landing-form-fallback')
     }
   }
 
