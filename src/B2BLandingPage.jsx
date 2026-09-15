@@ -165,7 +165,7 @@ const b2bFallbackContent = {
     address: {
       label: 'Workshop & Kantor AHR Printing',
       line: 'Jl. Bojong Tanjung No.19, Katapang, Kabupaten Bandung, Jawa Barat 40921',
-      mapUrl: 'https://maps.google.com/?q=Jl.+Bojong+Tanjung+No.19,+Katapang,+Bandung',
+      mapUrl: 'https://maps.app.goo.gl/V6fxMXch8Q5bcwrGA',
     },
   },
   utilityLinks: [],
