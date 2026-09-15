@@ -198,6 +198,8 @@ export default function B2BLandingPage() {
   })
   const [showStickyContact, setShowStickyContact] = useState(true)
   const formSectionRef = useRef(null)
+  const instagramEmbedRef = useRef(null)
+  const instagramScalerRef = useRef(null)
 
   useDocumentTitle(
     landingVariant?.title || 'AHR Corporation Kontak & Kerja Sama',
@@ -271,6 +273,40 @@ export default function B2BLandingPage() {
 
     observer.observe(formSection)
     return () => observer.disconnect()
+  }, [])
+
+  useEffect(() => {
+    const shell = instagramEmbedRef.current
+    const scaler = instagramScalerRef.current
+    if (!shell || !scaler || typeof ResizeObserver === 'undefined') {
+      return undefined
+    }
+
+    const INSTAGRAM_EMBED_WIDTH = 540
+    const INSTAGRAM_EMBED_HEIGHT = 780
+
+    const syncScale = () => {
+      if (window.matchMedia('(max-width: 640px)').matches) {
+        scaler.style.transform = ''
+        shell.style.height = ''
+        return
+      }
+
+      const available = shell.clientWidth
+      const scale = Math.max(1, available / INSTAGRAM_EMBED_WIDTH)
+      scaler.style.transform = `scale(${scale})`
+      shell.style.height = `${INSTAGRAM_EMBED_HEIGHT * scale}px`
+    }
+
+    syncScale()
+    const observer = new ResizeObserver(syncScale)
+    observer.observe(shell)
+    window.addEventListener('resize', syncScale)
+
+    return () => {
+      observer.disconnect()
+      window.removeEventListener('resize', syncScale)
+    }
   }, [])
 
   useEffect(() => {
@@ -650,14 +686,16 @@ export default function B2BLandingPage() {
             Feed resmi @ahr.printingsublimasi — portfolio printing, proses workshop, dan review pelanggan.
           </p>
 
-          <div className="b2b-instagram-embed">
-            <iframe
-              title="Instagram AHR Printing Sublimasi"
-              src={pageContent.embed_links.instagramEmbed || 'https://www.instagram.com/ahr.printingsublimasi/embed'}
-              loading="lazy"
-              referrerPolicy="strict-origin-when-cross-origin"
-              allow="encrypted-media; clipboard-write"
-            />
+          <div className="b2b-instagram-embed" ref={instagramEmbedRef}>
+            <div className="b2b-instagram-embed-scaler" ref={instagramScalerRef}>
+              <iframe
+                title="Instagram AHR Printing Sublimasi"
+                src={pageContent.embed_links.instagramEmbed || 'https://www.instagram.com/ahr.printingsublimasi/embed'}
+                loading="lazy"
+                referrerPolicy="strict-origin-when-cross-origin"
+                allow="encrypted-media; clipboard-write"
+              />
+            </div>
           </div>
 
           <div className="b2b-social-grid">

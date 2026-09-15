@@ -382,8 +382,8 @@
 }
 
 .b2b-instagram-embed {
-  width: min(100%, 540px);
-  margin: 0 auto 20px;
+  width: 100%;
+  margin: 0 0 20px;
   border-radius: 24px;
   overflow: hidden;
   border: 1px solid rgba(2, 37, 84, 0.1);
@@ -391,22 +391,36 @@
   box-shadow: 0 18px 48px rgba(2, 37, 84, 0.08);
 }
 
+.b2b-instagram-embed-scaler {
+  width: 540px;
+  max-width: 100%;
+  margin: 0 auto;
+  transform-origin: top center;
+  will-change: transform;
+}
+
 .b2b-instagram-embed iframe {
   display: block;
-  width: 100%;
-  height: 680px;
+  width: 540px;
+  max-width: 100%;
+  height: 780px;
   border: 0;
   background: #fafafa;
 }
 
 @media (max-width: 640px) {
   .b2b-instagram-embed {
-    width: 100%;
     border-radius: 18px;
   }
 
+  .b2b-instagram-embed-scaler {
+    width: 100%;
+    transform: none !important;
+  }
+
   .b2b-instagram-embed iframe {
-    height: 620px;
+    width: 100%;
+    height: 680px;
   }
 }
 
