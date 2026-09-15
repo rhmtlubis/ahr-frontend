@@ -44,6 +44,7 @@ export const b2bPortfolioItems = [
 
 export const b2bEmbedLinks = {
   instagramProfile: 'https://www.instagram.com/ahr.printingsublimasi/',
+  instagramEmbed: 'https://www.instagram.com/ahr.printingsublimasi/embed',
   tiktokProfile: 'https://www.tiktok.com/@ahrprintingsublimation',
 }
 

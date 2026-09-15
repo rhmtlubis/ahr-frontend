@@ -641,15 +641,25 @@ export default function B2BLandingPage() {
           </div>
         </section>
 
-        <section className="content-block section-plain b2b-social-proof" data-reveal>
+        <section className="content-block section-plain b2b-social-proof" id="instagram" data-reveal>
           <div className="section-heading">
             <span>Portofolio & review</span>
-            <h2>Lihat hasil produksi nyata di Instagram dan TikTok AHR.</h2>
+            <h2>Lihat hasil produksi nyata di Instagram AHR.</h2>
           </div>
           <p className="b2b-social-proof-lead">
-            Social proof visual membantu tim Anda yakin sebelum order — cek proses produksi, hasil printing, dan review
-            pelanggan langsung di channel resmi kami.
+            Feed resmi @ahr.printingsublimasi — portfolio printing, proses workshop, dan review pelanggan.
           </p>
+
+          <div className="b2b-instagram-embed">
+            <iframe
+              title="Instagram AHR Printing Sublimasi"
+              src={pageContent.embed_links.instagramEmbed || 'https://www.instagram.com/ahr.printingsublimasi/embed'}
+              loading="lazy"
+              referrerPolicy="strict-origin-when-cross-origin"
+              allow="encrypted-media; clipboard-write"
+            />
+          </div>
+
           <div className="b2b-social-grid">
             {pageContent.social_links.map((link) => {
               const Icon = link.platform === 'instagram' ? FaInstagram : FaTiktok
@@ -686,9 +696,14 @@ export default function B2BLandingPage() {
               href={pageContent.embed_links.instagramProfile}
               rel="noreferrer"
               target="_blank"
+              onClick={() =>
+                trackEvent('b2b_instagram_embed_open_profile', {
+                  source_page: window.location.pathname,
+                })
+              }
             >
               <FaInstagram size={18} aria-hidden="true" />
-              Lihat lebih banyak di Instagram
+              Buka profil Instagram
             </a>
             <a
               className="b2b-embed-action b2b-embed-action--tiktok"
