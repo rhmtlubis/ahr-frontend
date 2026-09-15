@@ -11,6 +11,8 @@ import {
 import { fallbackSiteData, legacyProductRedirects } from './prerender-fallback-data.mjs'
 import { getCategoryRoute, getCategorySeoContent } from '../src/lib/categorySeo.js'
 import { articles as fallbackArticles } from '../src/content/articles.js'
+import { b2bLandingVariants } from '../src/lib/b2bLandingVariants.js'
+import { buildB2bPrerenderPayload } from '../src/lib/b2bLandingTrustContent.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const projectRoot = path.resolve(__dirname, '..')
@@ -72,6 +74,47 @@ async function main() {
   }
 
   const articles = remoteArticles.length > 0 ? remoteArticles : isCssStore ? [] : fallbackArticles
+
+  const makeB2bAdsPage = (routePath, breadcrumbName) => {
+    const variant = b2bLandingVariants[routePath] || {}
+    const payload = buildB2bPrerenderPayload(routePath, variant)
+    const pageTitle = (variant.title || breadcrumbName).replace(/\s*\|\s*AHR.*$/i, '').trim()
+    return {
+      routePath,
+      filePath: path.join(distRoot, routePath.replace(/^\//, ''), 'index.html'),
+      title: pageTitle,
+      description: variant.description || payload.intro,
+      image: resolveAbsoluteUrl(siteData.defaultImage),
+      imageAlt: breadcrumbName,
+      type: 'website',
+      bodyContent: buildB2bLandingBodyContent(payload),
+      jsonLd: [
+        buildBreadcrumbSchema([
+          { name: 'Home', url: toPublicUrl('/') },
+          { name: breadcrumbName, url: toPublicUrl(routePath) },
+        ]),
+        buildFaqSchema(payload.faqs),
+        {
+          '@context': 'https://schema.org',
+          '@type': 'LocalBusiness',
+          name: 'AHR Corporation / CV AHR Printing',
+          description: variant.description || payload.intro,
+          url: toPublicUrl(routePath),
+          telephone: formatTelephoneForSchema(siteData.whatsappNumber),
+          address: {
+            '@type': 'PostalAddress',
+            streetAddress: 'Jl. Bojong Tanjung No.19, Katapang',
+            addressLocality: 'Kabupaten Bandung',
+            addressRegion: 'Jawa Barat',
+            postalCode: '40921',
+            addressCountry: 'ID',
+          },
+          priceRange: 'Rp88000+',
+        },
+      ],
+    }
+  }
+
   const productPages = siteData.products.map((product) => ({
     routePath: `/produk/${product.slug}`,
     filePath: path.join(distRoot, 'produk', product.slug, 'index.html'),
@@ -287,53 +330,22 @@ async function main() {
           ],
         },
     {
-      routePath: '/kontak-kerja-sama',
-      filePath: path.join(distRoot, 'kontak-kerja-sama', 'index.html'),
+      ...makeB2bAdsPage('/kontak-kerja-sama', 'Kontak & Kerja Sama'),
       title: 'Kontak & Kerja Sama',
       description:
         'Landing B2B AHR untuk kerja sama vendor, procurement, reseller, sekolah, EO, dan corporate yang butuh respon cepat ke WhatsApp.',
-      image: resolveAbsoluteUrl(siteData.defaultImage),
-      imageAlt: 'Kontak dan kerja sama AHR',
-      type: 'website',
-      bodyContent: buildSimplePageBodyContent(
-        'Kontak & Kerja Sama',
-        'Layanan B2B & Kerja Sama Vendor.',
-        [
-          'Respon cepat langsung ke WhatsApp untuk kebutuhan procurement, reseller, corporate, sekolah, dan event organizer.',
-          'Gunakan landing ini sebagai tujuan iklan Google Ads agar lead masuk ke jalur yang lebih fokus.',
-        ],
-      ),
-      jsonLd: [
-        buildBreadcrumbSchema([
-          { name: 'Home', url: toPublicUrl('/') },
-          { name: 'Kontak & Kerja Sama', url: toPublicUrl('/kontak-kerja-sama') },
-        ]),
-      ],
     },
     {
-      routePath: '/b2b',
-      filePath: path.join(distRoot, 'b2b', 'index.html'),
+      ...makeB2bAdsPage('/b2b', 'Kontak & Kerja Sama'),
       title: 'Kontak & Kerja Sama',
       description:
         'Landing B2B AHR untuk kerja sama vendor, procurement, reseller, sekolah, EO, dan corporate yang butuh respon cepat ke WhatsApp.',
-      image: resolveAbsoluteUrl(siteData.defaultImage),
-      imageAlt: 'Kontak dan kerja sama AHR',
-      type: 'website',
-      bodyContent: buildSimplePageBodyContent(
-        'Kontak & Kerja Sama',
-        'Layanan B2B & Kerja Sama Vendor.',
-        [
-          'Respon cepat langsung ke WhatsApp untuk kebutuhan procurement, reseller, corporate, sekolah, dan event organizer.',
-          'Gunakan landing ini sebagai tujuan iklan Google Ads agar lead masuk ke jalur yang lebih fokus.',
-        ],
-      ),
-      jsonLd: [
-        buildBreadcrumbSchema([
-          { name: 'Home', url: toPublicUrl('/') },
-          { name: 'Kontak & Kerja Sama', url: toPublicUrl('/b2b') },
-        ]),
-      ],
     },
+    makeB2bAdsPage('/vendor-jersey-b2b', 'Vendor Jersey B2B'),
+    makeB2bAdsPage('/konveksi-jersey-printing', 'Konveksi Jersey Printing'),
+    makeB2bAdsPage('/jersey-tim-komunitas', 'Jersey Tim & Komunitas'),
+    makeB2bAdsPage('/konveksi-jersey-bandung', 'Konveksi Jersey Bandung'),
+    makeB2bAdsPage('/jersey-printing-jakarta', 'Jersey Printing Jakarta'),
     {
       routePath: '/all-products',
       filePath: path.join(distRoot, 'all-products', 'index.html'),
@@ -939,6 +951,104 @@ function buildSimplePageBodyContent(title, intro, paragraphs = []) {
     ...paragraphs.map((paragraph) => `  <p>${escapeHtml(paragraph)}</p>`),
     '</section>',
   ].join('\n')
+}
+
+function buildB2bLandingBodyContent(payload) {
+  const {
+    title,
+    intro,
+    priceLead,
+    trustBar = [],
+    highlights = [],
+    services = [],
+    pricingTiers = [],
+    pricingDisclaimer,
+    processSteps = [],
+    faqs = [],
+    workshop,
+    testimonials = [],
+  } = payload
+
+  return [
+    '<section data-prerendered-seo hidden aria-hidden="true">',
+    `  <h1>${escapeHtml(title)}</h1>`,
+    intro ? `  <p>${escapeHtml(intro)}</p>` : '',
+    priceLead ? `  <p><strong>${escapeHtml(priceLead)}</strong></p>` : '',
+    trustBar.length
+      ? `  <ul>${trustBar.map((item) => `<li>${escapeHtml(item)}</li>`).join('')}</ul>`
+      : '',
+    services.length
+      ? [
+          '  <h2>Layanan</h2>',
+          `  <ul>${services.map((item) => `<li>${escapeHtml(item)}</li>`).join('')}</ul>`,
+        ].join('\n')
+      : '',
+    pricingTiers.length
+      ? [
+          '  <h2>Acuan harga</h2>',
+          '  <ul>',
+          ...pricingTiers.map(
+            (tier) =>
+              `    <li><strong>${escapeHtml(tier.qty)}</strong> — ${escapeHtml(tier.price)}. ${escapeHtml(tier.note)}</li>`,
+          ),
+          '  </ul>',
+          pricingDisclaimer ? `  <p>${escapeHtml(pricingDisclaimer)}</p>` : '',
+        ].join('\n')
+      : '',
+    highlights.length
+      ? [
+          '  <h2>Keunggulan</h2>',
+          '  <ul>',
+          ...highlights.map(
+            (item) => `    <li><strong>${escapeHtml(item.title)}</strong> — ${escapeHtml(item.detail)}</li>`,
+          ),
+          '  </ul>',
+        ].join('\n')
+      : '',
+    processSteps.length
+      ? [
+          '  <h2>Alur order</h2>',
+          '  <ol>',
+          ...processSteps.map(
+            (step) => `    <li><strong>${escapeHtml(step.title)}</strong> — ${escapeHtml(step.detail)}</li>`,
+          ),
+          '  </ol>',
+        ].join('\n')
+      : '',
+    workshop
+      ? [
+          `  <h2>${escapeHtml(workshop.title)}</h2>`,
+          `  <p>${escapeHtml(workshop.line)}</p>`,
+          `  <ul>${(workshop.points || []).map((point) => `<li>${escapeHtml(point)}</li>`).join('')}</ul>`,
+        ].join('\n')
+      : '',
+    testimonials.length
+      ? [
+          '  <h2>Testimoni</h2>',
+          '  <ul>',
+          ...testimonials.map(
+            (item) =>
+              `    <li>"${escapeHtml(item.quote)}" — ${escapeHtml(item.author)}, ${escapeHtml(item.org)}</li>`,
+          ),
+          '  </ul>',
+        ].join('\n')
+      : '',
+    faqs.length
+      ? [
+          '  <h2>FAQ</h2>',
+          '  <ul>',
+          ...faqs.map(
+            (faq) =>
+              `    <li><strong>${escapeHtml(faq.question)}</strong> ${escapeHtml(faq.answer)}</li>`,
+          ),
+          '  </ul>',
+        ].join('\n')
+      : '',
+    '  <p>Kirim brief order di form halaman ini atau chat WhatsApp untuk estimasi cepat.</p>',
+    '</section>',
+  ]
+    .filter(Boolean)
+    .join('\n')
 }
 
 function buildCategoryBodyContent(category, seoContent) {

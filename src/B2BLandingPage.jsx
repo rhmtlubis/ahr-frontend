@@ -1,5 +1,13 @@
-import { useEffect, useMemo, useState } from 'react'
-import { ArrowRight, CheckCircle2, Building2, MessageCircleMore, ShieldCheck, Users } from 'lucide-react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { ArrowRight, CheckCircle2, MapPin, MessageCircleMore, ShieldCheck, Users } from 'lucide-react'
+import {
+  b2bPricingDisclaimer,
+  b2bPricingTiers,
+  b2bProcessSteps,
+  b2bWorkshop,
+  getB2bFaqsForPath,
+  b2bServicesByPath,
+} from './lib/b2bLandingTrustContent'
 import './App.css'
 import './B2BLandingPage.css'
 import CookieConsentBanner from './components/layout/CookieConsentBanner'
@@ -16,7 +24,11 @@ import {
 import { getConsentPreferences, setConsentPreferences } from './lib/consent'
 import { useLanguage } from './lib/i18n.jsx'
 import { getLandingChromeContent } from './lib/landingContent'
+import { getB2bLandingVariant, b2bSocialLinks, b2bPortfolioItems, b2bEmbedLinks } from './lib/b2bLandingVariants'
+import { useLocation } from 'react-router-dom'
+import { FaInstagram, FaTiktok } from 'react-icons/fa6'
 import { clearPersonalizationData } from './lib/personalization'
+import { formatB2bQuantity, validateB2bQuantity } from './lib/b2bLeadForm'
 import useDocumentTitle from './lib/useDocumentTitle'
 
 const defaultForm = {
@@ -35,7 +47,7 @@ const b2bFallbackContent = {
     name: 'AHR Jersey',
     lockup: 'CV AHR Printing',
     tagline: 'Spesialis jersey full printing untuk tim, komunitas, sekolah, dan corporate.',
-    whatsapp_number: '6281234567890',
+    whatsapp_number: '6287711868290',
     response_time: 'Balas dalam 5-15 menit pada jam kerja',
   },
   hero: {
@@ -43,42 +55,97 @@ const b2bFallbackContent = {
     title: 'Kontak & kerja sama untuk kebutuhan vendor, procurement, dan bulk order.',
     body:
       'Cocok untuk partnership reseller, kerja sama vendor, kebutuhan corporate, sekolah, EO, dan tim yang butuh respons cepat langsung ke WhatsApp.',
-    primaryCta: 'Hubungi Kami',
-    secondaryCta: 'Lihat Alur Kerja',
+    primaryCta: 'Kirim Brief Order',
+    secondaryCta: 'Chat WhatsApp Sekarang',
   },
+  formTitle: 'Brief order B2B',
+  formSubtitle: 'Isi singkat — kami balas estimasi via WhatsApp.',
   stats: [
     { value: '500+', label: 'proyek bulk order' },
-    { value: '7 HK', label: 'estimasi produksi' },
-    { value: '2x', label: 'revisi desain gratis' },
-    { value: 'WhatsApp', label: 'respon cepat' },
+    { value: '200+', label: 'tim & komunitas' },
+    { value: '5 pcs', label: 'MOQ mulai' },
+    { value: '2-3 Hari', label: 'estimasi produksi' },
   ],
   trust_bar: [
-    'Sample fisik tersedia',
-    'File desain tersimpan untuk reorder',
+    'Free desain & 2x revisi',
+    'Full print sublimasi',
+    'Produksi 2-3 hari kerja',
     'Pengiriman nasional',
+    'MOQ mulai 5 pcs',
   ],
-  process_steps: [
-    { title: 'Brief', detail: 'Sampaikan kebutuhan, jumlah, deadline, dan referensi desain.' },
-    { title: 'Desain', detail: 'Tim kami menyiapkan draft dan revisi sesuai kebutuhan proyek.' },
-    { title: 'Produksi', detail: 'Order masuk line produksi setelah approval final.' },
-    { title: 'Kirim', detail: 'Produk dikirim dengan update status yang jelas.' },
+  testimonials: [
+    {
+      quote: 'Proses order tim futsal kami jadi lebih cepat. Desain direvisi sampai cocok dan hasil printing-nya tajam.',
+      author: 'Koordinator Tim Futsal',
+      org: 'Komunitas Jabodetabek',
+    },
+    {
+      quote: 'MOQ fleksibel dan respon WhatsApp cepat. Cocok untuk kebutuhan jersey komunitas yang butuh deadline ketat.',
+      author: 'PIC Event Organizer',
+      org: 'EO Olahraga',
+    },
+    {
+      quote: 'Sebagai vendor apparel, AHR membantu kami handle order bulk dengan alur yang jelas dari brief sampai kirim.',
+      author: 'Owner Reseller Apparel',
+      org: 'Partner B2B',
+    },
+    {
+      quote: 'Jersey seragam sekolah kami selesai dalam 3 hari setelah desain fix. Kualitas bahan dan jahitannya rapi.',
+      author: 'Guru Olahraga',
+      org: 'SMA di Bandung Raya',
+    },
+    {
+      quote: 'Repeat order ke-4 untuk jersey klub. File desain tersimpan, jadi reorder tim baru tinggal ganti nama dan nomor.',
+      author: 'Manager Klub Bola',
+      org: 'Liga Amatir Lokal',
+    },
+    {
+      quote: 'Butuh jersey corporate run event cepat — tim AHR bantu desain dan produksi dalam 2 hari kerja. On time.',
+      author: 'HR Corporate',
+      org: 'Perusahaan Manufaktur',
+    },
+    {
+      quote: 'Hasil sublimnya awet, warna tidak mudah pudar setelah beberapa kali cuci. Tim komunitas lari kami puas.',
+      author: 'Ketua Komunitas',
+      org: 'Running Community',
+    },
+    {
+      quote: 'Cek dulu portofolionya di Instagram, langsung yakin. Hasil real-nya sesuai yang ditampilkan di feed.',
+      author: 'Admin Komunitas Voli',
+      org: 'Tim Putri Regional',
+    },
   ],
-  faqs: [
-    { question: 'Minimal order berapa?', answer: 'Untuk jalur B2B, kami bisa bantu sesuaikan kebutuhan dan volume order.' },
-    { question: 'Bisa kerja sama vendor?', answer: 'Bisa. Silakan isi form, lalu tim kami follow up via WhatsApp.' },
+  social_links: b2bSocialLinks,
+  portfolio_items: b2bPortfolioItems,
+  embed_links: b2bEmbedLinks,
+  highlights: [
+    { title: 'Free desain', detail: 'Tim desain AHR bantu dari nol atau dari file referensi Anda.' },
+    { title: 'Full print sublim', detail: 'Hasil warna tajam, nyaman dipakai, cocok untuk tim & komunitas.' },
+    { title: 'MOQ mulai 5 pcs', detail: 'Cocok untuk tim kecil, komunitas, hingga order bulk corporate.' },
+    { title: 'Produksi cepat', detail: 'Estimasi 2-3 hari kerja setelah desain disetujui.' },
   ],
+  process_steps: b2bProcessSteps,
+  faqs: getB2bFaqsForPath('/kontak-kerja-sama'),
+  pricing_tiers: b2bPricingTiers,
+  pricing_disclaimer: b2bPricingDisclaimer,
+  workshop: b2bWorkshop,
+  services: b2bServicesByPath['/kontak-kerja-sama'],
   section_content: {
     client_brands_eyebrow: 'Kenapa AHR',
     client_brands_title: 'Siap untuk kerja sama yang butuh respon cepat dan alur jelas.',
     client_brands_body: 'Fokus kami adalah mempermudah buyer B2B dari awal briefing sampai barang diterima.',
     process_eyebrow: 'Alur kerja',
-    process_title: 'Jalur order dibuat singkat agar tim procurement lebih cepat ambil keputusan.',
-    pricing_eyebrow: 'Kontak & Kerja Sama',
-    pricing_title: 'Hubungi Kami',
+    process_title: 'Dari brief sampai kirim — 4 langkah yang jelas.',
+    pricing_eyebrow: 'Harga transparan',
+    pricing_title: 'Acuan harga jersey custom full print sublim.',
+    services_eyebrow: 'Layanan',
+    services_title: 'Yang bisa kami kerjakan untuk tim Anda.',
+    workshop_eyebrow: 'Lokasi workshop',
+    workshop_title: 'Produksi langsung di Katapang, Bandung.',
     final_cta_eyebrow: 'Hubungi Kami',
-    final_cta_title: 'Layanan B2B & Kerja Sama Vendor.',
+    final_cta_title: 'Kirim brief — dapat estimasi via WhatsApp.',
     faq_eyebrow: 'FAQ',
-    faq_title: 'Pertanyaan yang paling sering muncul sebelum lanjut ke WhatsApp.',
+    faq_title: 'Pertanyaan sebelum order jersey custom.',
     contact_eyebrow: 'Kontak',
     contact_title: 'Respon cepat langsung ke WhatsApp.',
   },
@@ -98,7 +165,7 @@ const b2bFallbackContent = {
     address: {
       label: 'Workshop & Kantor AHR Printing',
       line: 'Jl. Bojong Tanjung No.19, Katapang, Kabupaten Bandung, Jawa Barat 40921',
-      mapUrl: '#contact',
+      mapUrl: 'https://maps.google.com/?q=Jl.+Bojong+Tanjung+No.19,+Katapang,+Bandung',
     },
   },
   utilityLinks: [],
@@ -120,6 +187,8 @@ function buildWhatsAppUrl(phoneNumber, message, ctaContext) {
 
 export default function B2BLandingPage() {
   const { language } = useLanguage()
+  const { pathname } = useLocation()
+  const landingVariant = getB2bLandingVariant(pathname)
   const [pageContent, setPageContent] = useState(b2bFallbackContent)
   const [form, setForm] = useState(defaultForm)
   const [status, setStatus] = useState({ state: 'idle', message: '' })
@@ -127,15 +196,20 @@ export default function B2BLandingPage() {
     analytics: 'unknown',
     personalization: 'unknown',
   })
+  const [showStickyContact, setShowStickyContact] = useState(true)
+  const formSectionRef = useRef(null)
 
   useDocumentTitle(
-    'AHR Corporation Kontak & Kerja Sama',
-    'Landing B2B AHR Corporation untuk kerja sama vendor, procurement, reseller, sekolah, EO, dan corporate yang butuh respon cepat via WhatsApp.',
+    landingVariant?.title || 'AHR Corporation Kontak & Kerja Sama',
+    landingVariant?.description ||
+      'Landing B2B AHR Corporation untuk kerja sama vendor, procurement, reseller, sekolah, EO, dan corporate yang butuh respon cepat via WhatsApp.',
     {
-      canonicalPath: '/kontak-kerja-sama',
+      canonicalPath: landingVariant?.canonicalPath || '/kontak-kerja-sama',
       image: '/og-preview.png',
-      imageAlt: 'Kontak dan kerja sama AHR Corporation',
-      keywords: 'ahr corporation, kontak kerja sama, b2b jersey, vendor apparel, procurement, wholesale, WhatsApp AHR Corporation',
+      imageAlt: landingVariant?.title || 'Kontak dan kerja sama AHR Corporation',
+      keywords:
+        landingVariant?.keywords ||
+        'ahr corporation, kontak kerja sama, b2b jersey, vendor apparel, procurement, wholesale, WhatsApp AHR Corporation',
       locale: language,
       type: 'website',
     },
@@ -146,7 +220,60 @@ export default function B2BLandingPage() {
   }, [])
 
   useEffect(() => {
-    captureMarketingAttribution()
+    if (!landingVariant) {
+      return
+    }
+
+    setPageContent((current) => ({
+      ...current,
+      hero: {
+        ...current.hero,
+        eyebrow: landingVariant.hero?.eyebrow || current.hero.eyebrow,
+        title: landingVariant.hero?.title || current.hero.title,
+        body: landingVariant.hero?.body || current.hero.body,
+        primaryCta: landingVariant.hero?.primaryCta || current.hero.primaryCta,
+        secondaryCta: landingVariant.hero?.secondaryCta || current.hero.secondaryCta,
+      },
+      formTitle: landingVariant.formTitle || current.formTitle,
+      formSubtitle: landingVariant.formSubtitle || current.formSubtitle,
+      stats: landingVariant.stats || current.stats,
+      trust_bar: landingVariant.trustBar || current.trust_bar,
+      testimonials: landingVariant.testimonials || current.testimonials,
+      highlights: landingVariant.highlights || current.highlights,
+      social_links: landingVariant.socialLinks || current.social_links,
+      portfolio_items: landingVariant.portfolioItems || current.portfolio_items,
+      embed_links: landingVariant.embedLinks || current.embed_links,
+      faqs: landingVariant.faqs || current.faqs,
+      process_steps: landingVariant.processSteps || current.process_steps,
+      pricing_tiers: landingVariant.pricingTiers || current.pricing_tiers,
+      pricing_disclaimer: landingVariant.pricingDisclaimer || current.pricing_disclaimer,
+      workshop: landingVariant.workshop || current.workshop,
+      services: landingVariant.services || current.services,
+    }))
+  }, [landingVariant])
+
+  useEffect(() => {
+    const formSection = formSectionRef.current
+    if (!formSection) {
+      return undefined
+    }
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        setShowStickyContact(!entry.isIntersecting)
+      },
+      {
+        root: null,
+        threshold: 0.12,
+        rootMargin: '0px 0px -72px 0px',
+      },
+    )
+
+    observer.observe(formSection)
+    return () => observer.disconnect()
+  }, [])
+
+  useEffect(() => {
 
     fetch(getApiUrl(`/api/b2b/landing-page?locale=${language}`), {
       headers: {
@@ -170,16 +297,33 @@ export default function B2BLandingPage() {
           },
           hero: {
             ...b2bFallbackContent.hero,
-            eyebrow: payload.data.hero?.eyebrow || b2bFallbackContent.hero.eyebrow,
-            title: payload.data.hero?.headline || b2bFallbackContent.hero.title,
-            body: payload.data.hero?.subheadline || b2bFallbackContent.hero.body,
-            primaryCta: payload.data.hero?.primary_cta || b2bFallbackContent.hero.primaryCta,
-            secondaryCta: payload.data.hero?.secondary_cta || b2bFallbackContent.hero.secondaryCta,
+            eyebrow: landingVariant?.hero?.eyebrow || payload.data.hero?.eyebrow || b2bFallbackContent.hero.eyebrow,
+            title: landingVariant?.hero?.title || payload.data.hero?.headline || b2bFallbackContent.hero.title,
+            body: landingVariant?.hero?.body || payload.data.hero?.subheadline || b2bFallbackContent.hero.body,
+            primaryCta:
+              landingVariant?.hero?.primaryCta ||
+              payload.data.hero?.primary_cta ||
+              b2bFallbackContent.hero.primaryCta,
+            secondaryCta:
+              landingVariant?.hero?.secondaryCta ||
+              payload.data.hero?.secondary_cta ||
+              b2bFallbackContent.hero.secondaryCta,
           },
-          stats: Array.isArray(payload.data.hero?.stats) && payload.data.hero.stats.length > 0 ? payload.data.hero.stats : b2bFallbackContent.stats,
-          trust_bar: Array.isArray(payload.data.trust_bar) && payload.data.trust_bar.length > 0 ? payload.data.trust_bar : b2bFallbackContent.trust_bar,
-          process_steps: Array.isArray(payload.data.process_steps) && payload.data.process_steps.length > 0 ? payload.data.process_steps : b2bFallbackContent.process_steps,
-          faqs: Array.isArray(payload.data.faqs) && payload.data.faqs.length > 0 ? payload.data.faqs : b2bFallbackContent.faqs,
+          formTitle: landingVariant?.formTitle || b2bFallbackContent.formTitle,
+          formSubtitle: landingVariant?.formSubtitle || b2bFallbackContent.formSubtitle,
+          stats: landingVariant?.stats || (Array.isArray(payload.data.hero?.stats) && payload.data.hero.stats.length > 0 ? payload.data.hero.stats : b2bFallbackContent.stats),
+          trust_bar: landingVariant?.trustBar || (Array.isArray(payload.data.trust_bar) && payload.data.trust_bar.length > 0 ? payload.data.trust_bar : b2bFallbackContent.trust_bar),
+          testimonials: landingVariant?.testimonials || b2bFallbackContent.testimonials,
+          highlights: landingVariant?.highlights || b2bFallbackContent.highlights,
+          social_links: landingVariant?.socialLinks || b2bFallbackContent.social_links,
+          portfolio_items: landingVariant?.portfolioItems || b2bFallbackContent.portfolio_items,
+          embed_links: landingVariant?.embedLinks || b2bFallbackContent.embed_links,
+          process_steps: landingVariant?.processSteps || b2bFallbackContent.process_steps,
+          faqs: landingVariant?.faqs || b2bFallbackContent.faqs,
+          pricing_tiers: landingVariant?.pricingTiers || b2bFallbackContent.pricing_tiers,
+          pricing_disclaimer: landingVariant?.pricingDisclaimer || b2bFallbackContent.pricing_disclaimer,
+          workshop: landingVariant?.workshop || b2bFallbackContent.workshop,
+          services: landingVariant?.services || b2bFallbackContent.services,
           section_content: {
             ...b2bFallbackContent.section_content,
             ...(normalizedContent.sectionContent || {}),
@@ -203,7 +347,7 @@ export default function B2BLandingPage() {
         })
       })
       .catch(() => {})
-  }, [language])
+  }, [language, landingVariant])
 
   const contactProfile = pageContent.brand
   const companyProfile = pageContent.companyProfile
@@ -269,22 +413,30 @@ export default function B2BLandingPage() {
     void openB2bWhatsApp(ctaContext)
   }
 
-  const handleSubmit = async (event) => {
+  const handleSubmit = async (event, ctaContext = 'b2b-landing-form') => {
     event.preventDefault()
+
+    const quantityError = validateB2bQuantity(form.quantity_estimate)
+    if (quantityError) {
+      setStatus({ state: 'error', message: quantityError })
+      return
+    }
+
     setStatus({ state: 'loading', message: 'Mengirim data prospek...' })
 
     const attribution = getAttributionParams()
     const payload = {
       ...form,
+      quantity_estimate: `${formatB2bQuantity(form.quantity_estimate)} pcs`,
       source_page: window.location.pathname,
-      cta_context: 'b2b-landing-form',
+      cta_context: ctaContext,
       referrer_url: document.referrer || window.location.href,
       ...attribution,
     }
 
     try {
       await saveB2BLead(payload)
-      await openB2bWhatsApp('b2b-landing-form')
+      await openB2bWhatsApp(ctaContext)
       setStatus({ state: 'success', message: 'Lead tersimpan. WhatsApp sudah dibuka.' })
       setForm(defaultForm)
     } catch (error) {
@@ -292,12 +444,12 @@ export default function B2BLandingPage() {
         state: 'error',
         message: error.message || 'Lead gagal tersimpan. Anda tetap bisa lanjut ke WhatsApp.',
       })
-      await openB2bWhatsApp('b2b-landing-form-fallback')
+      await openB2bWhatsApp(`${ctaContext}-fallback`)
     }
   }
 
   return (
-    <div className="app-shell b2b-landing-shell">
+    <div className={`app-shell b2b-landing-shell${showStickyContact ? ' b2b-landing-shell--sticky-dock' : ''}`}>
       <SiteHeader
         brandHref="/"
         navGroups={pageContent.navGroups}
@@ -307,7 +459,7 @@ export default function B2BLandingPage() {
         cartItemCount={0}
         primaryActionLabel="Hubungi Kami"
         onPrimaryAction={() => {
-          window.location.hash = '#final-cta'
+          window.location.hash = '#hero-lead'
         }}
       />
 
@@ -317,12 +469,12 @@ export default function B2BLandingPage() {
             <span className="section-kicker">{pageContent.hero.eyebrow}</span>
             <h1>{pageContent.hero.title}</h1>
             <p>{pageContent.hero.body}</p>
-            <div className="hero-cta-row">
-              <a className="cta-button cta-button-dark" href="#final-cta">
+            <div className="hero-cta-row b2b-hero-cta-row">
+              <a className="cta-button cta-button-dark" href="#hero-lead">
                 {pageContent.hero.primaryCta}
               </a>
               <a
-                className="cta-button cta-button-light"
+                className="cta-button cta-button-light b2b-hero-wa-cta"
                 href={buildWhatsAppUrl(contactProfile.whatsapp_number, formMessage, 'hero-whatsapp')}
                 onClick={(event) => handleWhatsAppCtaClick(event, 'hero-whatsapp')}
               >
@@ -331,20 +483,60 @@ export default function B2BLandingPage() {
             </div>
           </div>
 
-          <div className="b2b-hero-card">
+          <div className="b2b-hero-card" id="hero-lead" ref={formSectionRef}>
             <div className="b2b-hero-card-top">
-              <Building2 size={20} />
-              <strong>Kontak & Kerja Sama</strong>
+              <MessageCircleMore size={20} />
+              <strong>{pageContent.formTitle || 'Brief order B2B'}</strong>
             </div>
-            <p>Fokus pada B2B, reseller, vendor, dan procurement dengan respon cepat ke WhatsApp.</p>
-            <div className="b2b-trust-list">
-              {pageContent.trust_bar.map((item) => (
+            <p className="b2b-hero-form-subtitle">
+              {pageContent.formSubtitle || 'Isi singkat — kami balas estimasi via WhatsApp.'}
+            </p>
+            <form
+              className="lead-form b2b-lead-form b2b-hero-lead-form"
+              onSubmit={(event) => handleSubmit(event, 'b2b-hero-form')}
+            >
+              <input
+                required
+                name="name"
+                placeholder="Nama PIC"
+                value={form.name}
+                onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+              />
+              <input
+                required
+                name="phone"
+                placeholder="No. WhatsApp"
+                value={form.phone}
+                onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
+              />
+              <input
+                name="organization"
+                placeholder="Tim / perusahaan"
+                value={form.organization}
+                onChange={(e) => setForm((f) => ({ ...f, organization: e.target.value }))}
+              />
+              <input
+                required
+                name="quantity_estimate"
+                placeholder="Jumlah (min. 5 pcs)"
+                value={form.quantity_estimate}
+                onChange={(e) => setForm((f) => ({ ...f, quantity_estimate: e.target.value }))}
+              />
+              <button className="cta-button cta-button-dark" type="submit" disabled={status.state === 'loading'}>
+                {status.state === 'loading' ? 'Mengirim...' : pageContent.hero.primaryCta}
+              </button>
+            </form>
+            <div className="b2b-trust-list b2b-hero-trust-compact">
+              {pageContent.trust_bar.slice(0, 4).map((item) => (
                 <div key={item}>
                   <CheckCircle2 size={16} />
                   <span>{item}</span>
                 </div>
               ))}
             </div>
+            {status.message ? (
+              <p className={`b2b-hero-form-status b2b-hero-form-status--${status.state}`}>{status.message}</p>
+            ) : null}
           </div>
         </section>
 
@@ -355,6 +547,159 @@ export default function B2BLandingPage() {
               <span>{stat.label}</span>
             </article>
           ))}
+        </section>
+
+        <section className="content-block section-plain b2b-highlights" data-reveal>
+          <div className="section-heading">
+            <span>Kenapa AHR</span>
+            <h2>Keunggulan yang dibutuhkan tim, komunitas, dan corporate.</h2>
+          </div>
+          <div className="b2b-highlight-grid">
+            {pageContent.highlights.map((item) => (
+              <article className="b2b-highlight-card" key={item.title}>
+                <h3>{item.title}</h3>
+                <p>{item.detail}</p>
+              </article>
+            ))}
+          </div>
+        </section>
+
+        <section className="content-block section-soft b2b-pricing" id="pricing" data-reveal>
+          <div className="section-heading">
+            <span>{pageContent.section_content.pricing_eyebrow}</span>
+            <h2>{pageContent.section_content.pricing_title}</h2>
+          </div>
+          <div className="b2b-pricing-grid">
+            {pageContent.pricing_tiers.map((tier) => (
+              <article className="b2b-pricing-card" key={tier.qty}>
+                <span className="b2b-pricing-qty">{tier.qty}</span>
+                <strong>{tier.price}</strong>
+                <p>{tier.note}</p>
+              </article>
+            ))}
+          </div>
+          <p className="b2b-pricing-note">{pageContent.pricing_disclaimer}</p>
+        </section>
+
+        <section className="content-block section-plain b2b-services" data-reveal>
+          <div className="section-heading">
+            <span>{pageContent.section_content.services_eyebrow}</span>
+            <h2>{pageContent.section_content.services_title}</h2>
+          </div>
+          <ul className="b2b-services-list">
+            {pageContent.services.map((service) => (
+              <li key={service}>
+                <CheckCircle2 size={18} aria-hidden="true" />
+                <span>{service}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+
+        <section className="content-block section-soft b2b-testimonials" id="testimonials" data-reveal>
+          <div className="section-heading">
+            <span>Dipercaya tim & komunitas</span>
+            <h2>Testimoni dari partner yang sudah produksi jersey bersama AHR.</h2>
+          </div>
+          <div className="b2b-testimonial-grid">
+            {pageContent.testimonials.map((item) => (
+              <article className="b2b-testimonial-card" key={`${item.author}-${item.org}`}>
+                <p>"{item.quote}"</p>
+                <div>
+                  <strong>{item.author}</strong>
+                  <span>{item.org}</span>
+                </div>
+              </article>
+            ))}
+          </div>
+        </section>
+
+        <section className="content-block section-soft b2b-portfolio" data-reveal>
+          <div className="section-heading">
+            <span>Portofolio produksi</span>
+            <h2>Hasil nyata dari workshop AHR — bukan mockup.</h2>
+          </div>
+          <div className="b2b-portfolio-grid">
+            {pageContent.portfolio_items.map((item) => (
+              <a
+                className="b2b-portfolio-card"
+                href={pageContent.embed_links.instagramProfile}
+                key={`${item.src}-${item.caption}`}
+                rel="noreferrer"
+                target="_blank"
+                onClick={() =>
+                  trackEvent('b2b_portfolio_click', {
+                    source_page: window.location.pathname,
+                    destination: 'instagram',
+                  })
+                }
+              >
+                <img alt={item.alt} loading="lazy" src={item.src} />
+                <span>{item.caption}</span>
+              </a>
+            ))}
+          </div>
+        </section>
+
+        <section className="content-block section-plain b2b-social-proof" data-reveal>
+          <div className="section-heading">
+            <span>Portofolio & review</span>
+            <h2>Lihat hasil produksi nyata di Instagram dan TikTok AHR.</h2>
+          </div>
+          <p className="b2b-social-proof-lead">
+            Social proof visual membantu tim Anda yakin sebelum order — cek proses produksi, hasil printing, dan review
+            pelanggan langsung di channel resmi kami.
+          </p>
+          <div className="b2b-social-grid">
+            {pageContent.social_links.map((link) => {
+              const Icon = link.platform === 'instagram' ? FaInstagram : FaTiktok
+
+              return (
+                <a
+                  className={`b2b-social-card b2b-social-card--${link.platform}`}
+                  href={link.href}
+                  key={link.platform}
+                  rel="noreferrer"
+                  target="_blank"
+                  onClick={() =>
+                    trackEvent('b2b_social_link_click', {
+                      platform: link.platform,
+                      source_page: window.location.pathname,
+                    })
+                  }
+                >
+                  <div className="b2b-social-card-top">
+                    <Icon size={22} aria-hidden="true" />
+                    <div>
+                      <strong>{link.label}</strong>
+                      <span>{link.handle}</span>
+                    </div>
+                  </div>
+                  <p>{link.description}</p>
+                </a>
+              )
+            })}
+          </div>
+          <div className="b2b-embed-actions">
+            <a
+              className="b2b-embed-action b2b-embed-action--instagram"
+              href={pageContent.embed_links.instagramProfile}
+              rel="noreferrer"
+              target="_blank"
+            >
+              <FaInstagram size={18} aria-hidden="true" />
+              Lihat lebih banyak di Instagram
+            </a>
+            <a
+              className="b2b-embed-action b2b-embed-action--tiktok"
+              href={pageContent.embed_links.tiktokProfile}
+              rel="noreferrer"
+              target="_blank"
+            >
+              <FaTiktok size={18} aria-hidden="true" />
+              Tonton proses produksi di TikTok
+            </a>
+          </div>
         </section>
 
         <section className="content-block section-soft b2b-process" id="process" data-reveal>
@@ -370,6 +715,35 @@ export default function B2BLandingPage() {
                 <p>{step.detail}</p>
               </article>
             ))}
+          </div>
+        </section>
+
+        <section className="content-block section-plain b2b-workshop" id="workshop" data-reveal>
+          <div className="section-heading">
+            <span>{pageContent.section_content.workshop_eyebrow}</span>
+            <h2>{pageContent.section_content.workshop_title}</h2>
+          </div>
+          <div className="b2b-workshop-card">
+            <div className="b2b-workshop-card-top">
+              <MapPin size={20} aria-hidden="true" />
+              <div>
+                <strong>{pageContent.workshop.title}</strong>
+                <p>{pageContent.workshop.line}</p>
+              </div>
+            </div>
+            <ul className="b2b-workshop-points">
+              {pageContent.workshop.points.map((point) => (
+                <li key={point}>{point}</li>
+              ))}
+            </ul>
+            <a
+              className="cta-button cta-button-light"
+              href={pageContent.workshop.mapUrl}
+              rel="noreferrer"
+              target="_blank"
+            >
+              Buka di Google Maps
+            </a>
           </div>
         </section>
 
@@ -412,11 +786,14 @@ export default function B2BLandingPage() {
               <div className="lead-form-row">
                 <input
                   aria-label="Estimasi pcs"
-                  placeholder="Estimasi pcs"
+                  placeholder="Jumlah pcs (min. 5) *"
+                  inputMode="numeric"
+                  min="5"
                   value={form.quantity_estimate}
                   onChange={(event) =>
                     setForm((current) => ({ ...current, quantity_estimate: event.target.value }))
                   }
+                  required
                 />
                 <select
                   aria-label="Jenis kebutuhan"
@@ -490,6 +867,25 @@ export default function B2BLandingPage() {
           </div>
         </section>
       </main>
+
+      <div
+        className={`b2b-sticky-contact${showStickyContact ? ' is-visible' : ''}`}
+        aria-hidden={!showStickyContact}
+      >
+        <a className="b2b-sticky-contact-form" href="#hero-lead">
+          Isi Form
+        </a>
+        <button
+          className="b2b-sticky-contact-wa"
+          type="button"
+          onClick={() => {
+            void openB2bWhatsApp('sticky-mobile-dock')
+          }}
+        >
+          <MessageCircleMore size={18} aria-hidden="true" />
+          WhatsApp
+        </button>
+      </div>
 
       <SiteFooter
         companyProfile={companyProfile}

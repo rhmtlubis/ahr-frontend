@@ -126,6 +126,11 @@ createRoot(document.getElementById('root')).render(
                 <>
                   <Route path="/b2b" element={<B2BLandingPage />} />
                   <Route path="/kontak-kerja-sama" element={<B2BLandingPage />} />
+                  <Route path="/vendor-jersey-b2b" element={<B2BLandingPage />} />
+                  <Route path="/konveksi-jersey-printing" element={<B2BLandingPage />} />
+                  <Route path="/jersey-tim-komunitas" element={<B2BLandingPage />} />
+                  <Route path="/konveksi-jersey-bandung" element={<B2BLandingPage />} />
+                  <Route path="/jersey-printing-jakarta" element={<B2BLandingPage />} />
                 </>
               )}
               <Route path="/linktree" element={isCssStore() ? <CssLinktreePage /> : <LinktreePage />} />

@@ -37,10 +37,66 @@
 
 .b2b-hero-copy h1 {
   margin: 12px 0 16px;
-  max-width: 12ch;
-  font-size: clamp(2.6rem, 6vw, 5rem);
-  line-height: 0.92;
-  letter-spacing: -0.05em;
+  max-width: 18ch;
+  font-size: clamp(2.2rem, 5.2vw, 4.2rem);
+  line-height: 0.98;
+  letter-spacing: -0.04em;
+}
+
+.b2b-hero-form-subtitle {
+  margin: 0;
+  color: var(--text-700);
+  font-size: 0.92rem;
+  line-height: 1.5;
+}
+
+.b2b-hero-lead-form {
+  display: grid;
+  gap: 10px;
+  padding: 0;
+  background: transparent;
+  box-shadow: none;
+  border: 0;
+}
+
+.b2b-hero-lead-form input {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid rgba(2, 37, 84, 0.14);
+  border-radius: 14px;
+  font: inherit;
+  background: #fff;
+}
+
+.b2b-hero-lead-form .cta-button {
+  width: 100%;
+  justify-content: center;
+  margin-top: 4px;
+}
+
+.b2b-hero-trust-compact {
+  gap: 8px;
+}
+
+.b2b-hero-trust-compact span {
+  font-size: 0.86rem;
+}
+
+.b2b-hero-form-status {
+  margin: 0;
+  font-size: 0.86rem;
+}
+
+.b2b-hero-form-status--success {
+  color: #0f7a3a;
+}
+
+.b2b-hero-form-status--error {
+  color: #b42318;
+}
+
+.b2b-hero-form-status--loading {
+  color: var(--text-700);
 }
 
 .b2b-hero-copy p {
@@ -190,6 +246,358 @@
   color: var(--text-700);
 }
 
+.b2b-pricing-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.b2b-pricing-card,
+.b2b-workshop-card {
+  border: 1px solid rgba(2, 37, 84, 0.1);
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 18px 48px rgba(2, 37, 84, 0.08);
+  border-radius: 24px;
+  padding: 22px;
+}
+
+.b2b-pricing-qty {
+  display: inline-flex;
+  margin-bottom: 10px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(15, 76, 129, 0.08);
+  color: var(--navy-900);
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+
+.b2b-pricing-card strong {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 1.25rem;
+  color: var(--navy-900);
+}
+
+.b2b-pricing-card p,
+.b2b-pricing-note,
+.b2b-workshop-card p {
+  margin: 0;
+  color: var(--text-700);
+  line-height: 1.6;
+}
+
+.b2b-pricing-note {
+  margin-top: 16px;
+  max-width: 72ch;
+  font-size: 0.92rem;
+}
+
+.b2b-highlight-grid,
+.b2b-testimonial-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.b2b-services-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px 18px;
+}
+
+.b2b-services-list li {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 14px 16px;
+  border-radius: 18px;
+  border: 1px solid rgba(2, 37, 84, 0.1);
+  background: rgba(255, 255, 255, 0.92);
+}
+
+.b2b-services-list svg {
+  flex: 0 0 auto;
+  margin-top: 2px;
+  color: var(--navy-900);
+}
+
+.b2b-workshop-card {
+  display: grid;
+  gap: 18px;
+  max-width: 720px;
+}
+
+.b2b-workshop-card-top {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.b2b-workshop-card-top strong {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 1.15rem;
+}
+
+.b2b-workshop-points {
+  margin: 0;
+  padding-left: 18px;
+  color: var(--text-700);
+  line-height: 1.7;
+}
+
+.b2b-workshop-card .cta-button {
+  justify-self: start;
+}
+
+@media (max-width: 960px) {
+  .b2b-pricing-grid,
+  .b2b-services-list {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .b2b-pricing-grid,
+  .b2b-services-list {
+    grid-template-columns: 1fr;
+  }
+}
+
+
+.b2b-testimonial-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.b2b-social-proof-lead {
+  max-width: 68ch;
+  margin: 0 0 20px;
+  color: var(--text-700);
+  line-height: 1.7;
+}
+
+.b2b-social-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.b2b-social-card {
+  display: grid;
+  gap: 14px;
+  border-radius: 24px;
+  padding: 22px;
+  text-decoration: none;
+  color: inherit;
+  border: 1px solid rgba(2, 37, 84, 0.1);
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 18px 48px rgba(2, 37, 84, 0.08);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.b2b-social-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 22px 52px rgba(2, 37, 84, 0.12);
+}
+
+.b2b-social-card-top {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.b2b-social-card-top strong {
+  display: block;
+  font-size: 1.02rem;
+}
+
+.b2b-social-card-top span {
+  display: block;
+  color: var(--text-700);
+  font-size: 0.92rem;
+}
+
+.b2b-social-card p {
+  margin: 0;
+  color: var(--text-700);
+  line-height: 1.65;
+}
+
+.b2b-social-card--instagram .b2b-social-card-top svg {
+  color: #c13584;
+}
+
+.b2b-social-card--tiktok .b2b-social-card-top svg {
+  color: #111111;
+}
+
+.b2b-portfolio-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.b2b-portfolio-card {
+  display: grid;
+  gap: 10px;
+  text-decoration: none;
+  color: inherit;
+  border-radius: 20px;
+  overflow: hidden;
+  border: 1px solid rgba(2, 37, 84, 0.1);
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 14px 36px rgba(2, 37, 84, 0.08);
+}
+
+.b2b-portfolio-card img {
+  width: 100%;
+  aspect-ratio: 4 / 5;
+  object-fit: cover;
+  display: block;
+}
+
+.b2b-portfolio-card span {
+  padding: 0 14px 14px;
+  color: var(--text-700);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.b2b-embed-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.b2b-embed-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 48px;
+  padding: 0 16px;
+  border-radius: 999px;
+  text-decoration: none;
+  font-weight: 700;
+  border: 1px solid rgba(2, 37, 84, 0.12);
+  background: #fff;
+  color: var(--navy-900);
+}
+
+.b2b-embed-action--instagram svg {
+  color: #c13584;
+}
+
+.b2b-embed-action--tiktok svg {
+  color: #111111;
+}
+
+.b2b-highlight-card,
+.b2b-testimonial-card {
+  border: 1px solid rgba(2, 37, 84, 0.1);
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 18px 48px rgba(2, 37, 84, 0.08);
+  border-radius: 24px;
+  padding: 22px;
+}
+
+.b2b-highlight-card h3,
+.b2b-testimonial-card strong {
+  margin: 0 0 10px;
+  font-size: 1.05rem;
+}
+
+.b2b-highlight-card p,
+.b2b-testimonial-card p {
+  margin: 0;
+  color: var(--text-700);
+  line-height: 1.65;
+}
+
+.b2b-testimonial-card div {
+  display: grid;
+  gap: 4px;
+  margin-top: 18px;
+}
+
+.b2b-testimonial-card span {
+  color: var(--text-700);
+  font-size: 0.92rem;
+}
+
+.b2b-landing-shell--sticky-dock .b2b-landing-main {
+  padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px));
+}
+
+.b2b-sticky-contact {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 40;
+  display: none;
+  gap: 10px;
+  padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px));
+  background: rgba(255, 255, 255, 0.96);
+  border-top: 1px solid rgba(2, 37, 84, 0.1);
+  box-shadow: 0 -12px 32px rgba(2, 37, 84, 0.12);
+  backdrop-filter: blur(12px);
+  transform: translateY(110%);
+  transition: transform 0.24s ease;
+}
+
+.b2b-sticky-contact.is-visible {
+  transform: translateY(0);
+}
+
+.b2b-sticky-contact-form,
+.b2b-sticky-contact-wa {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 48px;
+  border-radius: 999px;
+  font: inherit;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.b2b-sticky-contact-form {
+  flex: 0 0 38%;
+  border: 1px solid rgba(2, 37, 84, 0.16);
+  background: #fff;
+  color: var(--navy-900);
+}
+
+.b2b-sticky-contact-wa {
+  flex: 1;
+  border: 0;
+  background: #1faf63;
+  color: #fff;
+}
+
+.b2b-landing-main .section-heading h2 {
+  max-width: none;
+  font-size: clamp(1.45rem, 5vw, 2.2rem);
+  line-height: 1.15;
+}
+
+.b2b-form-section .heading-inline {
+  align-items: flex-start;
+}
+
+.b2b-form-section .heading-inline a {
+  white-space: nowrap;
+}
+
 @media (max-width: 1100px) {
   .b2b-hero,
   .b2b-form-layout {
@@ -200,19 +608,196 @@
   .b2b-process-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  .b2b-highlight-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .b2b-testimonial-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .b2b-social-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .b2b-portfolio-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .b2b-embed-actions {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 640px) {
+  .b2b-sticky-contact {
+    display: grid;
+    grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.35fr);
+  }
+
   .b2b-landing-main {
-    padding-inline: 16px;
+    gap: 18px;
+    padding-inline: 14px;
+    padding-top: 16px;
+  }
+
+  .b2b-hero {
+    gap: 14px;
+  }
+
+  .b2b-hero-copy {
+    border-radius: 24px;
+    padding: 20px 18px;
   }
 
   .b2b-hero-copy h1 {
     max-width: none;
+    font-size: clamp(1.85rem, 8.5vw, 2.35rem);
+    line-height: 1.02;
+    letter-spacing: -0.04em;
   }
 
-  .b2b-stats,
+  .b2b-hero-copy p {
+    font-size: 0.95rem;
+    line-height: 1.6;
+  }
+
+  .b2b-hero-cta-row {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .b2b-hero-cta-row .cta-button {
+    width: 100%;
+  }
+
+  .b2b-hero-card {
+    border-radius: 22px;
+    padding: 18px;
+    gap: 14px;
+  }
+
+  .b2b-hero-card p {
+    margin: 0;
+    font-size: 0.92rem;
+    line-height: 1.55;
+  }
+
+  .b2b-trust-list {
+    gap: 10px;
+  }
+
+  .b2b-trust-list div span {
+    font-size: 0.9rem;
+    line-height: 1.45;
+  }
+
+  .b2b-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .b2b-stat-card {
+    padding: 16px 14px;
+    border-radius: 18px;
+  }
+
+  .b2b-stat-card strong {
+    font-size: 1.45rem;
+  }
+
+  .b2b-stat-card span {
+    font-size: 0.86rem;
+  }
+
+  .b2b-highlights .section-heading,
+  .b2b-testimonials .section-heading,
+  .b2b-social-proof .section-heading,
+  .b2b-process .section-heading,
+  .b2b-form-section .section-heading,
+  .b2b-faq .section-heading {
+    margin-bottom: 4px;
+  }
+
+  .b2b-highlight-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .b2b-highlight-card,
+  .b2b-social-card {
+    padding: 16px;
+    border-radius: 18px;
+  }
+
+  .b2b-testimonial-grid {
+    display: flex;
+    overflow-x: auto;
+    gap: 12px;
+    padding-bottom: 6px;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .b2b-testimonial-grid::-webkit-scrollbar {
+    display: none;
+  }
+
+  .b2b-testimonial-card {
+    flex: 0 0 min(86vw, 320px);
+    scroll-snap-align: start;
+    padding: 16px;
+    border-radius: 18px;
+  }
+
+  .b2b-testimonial-card p {
+    font-size: 0.92rem;
+  }
+
+  .b2b-social-proof-lead {
+    font-size: 0.92rem;
+    margin-bottom: 14px;
+  }
+
   .b2b-process-grid {
     grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .b2b-process-card {
+    padding: 16px;
+    border-radius: 18px;
+  }
+
+  .b2b-form-section .heading-inline {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .b2b-form-section .heading-inline a {
+    justify-content: center;
+    width: 100%;
+  }
+
+  .b2b-form-layout {
+    gap: 14px;
+  }
+
+  .b2b-lead-form textarea {
+    min-height: 100px;
+  }
+
+  .b2b-contact-card {
+    padding: 18px;
+    border-radius: 22px;
+  }
+
+  .b2b-faq-item {
+    padding: 16px;
+    border-radius: 18px;
   }
 }

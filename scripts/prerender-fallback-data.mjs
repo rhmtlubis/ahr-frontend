@@ -14,7 +14,7 @@ export const fallbackSiteData = {
   faqItems: [
     {
       question: 'Berapa minimal order untuk jersey custom?',
-      answer: 'Minimal order reguler dimulai dari 10 pcs, dengan opsi harga tier untuk volume yang lebih besar.',
+      answer: 'Minimal order reguler dimulai dari 5 pcs per desain, dengan opsi harga tier untuk volume yang lebih besar.',
     },
     {
       question: 'Apakah bisa minta sample fisik sebelum produksi massal?',
