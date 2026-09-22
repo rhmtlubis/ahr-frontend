@@ -225,7 +225,8 @@ export default function B2BLandingPage() {
   }, [])
 
   useEffect(() => {
-    if (!landingVariant) {
+    const variant = getB2bLandingVariant(pathname)
+    if (!variant) {
       return
     }
 
@@ -233,30 +234,30 @@ export default function B2BLandingPage() {
       ...current,
       hero: {
         ...current.hero,
-        eyebrow: landingVariant.hero?.eyebrow || current.hero.eyebrow,
-        title: landingVariant.hero?.title || current.hero.title,
-        body: landingVariant.hero?.body || current.hero.body,
-        primaryCta: landingVariant.hero?.primaryCta || current.hero.primaryCta,
-        secondaryCta: landingVariant.hero?.secondaryCta || current.hero.secondaryCta,
+        eyebrow: variant.hero?.eyebrow || current.hero.eyebrow,
+        title: variant.hero?.title || current.hero.title,
+        body: variant.hero?.body || current.hero.body,
+        primaryCta: variant.hero?.primaryCta || current.hero.primaryCta,
+        secondaryCta: variant.hero?.secondaryCta || current.hero.secondaryCta,
       },
-      formTitle: landingVariant.formTitle || current.formTitle,
-      formSubtitle: landingVariant.formSubtitle || current.formSubtitle,
-      stats: landingVariant.stats || current.stats,
-      trust_bar: landingVariant.trustBar || current.trust_bar,
-      testimonials: landingVariant.testimonials || current.testimonials,
-      highlights: landingVariant.highlights || current.highlights,
-      social_links: landingVariant.socialLinks || current.social_links,
-      portfolio_items: landingVariant.portfolioItems || current.portfolio_items,
-      embed_links: landingVariant.embedLinks || current.embed_links,
-      faqs: landingVariant.faqs || current.faqs,
-      process_steps: landingVariant.processSteps || current.process_steps,
-      pricing_tiers: landingVariant.pricingTiers || current.pricing_tiers,
-      pricing_disclaimer: landingVariant.pricingDisclaimer || current.pricing_disclaimer,
-      workshop: landingVariant.workshop || current.workshop,
-      services: landingVariant.services || current.services,
-      intent_blocks: landingVariant.intentBlocks || current.intent_blocks || [],
+      formTitle: variant.formTitle || current.formTitle,
+      formSubtitle: variant.formSubtitle || current.formSubtitle,
+      stats: variant.stats || current.stats,
+      trust_bar: variant.trustBar || current.trust_bar,
+      testimonials: variant.testimonials || current.testimonials,
+      highlights: variant.highlights || current.highlights,
+      social_links: variant.socialLinks || current.social_links,
+      portfolio_items: variant.portfolioItems || current.portfolio_items,
+      embed_links: variant.embedLinks || current.embed_links,
+      faqs: variant.faqs || current.faqs,
+      process_steps: variant.processSteps || current.process_steps,
+      pricing_tiers: variant.pricingTiers || current.pricing_tiers,
+      pricing_disclaimer: variant.pricingDisclaimer || current.pricing_disclaimer,
+      workshop: variant.workshop || current.workshop,
+      services: variant.services || current.services,
+      intent_blocks: variant.intentBlocks || current.intent_blocks || [],
     }))
-  }, [landingVariant])
+  }, [pathname])
 
   useEffect(() => {
     const formSection = formSectionRef.current
