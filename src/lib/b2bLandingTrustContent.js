@@ -112,6 +112,24 @@ export const b2bServicesByPath = {
     'Tempat bikin jersey — workshop Bandung',
     'Jersey custom printing sublimasi',
   ],
+  '/pembuatan-jersey': [
+    'Pembuatan jersey custom full print',
+    'Jasa buat jersey tim & komunitas',
+    'Custom nama, nomor, dan logo',
+    'MOQ mulai 5 pcs — produksi 2–3 hari',
+  ],
+  '/printing-jersey': [
+    'Printing jersey full print sublimasi',
+    'Jersey custom printing warna tajam',
+    'Desain full body & gradient',
+    'Reorder file tersimpan untuk tim berulang',
+  ],
+  '/tempat-bikin-jersey': [
+    'Tempat bikin jersey di workshop Bandung',
+    'Produksi 1 atap: desain, print, jahit, QC',
+    'Bisa kunjungi dengan janji temu',
+    'Kirim nasional termasuk Jabodetabek',
+  ],
   '/jersey-printing-jakarta': [
     'Jersey custom Jakarta & Jabodetabek',
     'Jersey printing Jakarta — kirim cepat',
@@ -162,6 +180,27 @@ export function getB2bFaqsForPath(pathname = '') {
           'Fokus partnership berulang: brief jelas, file tersimpan untuk reorder, dan opsi white label/reseller sesuai kesepakatan.',
       },
     ],
+    '/pembuatan-jersey': [
+      {
+        question: 'Apa saja tahapan pembuatan jersey di AHR?',
+        answer:
+          'Brief kebutuhan → mockup gratis → revisi hingga approve → produksi full print → QC → kirim dengan update resi.',
+      },
+    ],
+    '/printing-jersey': [
+      {
+        question: 'Printing jersey AHR pakai teknik apa?',
+        answer:
+          'Full print sublimasi pada bahan dry-fit sport. Warna menyatu ke serat kain sehingga lebih detail dan tahan luntur dibanding sablon biasa.',
+      },
+    ],
+    '/tempat-bikin-jersey': [
+      {
+        question: 'Di mana alamat tempat bikin jersey AHR?',
+        answer:
+          'Workshop di Jl. Bojong Tanjung No.19, Katapang, Kabupaten Bandung. Bisa kunjungi dengan janji temu via WhatsApp, atau order penuh online.',
+      },
+    ],
   }
 
   return [...b2bBaseFaqs, ...(extras[path] || [])]
@@ -178,6 +217,7 @@ export function buildB2bPrerenderPayload(pathname, variant) {
     priceLead: 'Harga mulai Rp 88.000/pcs · MOQ 5 pcs · Produksi 2–3 hari kerja',
     trustBar: variant?.trustBar || [],
     highlights: variant?.highlights || [],
+    intentBlocks: variant?.intentBlocks || [],
     services,
     pricingTiers: b2bPricingTiers,
     pricingDisclaimer: b2bPricingDisclaimer,

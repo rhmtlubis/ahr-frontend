@@ -6,7 +6,7 @@ const SITE_URL = String(import.meta.env.VITE_SITE_URL || 'https://ahrcorporation
 const MAIN_SITE_URL = String(import.meta.env.VITE_MAIN_SITE_URL || 'https://ahrcorporation.id').replace(/\/$/, '')
 const STORE_BRAND_NAME = String(import.meta.env.VITE_STORE_BRAND_NAME || (BRAND_SKIN === 'css' ? 'CS Studio' : 'AHR'))
 
-const B2B_PATH_PATTERN = /\/(b2b|kontak-kerja-sama|vendor-jersey-b2b|konveksi-jersey-printing|jersey-tim-komunitas|konveksi-jersey-bandung|jersey-printing-jakarta)(\/|$)/i
+const B2B_PATH_PATTERN = /\/(b2b|kontak-kerja-sama|vendor-jersey-b2b|konveksi-jersey-printing|pembuatan-jersey|printing-jersey|tempat-bikin-jersey|jersey-tim-komunitas|konveksi-jersey-bandung|jersey-printing-jakarta)(\/|$)/i
 const B2B_LABEL_PATTERN = /\b(corporate\s*kit|kerja\s*sama|vendor|wholesale|procurement|konsultasi(\s*desain|\s*awal)?|reorder\s*support|partner)\b/i
 
 function isB2cExcludedLink(link = {}) {

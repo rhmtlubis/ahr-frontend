@@ -343,6 +343,9 @@ async function main() {
     },
     makeB2bAdsPage('/vendor-jersey-b2b', 'Vendor Jersey B2B'),
     makeB2bAdsPage('/konveksi-jersey-printing', 'Konveksi Jersey Printing'),
+    makeB2bAdsPage('/pembuatan-jersey', 'Pembuatan Jersey'),
+    makeB2bAdsPage('/printing-jersey', 'Printing Jersey'),
+    makeB2bAdsPage('/tempat-bikin-jersey', 'Tempat Bikin Jersey'),
     makeB2bAdsPage('/jersey-tim-komunitas', 'Jersey Tim & Komunitas'),
     makeB2bAdsPage('/konveksi-jersey-bandung', 'Konveksi Jersey Bandung'),
     makeB2bAdsPage('/jersey-printing-jakarta', 'Jersey Printing Jakarta'),
@@ -960,6 +963,7 @@ function buildB2bLandingBodyContent(payload) {
     priceLead,
     trustBar = [],
     highlights = [],
+    intentBlocks = [],
     services = [],
     pricingTiers = [],
     pricingDisclaimer,
@@ -1001,6 +1005,16 @@ function buildB2bLandingBodyContent(payload) {
           '  <ul>',
           ...highlights.map(
             (item) => `    <li><strong>${escapeHtml(item.title)}</strong> — ${escapeHtml(item.detail)}</li>`,
+          ),
+          '  </ul>',
+        ].join('\n')
+      : '',
+    intentBlocks.length
+      ? [
+          '  <h2>Detail layanan</h2>',
+          '  <ul>',
+          ...intentBlocks.map(
+            (item) => `    <li><strong>${escapeHtml(item.title)}</strong> — ${escapeHtml(item.body)}</li>`,
           ),
           '  </ul>',
         ].join('\n')

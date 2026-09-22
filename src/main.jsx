@@ -128,6 +128,9 @@ createRoot(document.getElementById('root')).render(
                   <Route path="/kontak-kerja-sama" element={<B2BLandingPage />} />
                   <Route path="/vendor-jersey-b2b" element={<B2BLandingPage />} />
                   <Route path="/konveksi-jersey-printing" element={<B2BLandingPage />} />
+                  <Route path="/pembuatan-jersey" element={<B2BLandingPage />} />
+                  <Route path="/printing-jersey" element={<B2BLandingPage />} />
+                  <Route path="/tempat-bikin-jersey" element={<B2BLandingPage />} />
                   <Route path="/jersey-tim-komunitas" element={<B2BLandingPage />} />
                   <Route path="/konveksi-jersey-bandung" element={<B2BLandingPage />} />
                   <Route path="/jersey-printing-jakarta" element={<B2BLandingPage />} />

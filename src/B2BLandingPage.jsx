@@ -130,6 +130,7 @@ const b2bFallbackContent = {
   pricing_disclaimer: b2bPricingDisclaimer,
   workshop: b2bWorkshop,
   services: b2bServicesByPath['/kontak-kerja-sama'],
+  intent_blocks: [],
   section_content: {
     client_brands_eyebrow: 'Kenapa AHR',
     client_brands_title: 'Siap untuk kerja sama yang butuh respon cepat dan alur jelas.',
@@ -197,8 +198,10 @@ export default function B2BLandingPage() {
     personalization: 'unknown',
   })
   const [showStickyContact, setShowStickyContact] = useState(true)
+  const [showInstagramEmbed, setShowInstagramEmbed] = useState(false)
   const formSectionRef = useRef(null)
   const instagramEmbedRef = useRef(null)
+  const instagramSectionRef = useRef(null)
   const instagramScalerRef = useRef(null)
 
   useDocumentTitle(
@@ -251,6 +254,7 @@ export default function B2BLandingPage() {
       pricing_disclaimer: landingVariant.pricingDisclaimer || current.pricing_disclaimer,
       workshop: landingVariant.workshop || current.workshop,
       services: landingVariant.services || current.services,
+      intent_blocks: landingVariant.intentBlocks || current.intent_blocks || [],
     }))
   }, [landingVariant])
 
@@ -278,7 +282,7 @@ export default function B2BLandingPage() {
   useEffect(() => {
     const shell = instagramEmbedRef.current
     const scaler = instagramScalerRef.current
-    if (!shell || !scaler || typeof ResizeObserver === 'undefined') {
+    if (!showInstagramEmbed || !shell || !scaler || typeof ResizeObserver === 'undefined') {
       return undefined
     }
 
@@ -307,7 +311,26 @@ export default function B2BLandingPage() {
       observer.disconnect()
       window.removeEventListener('resize', syncScale)
     }
-  }, [])
+  }, [showInstagramEmbed])
+
+  useEffect(() => {
+    const section = instagramSectionRef.current
+    if (!section || showInstagramEmbed) {
+      return undefined
+    }
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setShowInstagramEmbed(true)
+          observer.disconnect()
+        }
+      },
+      { rootMargin: '200px 0px' },
+    )
+    observer.observe(section)
+    return () => observer.disconnect()
+  }, [showInstagramEmbed])
 
   useEffect(() => {
 
@@ -360,6 +383,7 @@ export default function B2BLandingPage() {
           pricing_disclaimer: landingVariant?.pricingDisclaimer || b2bFallbackContent.pricing_disclaimer,
           workshop: landingVariant?.workshop || b2bFallbackContent.workshop,
           services: landingVariant?.services || b2bFallbackContent.services,
+          intent_blocks: landingVariant?.intentBlocks || b2bFallbackContent.intent_blocks,
           section_content: {
             ...b2bFallbackContent.section_content,
             ...(normalizedContent.sectionContent || {}),
@@ -600,6 +624,23 @@ export default function B2BLandingPage() {
           </div>
         </section>
 
+        {pageContent.intent_blocks?.length ? (
+          <section className="content-block section-soft b2b-intent" data-reveal>
+            <div className="section-heading">
+              <span>Detail layanan</span>
+              <h2>Yang biasanya ditanyakan sebelum order.</h2>
+            </div>
+            <div className="b2b-intent-grid">
+              {pageContent.intent_blocks.map((item) => (
+                <article className="b2b-intent-card" key={item.title}>
+                  <h3>{item.title}</h3>
+                  <p>{item.body}</p>
+                </article>
+              ))}
+            </div>
+          </section>
+        ) : null}
+
         <section className="content-block section-soft b2b-pricing" id="pricing" data-reveal>
           <div className="section-heading">
             <span>{pageContent.section_content.pricing_eyebrow}</span>
@@ -677,7 +718,7 @@ export default function B2BLandingPage() {
           </div>
         </section>
 
-        <section className="content-block section-plain b2b-social-proof" id="instagram" data-reveal>
+        <section className="content-block section-plain b2b-social-proof" id="instagram" data-reveal ref={instagramSectionRef}>
           <div className="section-heading">
             <span>Portofolio & review</span>
             <h2>Lihat hasil produksi nyata di Instagram AHR.</h2>
@@ -688,13 +729,19 @@ export default function B2BLandingPage() {
 
           <div className="b2b-instagram-embed" ref={instagramEmbedRef}>
             <div className="b2b-instagram-embed-scaler" ref={instagramScalerRef}>
-              <iframe
-                title="Instagram AHR Printing Sublimasi"
-                src={pageContent.embed_links.instagramEmbed || 'https://www.instagram.com/ahr.printingsublimasi/embed'}
-                loading="lazy"
-                referrerPolicy="strict-origin-when-cross-origin"
-                allow="encrypted-media; clipboard-write"
-              />
+              {showInstagramEmbed ? (
+                <iframe
+                  title="Instagram AHR Printing Sublimasi"
+                  src={pageContent.embed_links.instagramEmbed || 'https://www.instagram.com/ahr.printingsublimasi/embed'}
+                  loading="lazy"
+                  referrerPolicy="strict-origin-when-cross-origin"
+                  allow="encrypted-media; clipboard-write"
+                />
+              ) : (
+                <div className="b2b-instagram-embed-placeholder" aria-hidden="true">
+                  Memuat portofolio Instagram…
+                </div>
+              )}
             </div>
           </div>
 

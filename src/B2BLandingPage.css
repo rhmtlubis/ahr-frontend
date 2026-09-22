@@ -295,10 +295,23 @@
 }
 
 .b2b-highlight-grid,
-.b2b-testimonial-grid {
+.b2b-testimonial-grid,
+.b2b-intent-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 16px;
+}
+
+.b2b-intent-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.b2b-instagram-embed-placeholder {
+  display: grid;
+  place-items: center;
+  min-height: 320px;
+  color: rgba(2, 37, 84, 0.55);
+  font-size: 0.95rem;
 }
 
 .b2b-services-list {
@@ -542,6 +555,7 @@
 }
 
 .b2b-highlight-card,
+.b2b-intent-card,
 .b2b-testimonial-card {
   border: 1px solid rgba(2, 37, 84, 0.1);
   background: rgba(255, 255, 255, 0.92);
@@ -551,12 +565,14 @@
 }
 
 .b2b-highlight-card h3,
+.b2b-intent-card h3,
 .b2b-testimonial-card strong {
   margin: 0 0 10px;
   font-size: 1.05rem;
 }
 
 .b2b-highlight-card p,
+.b2b-intent-card p,
 .b2b-testimonial-card p {
   margin: 0;
   color: var(--text-700);
@@ -654,6 +670,10 @@
 
   .b2b-highlight-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .b2b-intent-grid {
+    grid-template-columns: 1fr;
   }
 
   .b2b-testimonial-grid {
@@ -770,6 +790,7 @@
   }
 
   .b2b-highlight-card,
+  .b2b-intent-card,
   .b2b-social-card {
     padding: 16px;
     border-radius: 18px;
